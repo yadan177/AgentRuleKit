@@ -1,50 +1,26 @@
-# Unity UI Toolkit — 完整参考
+# 05 - Unity UI Toolkit 设计规则
 
-**目标版本：仅限 Unity 6.3.4f1。** 本文档涉及的 API 均为 Unity 6.3，请勿使用或引用 Unity 6 之前的替代方案。
+> 🟢 本文件适用于 Unity UI Toolkit 界面（UXML/USS/BEM/Flexbox/数据绑定）。
 
-> 关于 UI 控制器中 C# 代码风格，请遵循 `CLAUDE.md` 中的约定（`m_` 前缀、PascalCase 属性、Allman 大括号等）。
-
-官方文档（如遇到本文未覆盖的 API，按需查阅）：
-→ https://docs.unity3d.com/6000.3/Documentation/Manual/UIElements.html
+> 🔴 不适用：业务逻辑实现、美术资源制作、旧版 IMGUI
 
 ---
 
-## 目录
-
-1. [文件命名与组织](#文件命名与组织)
-2. [USS 与 CSS 的关键差异](#关键-uss-与-css-差异)
-3. [USS 命名约定（BEM）](#uss-命名约定bem)
-4. [Flexbox 布局系统](#flexbox-布局系统)
-5. [USS 常用属性速查](#uss-常用属性速查)
-6. [USS 变量（设计 Token）](#uss-变量设计-token)
-7. [USS 伪类](#uss-伪类)
-8. [过渡与动画](#过渡与动画)
-9. [UXML 结构与最佳实践](#uxml-结构与最佳实践)
-10. [UXML 元素速查表](#uxml-元素速查表)
-11. [数据绑定（Unity 6+）](#数据绑定unity-6)
-12. [自定义 VisualElement — Unity 6 API](#自定义-visualelement--unity-6-api)
-13. [元素查询](#元素查询)
-14. [显示/隐藏模式](#显示隐藏模式)
-15. [按钮与事件处理](#按钮与事件处理)
-16. [ListView 与模板生成](#listview-与模板生成)
-17. [TabView 与 Tab 样式](#tabview-与-tab-样式)
-18. [常用模式与示例](#常用模式与示例)
-19. [基于数据绑定的 MVP 设计模式](#基于数据绑定的-mvp-设计模式)
-20. [性能建议](#性能建议)
-21. [常见错误速查](#常见错误速查)
-22. [故障排查](#故障排查)
-
----
-
-## 文件命名与组织
-
+## 1. 官方文档（按版本）
+| 你的 Unity 版本 | 官方文档 URL |
+|---|---|
+| Unity 2021.2 ~ 2021.3 | `https://docs.unity3d.com/2021.3/Documentation/Manual/UIElements.html` |
+| Unity 2022 LTS | `https://docs.unity3d.com/2022.3/Documentation/Manual/UIElements.html` |
+| Unity 6.0 | `https://docs.unity3d.com/6000.0/Documentation/Manual/UIElements.html` |
+| Unity 6.x（最新） | `https://docs.unity3d.com/6000.x/Documentation/Manual/UIElements.html` |
+> 上表中的「URL」只是基线入口；进入文档后，左侧导航里的 API 文档按 Unity 版本可能略有差异。
+## 2. 文件命名与组织
 - ✅ UXML/USS 文件名使用 **PascalCase**，与 Unity 约定保持一致（例如 `MainMenu.uxml`、`InventoryPanel.uxml`、`PlayerHUD.uss`）。
 - ✅ UXML 与 USS 放在统一的目录结构中（例如 `Assets/UI/UXML/` 与 `Assets/UI/USS/`）。
 - ✅ USS 文件名与对应 UXML 一致（例如 `MainMenu.uss` 对应 `MainMenu.uxml`）。
-
 ---
 
-## 关键：USS 与 CSS 差异
+## 3. 关键：USS 与 CSS 差异
 
 **USS（Unity Style Sheets）不是标准 CSS**，而是 CSS 的子集加上 Unity 专属扩展。
 
@@ -67,7 +43,7 @@
 | `@media` 查询 | ✅ | ❌ 不支持 |
 | `@import` | ✅ | ❌ — 改用 UXML 的 `<Style src="..."/>` |
 | 字体相对单位 | `em`、`rem` | ❌ — 改用 `px` |
-| 颜色值 | 十六进制 `#FF6432`、`rgb()`、`rgba()` | **仅** `rgb()` 与 `rgba()` — ❌ 十六进制 **无效** |
+| 颜色值 | 十六进制 `#FF6432`、`rgb()`、`rgba()` | 推荐 `rgb()` / `rgba()`（Unity 2022 及更早十六进制无效，Unity 6+ 待验证） |
 | 文本对齐 | `text-align: center` | `-unity-text-align: middle-center` |
 | 字体粗细 | `font-style: bold` | `-unity-font-style: bold` |
 | 背景缩放 | `background-size` | `-unity-background-scale-mode: scale-to-fit` 等 |
@@ -82,7 +58,7 @@ background-color: rgb(255, 100, 50);
 background-color: rgba(255, 100, 50, 0.8);
 color: rgb(200, 200, 200);
 
-/* ❌ USS 中十六进制颜色无效 */
+/* ⚠️ Unity 2022 及更早十六进制颜色无效，推荐用 rgb()/rgba() */
 background-color: #FF6432;
 ```
 
@@ -136,7 +112,7 @@ picking-mode: ignore;
 
 ---
 
-## USS 命名约定（BEM）
+## 4. USS 命名约定（BEM）
 
 ### 指南
 
@@ -244,7 +220,175 @@ btn.ToggleInClassList("button--primary");
 
 ---
 
-## Flexbox 布局系统
+## 5. USS 变量（设计 Token）
+
+USS 变量必须声明在 `:root {}` 中，无法限定在其它选择器上。
+
+```css
+:root {
+    --color-primary: rgb(72, 144, 226);
+    --color-secondary: rgb(100, 150, 200);
+    --color-surface: rgb(40, 40, 40);
+    --color-text: rgb(210, 210, 210);
+    --color-text-muted: rgb(140, 140, 140);
+    --color-border: rgba(255, 255, 255, 0.15);
+
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 16px;
+    --spacing-lg: 24px;
+
+    --radius-sm: 4px;
+    --radius-md: 8px;
+
+    --font-size-sm: 12px;
+    --font-size-md: 14px;
+    --font-size-lg: 18px;
+
+    --border-radius: 4px;
+}
+
+.card {
+    background-color: var(--color-surface);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md);
+    border-width: 1px;
+    border-color: var(--color-border);
+}
+
+.button--primary {
+    background-color: var(--color-primary);
+    padding: var(--spacing-md);
+    border-radius: var(--border-radius);
+}
+```
+
+---
+
+## 6. USS 伪类
+
+USS 仅支持以下伪类：
+
+| 伪类 | 触发条件 |
+|---|---|
+| `:hover` | 鼠标位于元素上 |
+| `:active` | 元素被按下 |
+| `:focus` | 元素获得键盘焦点 |
+| `:disabled` | 元素被 `SetEnabled(false)` |
+| `:enabled` | 元素处于启用状态（默认） |
+| `:checked` | Toggle/RadioButton 处于选中 |
+| `:selected` | 列表项被选中 |
+| `:root` | 根 VisualElement |
+
+```css
+.button--primary:hover {
+    background-color: rgb(90, 160, 240);
+}
+
+.button--primary:active {
+    background-color: rgb(55, 120, 200);
+    scale: 0.97;
+}
+
+.toggle:checked > .toggle__checkmark {
+    background-color: var(--color-primary);
+}
+
+.input:disabled {
+    opacity: 0.4;
+}
+
+/* Unity 内置元素的 class */
+.unity-button:disabled {
+    opacity: 0.5;
+    background-color: rgb(128, 128, 128);
+}
+```
+
+> ❌ `:nth-child()`、`:not()`、`:first-child`、`:last-child`、`:is()`、`:where()` **均不支持**。
+
+---
+
+## 7. USS 常用属性速查
+
+### 显示与可见性
+
+```css
+display: flex;                 /* 默认 —— 可见 */
+display: none;                 /* 隐藏，不占布局空间 */
+
+visibility: visible;           /* 默认 */
+visibility: hidden;            /* 隐藏，保留空间 */
+
+opacity: 1;                    /* 0 到 1 */
+
+overflow: visible;             /* 默认 */
+overflow: hidden;              /* 裁剪内容 */
+```
+
+### 尺寸
+
+```css
+width: 100px;
+width: 50%;
+width: auto;
+
+height: 100px;
+min-width: 50px;
+max-width: 200px;
+min-height: 50px;
+max-height: 200px;
+
+flex-grow: 1;                  /* 填满可用空间 */
+flex-shrink: 0;                /* 不收缩 */
+```
+
+### 间距
+
+```css
+padding: 10px;
+padding: 10px 20px;            /* 上/下 左/右 */
+padding: 10px 20px 15px 25px;  /* 上 右 下 左 */
+
+margin: 10px;
+margin-left: auto;             /* 推至右侧 */
+```
+
+### 边框
+
+```css
+border-width: 2px;
+border-color: rgb(0, 0, 0);
+border-radius: 8px;
+border-top-left-radius: 8px;
+```
+
+### 背景
+
+```css
+background-color: rgb(50, 50, 50);
+background-color: rgba(255, 255, 255, 0.1);
+background-image: url('project://database/Assets/UI/background.png');
+-unity-background-scale-mode: stretch-to-fill;
+-unity-background-scale-mode: scale-to-fit;
+-unity-background-image-tint-color: rgb(255, 255, 255);
+```
+
+### 文本
+
+```css
+color: rgb(0, 0, 0);
+font-size: 16px;
+-unity-font-style: bold;
+-unity-text-align: middle-center;
+white-space: nowrap;
+-unity-text-outline-width: 1px;
+-unity-text-outline-color: rgb(0, 0, 0);
+```
+
+---
+
+## 8. Flexbox 布局系统
 
 Unity UI Toolkit 使用 **Yoga 布局引擎**，实现了 CSS Flexbox 的一个子集。**没有 grid** —— 每个容器要么是行、要么是列。
 
@@ -352,175 +496,7 @@ left: 0; right: 0; top: 0; bottom: 0;
 
 ---
 
-## USS 常用属性速查
-
-### 显示与可见性
-
-```css
-display: flex;                 /* 默认 —— 可见 */
-display: none;                 /* 隐藏，不占布局空间 */
-
-visibility: visible;           /* 默认 */
-visibility: hidden;            /* 隐藏，保留空间 */
-
-opacity: 1;                    /* 0 到 1 */
-
-overflow: visible;             /* 默认 */
-overflow: hidden;              /* 裁剪内容 */
-```
-
-### 尺寸
-
-```css
-width: 100px;
-width: 50%;
-width: auto;
-
-height: 100px;
-min-width: 50px;
-max-width: 200px;
-min-height: 50px;
-max-height: 200px;
-
-flex-grow: 1;                  /* 填满可用空间 */
-flex-shrink: 0;                /* 不收缩 */
-```
-
-### 间距
-
-```css
-padding: 10px;
-padding: 10px 20px;            /* 上/下 左/右 */
-padding: 10px 20px 15px 25px;  /* 上 右 下 左 */
-
-margin: 10px;
-margin-left: auto;             /* 推至右侧 */
-```
-
-### 边框
-
-```css
-border-width: 2px;
-border-color: rgb(0, 0, 0);
-border-radius: 8px;
-border-top-left-radius: 8px;
-```
-
-### 背景
-
-```css
-background-color: rgb(50, 50, 50);
-background-color: rgba(255, 255, 255, 0.1);
-background-image: url('project://database/Assets/UI/background.png');
--unity-background-scale-mode: stretch-to-fill;
--unity-background-scale-mode: scale-to-fit;
--unity-background-image-tint-color: rgb(255, 255, 255);
-```
-
-### 文本
-
-```css
-color: rgb(0, 0, 0);
-font-size: 16px;
--unity-font-style: bold;
--unity-text-align: middle-center;
-white-space: nowrap;
--unity-text-outline-width: 1px;
--unity-text-outline-color: rgb(0, 0, 0);
-```
-
----
-
-## USS 变量（设计 Token）
-
-USS 变量必须声明在 `:root {}` 中，无法限定在其它选择器上。
-
-```css
-:root {
-    --color-primary: rgb(72, 144, 226);
-    --color-secondary: rgb(100, 150, 200);
-    --color-surface: rgb(40, 40, 40);
-    --color-text: rgb(210, 210, 210);
-    --color-text-muted: rgb(140, 140, 140);
-    --color-border: rgba(255, 255, 255, 0.15);
-
-    --spacing-xs: 4px;
-    --spacing-sm: 8px;
-    --spacing-md: 16px;
-    --spacing-lg: 24px;
-
-    --radius-sm: 4px;
-    --radius-md: 8px;
-
-    --font-size-sm: 12px;
-    --font-size-md: 14px;
-    --font-size-lg: 18px;
-
-    --border-radius: 4px;
-}
-
-.card {
-    background-color: var(--color-surface);
-    border-radius: var(--radius-md);
-    padding: var(--spacing-md);
-    border-width: 1px;
-    border-color: var(--color-border);
-}
-
-.button--primary {
-    background-color: var(--color-primary);
-    padding: var(--spacing-md);
-    border-radius: var(--border-radius);
-}
-```
-
----
-
-## USS 伪类
-
-USS 仅支持以下伪类：
-
-| 伪类 | 触发条件 |
-|---|---|
-| `:hover` | 鼠标位于元素上 |
-| `:active` | 元素被按下 |
-| `:focus` | 元素获得键盘焦点 |
-| `:disabled` | 元素被 `SetEnabled(false)` |
-| `:enabled` | 元素处于启用状态（默认） |
-| `:checked` | Toggle/RadioButton 处于选中 |
-| `:selected` | 列表项被选中 |
-| `:root` | 根 VisualElement |
-
-```css
-.button--primary:hover {
-    background-color: rgb(90, 160, 240);
-}
-
-.button--primary:active {
-    background-color: rgb(55, 120, 200);
-    scale: 0.97;
-}
-
-.toggle:checked > .toggle__checkmark {
-    background-color: var(--color-primary);
-}
-
-.input:disabled {
-    opacity: 0.4;
-}
-
-/* Unity 内置元素的 class */
-.unity-button:disabled {
-    opacity: 0.5;
-    background-color: rgb(128, 128, 128);
-}
-```
-
-> ❌ `:nth-child()`、`:not()`、`:first-child`、`:last-child`、`:is()`、`:where()` **均不支持**。
-
----
-
-## 过渡与动画
+## 9. 过渡与动画
 
 ```css
 .button {
@@ -553,7 +529,7 @@ translate: 10px 20px;
 
 ---
 
-## UXML 结构与最佳实践
+## 10. UXML 结构与最佳实践
 
 ### 文件结构
 
@@ -588,7 +564,7 @@ translate: 10px 20px;
 
 ---
 
-## UXML 元素速查表
+## 11. UXML 元素速查表
 
 常用 UI Toolkit 元素的速查，附 UXML 示例和关键属性。
 
@@ -1112,11 +1088,561 @@ table.itemsSource = m_data;
 
 ---
 
-## 数据绑定（Unity 6+）
+## 12. 元素查询
+
+### 基础查询
+
+```csharp
+// 按 name
+var button = root.Q<Button>("submit-button");
+
+// 仅按类型（首个匹配）
+var firstLabel = root.Q<Label>();
+
+// 按 USS class
+var cards = root.Query<VisualElement>(className: "card").ToList();
+
+// 按 name 和 class 同时
+var specificCard = root.Q<VisualElement>("my-card", "card--highlighted");
+
+// 某种类型的所有实例
+var allButtons = root.Query<Button>().ToList();
+
+// 链式 —— 在子区域中查找
+var panelButton = root.Q<VisualElement>("settings-panel").Q<Button>("close-button");
+
+// 带谓词（避免在热路径中使用 —— 会产生分配）
+var activeItems = root.Query<VisualElement>()
+    .Where(e => e.ClassListContains("card--active"))
+    .ToList();
+```
+
+### 空安全
+
+```csharp
+var button = root.Q<Button>("optional-button");
+if (button != null)
+{
+    button.clicked += OnClicked;
+}
+
+// 一行式空安全调用
+root.Q<Button>("optional-button")?.SetEnabled(false);
+```
+
+### 缓存查询 —— 绝不要在 Update 中调用
+
+```csharp
+// ✅ 好 —— 在 OnEnable 中缓存（推荐用于 UIDocument MonoBehaviour）
+private Button m_submitButton;
+
+private void OnEnable()
+{
+    var root = m_uiDocument.rootVisualElement;
+    m_submitButton = root.Q<Button>("submit-button");
+    m_submitButton.clicked += OnSubmitClicked;
+}
+
+private void OnDisable()
+{
+    m_submitButton.clicked -= OnSubmitClicked;
+}
+
+// ❌ 差 —— 每帧都查询
+private void Update()
+{
+    m_uiDocument.rootVisualElement.Q<Button>("submit-button").SetEnabled(false);
+}
+```
+
+### 查询时机
+
+```csharp
+// ✅ OnEnable 是推荐查询位置。
+//    这里 UIDocument 一定已初始化好 rootVisualElement。
+private void OnEnable()
+{
+    var root = m_uiDocument.rootVisualElement;
+    m_button = root.Q<Button>("my-button");
+    m_button.clicked += OnButtonClicked;
+}
+
+private void OnDisable()
+{
+    m_button.clicked -= OnButtonClicked;
+}
+
+/// ⚠️ Awake：若 UIDocument 在同一 GameObject 上（会在 Awake 中同步初始化），
+//    此处查询 rootVisualElement 是可以的，但意味着查询和事件订阅会分散在
+//    不同的生命周期方法中。
+//    推荐在 OnEnable 中统一处理查询与事件注册。
+private void Awake()
+{
+    m_uiDocument = GetComponent<UIDocument>(); // 在 Awake 中查找组件没问题
+}
+
+// ✅ CreateGUI 是 EditorWindow 的正确入口
+public void CreateGUI()
+{
+    visualTree.CloneTree(rootVisualElement);
+    var button = rootVisualElement.Q<Button>(); // 这里总是安全的
+}
+```
+
+---
+
+## 13. 显示/隐藏模式
+
+### display 属性（脱离布局）
+
+```csharp
+// 隐藏 —— 脱离布局（元素不占空间）
+element.style.display = DisplayStyle.None;
+
+// 显示 —— 回到布局
+element.style.display = DisplayStyle.Flex;
+
+// 辅助方法
+public void SetPanelVisible(bool isVisible)
+{
+    m_panel.style.display = isVisible ? DisplayStyle.Flex : DisplayStyle.None;
+}
+```
+
+### visibility 属性（保留布局空间）
+
+```csharp
+// 隐藏但保留空间
+element.style.visibility = Visibility.Hidden;
+
+// 显示
+element.style.visibility = Visibility.Visible;
+```
+
+> 想让元素完全不参与布局时使用 `display`；需要保留空间（例如避免布局抖动）时使用 `visibility`。
+
+---
+
+## 14. 按钮与事件处理
+
+### 按钮点击事件
+
+```csharp
+private Button m_actionButton;
+
+private void OnEnable()
+{
+    var root = m_uiDocument.rootVisualElement;
+    m_actionButton = root.Q<Button>("action-button");
+    m_actionButton.clicked += OnActionButtonClicked;
+}
+
+private void OnDisable()
+{
+    // 始终取消订阅，避免内存泄漏
+    m_actionButton.clicked -= OnActionButtonClicked;
+}
+
+private void OnActionButtonClicked()
+{
+    Debug.Log("Action button clicked");
+}
+```
+
+### 启用/禁用按钮
+
+```csharp
+button.SetEnabled(false);  // 禁用（置灰）
+button.SetEnabled(true);   // 启用
+
+if (button.enabledSelf) { /* 按钮已启用 */ }
+```
+
+### 其它事件类型
+
+```csharp
+// 通用事件注册
+button.RegisterCallback<ClickEvent>(OnClick);
+
+// 指针事件
+element.RegisterCallback<PointerEnterEvent>(evt => Debug.Log("Mouse entered"));
+element.RegisterCallback<PointerLeaveEvent>(evt => Debug.Log("Mouse left"));
+
+// 值变化
+textField.RegisterValueChangedCallback(evt =>
+{
+    Debug.Log($"Value changed to {evt.newValue}");
+});
+slider.RegisterValueChangedCallback(evt =>
+{
+    Debug.Log($"Changed: {evt.previousValue} → {evt.newValue}");
+});
+
+// 键盘
+element.RegisterCallback<KeyDownEvent>(evt =>
+{
+    if (evt.keyCode == KeyCode.Return) Submit();
+});
+
+// 事件传播
+button.RegisterCallback<ClickEvent>(evt =>
+{
+    evt.StopPropagation();
+});
+
+// 清理 —— MonoBehaviour 用 OnDisable，EditorWindow 用 OnDestroy
+private void OnDisable()
+{
+    button.clicked -= OnButtonClicked;
+    button.UnregisterCallback<ClickEvent>(OnClick);
+}
+```
+
+### 使用 EventRegistry（项目标准）
+
+项目中的 `EventRegistry` 工具（位于 `GameSystems` 命名空间）提供集中清理 —— 优先使用它而不是手动订阅/取消订阅：
+
+```csharp
+using GameSystems;
+
+private readonly EventRegistry m_eventRegistry = new();
+
+private void OnEnable()
+{
+    m_eventRegistry.RegisterCallback<ClickEvent>(m_submitButton, OnSubmitClicked);
+    m_eventRegistry.RegisterCallback<ClickEvent>(m_cancelButton, OnCancelClicked);
+    m_eventRegistry.RegisterValueChangedCallback<float>(m_volumeSlider, OnVolumeChanged);
+}
+
+private void OnDisable()
+{
+    m_eventRegistry.Dispose(); // 一次性取消所有注册
+}
+```
+
+---
+
+## 15. ListView 与模板生成
+
+### VisualTreeAsset 实例化（手动网格/列表）
+
+```csharp
+public class CardGridController : MonoBehaviour
+{
+    [SerializeField] private UIDocument m_uiDocument;
+    [SerializeField] private VisualTreeAsset m_cardTemplate;
+    [SerializeField] private List<CardDataSO> m_cards;
+
+    private VisualElement m_cardContainer;
+
+    private void OnEnable()
+    {
+        var root = m_uiDocument.rootVisualElement;
+        m_cardContainer = root.Q<VisualElement>("card-container");
+        PopulateCards();
+    }
+
+    private void PopulateCards()
+    {
+        m_cardContainer.Clear();
+
+        foreach (var cardData in m_cards)
+        {
+            // 实例化模板
+            var cardElement = m_cardTemplate.Instantiate();
+
+            // 通过查询或数据绑定填充
+            cardElement.Q<Label>("card-title").text = cardData.Title;
+            cardElement.Q<Label>("card-cost").text = cardData.Cost.ToString();
+            cardElement.dataSource = cardData;
+
+            // 设置按钮（捕获循环变量）
+            var data = cardData;
+            var actionButton = cardElement.Q<Button>("action-button");
+            if (actionButton != null)
+            {
+                actionButton.clicked += () => OnCardActionClicked(data);
+            }
+
+            m_cardContainer.Add(cardElement);
+        }
+    }
+
+    private void OnCardActionClicked(CardDataSO cardData)
+    {
+        Debug.Log($"Card clicked: {cardData.Title}");
+    }
+}
+```
+
+### 使用 makeItem/bindItem 的 ListView（虚拟化）
+
+```csharp
+private void SetupListView()
+{
+    m_listView.makeItem = () => m_itemTemplate.Instantiate();
+
+    m_listView.bindItem = (element, index) =>
+    {
+        var item = m_items[index];
+        element.Q<Label>("item-name").text = item.ItemName;
+        element.Q<Label>("item-cost").text = $"{item.Cost} gold";
+        element.dataSource = item;
+    };
+
+    m_listView.itemsSource = m_items;
+}
+
+// 数据变化时刷新
+public void RefreshList() => m_listView.RefreshItems();
+```
+
+**ListView UXML：**
+```xml
+<ui:ListView name="inventory-list"
+             fixed-item-height="60"
+             virtualization-method="FixedHeight"
+             selection-type="Single" />
+```
+
+---
+
+## 16. TabView 与 Tab 样式
+
+### USS 选择器
+
+```css
+/* TabView 容器 */
+.unity-tab-view { }
+.unity-tab-view__content-container { }
+
+/* Tab 头部 */
+.unity-tab { }
+.unity-tab__header { }
+.unity-tab__header:checked { }      /* 激活的 Tab */
+.unity-tab__header:hover { }
+.unity-tab__header-label { }
+.unity-tab__header-underline { }
+```
+
+### 定制 Tab 样式
+
+```css
+.unity-tab__header {
+    background-color: rgb(230, 230, 230);
+    padding: 10px 20px;
+    border-radius: 4px 4px 0 0;
+    -unity-font-style: bold;
+    color: rgb(0, 0, 0);
+}
+
+.unity-tab__header:checked {
+    background-color: rgb(100, 150, 200);
+    color: rgb(255, 255, 255);
+}
+
+.unity-tab__header:hover {
+    background-color: rgb(200, 200, 200);
+}
+
+/* 隐藏下划线 */
+.unity-tab__header-underline {
+    opacity: 0;
+}
+```
+
+### C# Tab 事件
+
+```csharp
+private TabView m_tabView;
+
+private void OnEnable()
+{
+    m_tabView = root.Q<TabView>("main-tabs");
+    m_tabView.activeTabChanged += OnActiveTabChanged;
+}
+
+private void OnDisable()
+{
+    m_tabView.activeTabChanged -= OnActiveTabChanged;
+}
+
+private void OnActiveTabChanged(Tab previousTab, Tab newTab)
+{
+    Debug.Log($"Tab changed to {newTab?.label}");
+}
+```
+
+---
+
+## 17. 自定义 VisualElement —— **按版本选 API**
+
+> **重要**：`[UxmlElement]` / `[UxmlAttribute]` **仅 Unity 6+**。Unity 2022 及更早必须用 `UxmlFactory` / `UxmlTraits`（旧标准 API，仍受支持）。
+
+### ✅ 全版本通用：`UxmlFactory` / `UxmlTraits` 写法（推荐用于 Unity 2022）
+
+```csharp
+using UnityEngine.UIElements;
+
+public class HealthBar : VisualElement
+{
+    public new class UxmlFactory : UxmlFactory<HealthBar, UxmlTraits> { }
+    public new class UxmlTraits : VisualElement.UxmlTraits
+    {
+        private UxmlFloatAttributeDescription m_maxHealth = new()
+            { name = "max-health", defaultValue = 100f };
+
+        public override void Init(VisualElement ve, IUxmlAttributes bag, CreationContext cc)
+        {
+            base.Init(ve, bag, cc);
+            ((HealthBar)ve).maxHealth = m_maxHealth.GetValueFromBag(bag, cc);
+        }
+    }
+
+    private float m_maxHealth = 100f;
+    public float maxHealth
+    {
+        get => m_maxHealth;
+        set
+        {
+            m_maxHealth = value;
+            // ... 刷新 UI
+        }
+    }
+
+    public HealthBar()
+    {
+        // ... 构造
+    }
+}
+```
+
+> Unity 6 起，下方 `[UxmlElement]` 写法是更新的官方推荐。但 Unity 2022 及更早**必须**用上方 `UxmlFactory` 写法。
+
+### ❌ 仅 Unity 6+：`[UxmlElement]` 写法
+
+```csharp
+// ❌ 仅 Unity 6+ —— Unity 2022 及更早版本不能使用
+[UxmlElement]
+public partial class HealthBar : VisualElement
+{
+    [UxmlAttribute]
+    public float maxHealth { get; set; } = 100f;
+    // ...
+}
+```
+
+🟡 **Unity 6 有更简洁的新方式（UxmlFactory 仍兼容但非首选）：**
+```csharp
+// Unity 6 之前 —— 不要这样写
+public new class UxmlFactory : UxmlFactory<MyElement, UxmlTraits> { }
+public new class UxmlTraits : VisualElement.UxmlTraits
+{
+    public override void Init(VisualElement ve, IUxmlAttributes bag, CreationContext cc) { }
+}
+```
+
+✅ **统一使用 —— Unity 6.3 API：**
+```csharp
+using UnityEngine.UIElements;
+
+/// <summary>
+/// 可直接在 UXML 中使用的自定义血条元素。
+/// </summary>
+[UxmlElement]
+public partial class HealthBar : VisualElement
+{
+    // 在 UXML 中作为属性暴露 —— Unity 6.3 会自动生成注册代码
+    [UxmlAttribute]
+    public float maxHealth { get; set; } = 100f;
+
+    [UxmlAttribute]
+    public string label { get; set; } = "HP";
+
+    private Label m_label;
+    private VisualElement m_fill;
+
+    public HealthBar()
+    {
+        AddToClassList("health-bar");
+
+        m_label = new Label(label);
+        m_label.AddToClassList("health-bar__label");
+
+        m_fill = new VisualElement();
+        m_fill.AddToClassList("health-bar__fill");
+
+        Add(m_label);
+        Add(m_fill);
+    }
+
+    public void SetValue(float current)
+    {
+        float pct = Mathf.Clamp01(current / maxHealth) * 100f;
+        m_fill.style.width = Length.Percent(pct);
+    }
+}
+```
+
+在 UXML 中使用：
+```xml
+<MyNamespace.HealthBar max-health="100" label="HP" name="player-health" />
+```
+
+---
+
+## 18. 数据绑定（**Unity 6+** 专属）
+
+> **重要**：运行时数据绑定（`INotifyBindablePropertyChanged` / `[CreateProperty]` / `SetBinding()`）**仅 Unity 6 及以上版本支持**。Unity 2022 及更早版本请使用替代方案（见下方）。
 
 Unity 6 引入了完整的**运行时**数据绑定系统。这与仅限 Editor 的 `SerializedObject.Bind()` 完全不同。
 
-### 响应式数据源（运行时更新）
+### ⚠️ Unity 2022 及更早版本：替代方案
+
+如果工程是 Unity 2022 或更早版本（**没有运行时数据绑定**），请使用以下替代方案：
+
+```csharp
+// Unity 2022 推荐写法：手动订阅 INotifyPropertyChanged
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
+
+public class PlayerDataSO : ScriptableObject, INotifyPropertyChanged
+{
+    public event PropertyChangedEventHandler PropertyChanged;
+
+    [SerializeField] private int m_health = 100;
+    public int Health
+    {
+        get => m_health;
+        set
+        {
+            if (m_health != value)
+            {
+                m_health = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Health)));
+            }
+        }
+    }
+}
+```
+
+在 C# 中手动订阅：
+```csharp
+// Unity 2022
+private void OnEnable()
+{
+    m_playerData.PropertyChanged += OnDataChanged;
+    m_playerData.PropertyChanged += (s, e) =>
+    {
+        if (e.PropertyName == nameof(PlayerDataSO.Health))
+            m_healthBar.value = m_playerData.Health;
+    };
+}
+```
+
+> 升级到 Unity 6 后，可使用下方原方案（`INotifyBindablePropertyChanged` + `SetBinding`）。
+
+### 响应式数据源（运行时更新）—— **Unity 6+**
 
 实现 `INotifyBindablePropertyChanged` 以使 UI 在数据运行时变化时自动更新：
 
@@ -1264,7 +1790,7 @@ slider.SetBinding("value", new DataBinding
 
 ---
 
-## 数据绑定 — Editor / SerializedObject
+## 19. 数据绑定 — Editor / SerializedObject
 
 `SerializedObject.Bind()` **仅用于 Editor 窗口与自定义 Inspector**。它在运行时无效。
 
@@ -1292,457 +1818,7 @@ rootVisualElement.Add(field);
 
 ---
 
-## 自定义 VisualElement — Unity 6 API
-
-Unity 6 完全废弃了旧的 `UxmlFactory`/`UxmlTraits` 注册体系。
-
-❌ **绝不要再这样写 —— 在 Unity 6 中已废弃且会生成编译警告：**
-```csharp
-// Unity 6 之前 —— 不要这样写
-public new class UxmlFactory : UxmlFactory<MyElement, UxmlTraits> { }
-public new class UxmlTraits : VisualElement.UxmlTraits
-{
-    public override void Init(VisualElement ve, IUxmlAttributes bag, CreationContext cc) { }
-}
-```
-
-✅ **统一使用 —— Unity 6.3 API：**
-```csharp
-using UnityEngine.UIElements;
-
-/// <summary>
-/// 可直接在 UXML 中使用的自定义血条元素。
-/// </summary>
-[UxmlElement]
-public partial class HealthBar : VisualElement
-{
-    // 在 UXML 中作为属性暴露 —— Unity 6.3 会自动生成注册代码
-    [UxmlAttribute]
-    public float maxHealth { get; set; } = 100f;
-
-    [UxmlAttribute]
-    public string label { get; set; } = "HP";
-
-    private Label m_label;
-    private VisualElement m_fill;
-
-    public HealthBar()
-    {
-        AddToClassList("health-bar");
-
-        m_label = new Label(label);
-        m_label.AddToClassList("health-bar__label");
-
-        m_fill = new VisualElement();
-        m_fill.AddToClassList("health-bar__fill");
-
-        Add(m_label);
-        Add(m_fill);
-    }
-
-    public void SetValue(float current)
-    {
-        float pct = Mathf.Clamp01(current / maxHealth) * 100f;
-        m_fill.style.width = Length.Percent(pct);
-    }
-}
-```
-
-在 UXML 中使用：
-```xml
-<MyNamespace.HealthBar max-health="100" label="HP" name="player-health" />
-```
-
----
-
-## 元素查询
-
-### 基础查询
-
-```csharp
-// 按 name
-var button = root.Q<Button>("submit-button");
-
-// 仅按类型（首个匹配）
-var firstLabel = root.Q<Label>();
-
-// 按 USS class
-var cards = root.Query<VisualElement>(className: "card").ToList();
-
-// 按 name 和 class 同时
-var specificCard = root.Q<VisualElement>("my-card", "card--highlighted");
-
-// 某种类型的所有实例
-var allButtons = root.Query<Button>().ToList();
-
-// 链式 —— 在子区域中查找
-var panelButton = root.Q<VisualElement>("settings-panel").Q<Button>("close-button");
-
-// 带谓词（避免在热路径中使用 —— 会产生分配）
-var activeItems = root.Query<VisualElement>()
-    .Where(e => e.ClassListContains("card--active"))
-    .ToList();
-```
-
-### 空安全
-
-```csharp
-var button = root.Q<Button>("optional-button");
-if (button != null)
-{
-    button.clicked += OnClicked;
-}
-
-// 一行式空安全调用
-root.Q<Button>("optional-button")?.SetEnabled(false);
-```
-
-### 缓存查询 —— 绝不要在 Update 中调用
-
-```csharp
-// ✅ 好 —— 在 OnEnable 中缓存（推荐用于 UIDocument MonoBehaviour）
-private Button m_submitButton;
-
-private void OnEnable()
-{
-    var root = m_uiDocument.rootVisualElement;
-    m_submitButton = root.Q<Button>("submit-button");
-    m_submitButton.clicked += OnSubmitClicked;
-}
-
-private void OnDisable()
-{
-    m_submitButton.clicked -= OnSubmitClicked;
-}
-
-// ❌ 差 —— 每帧都查询
-private void Update()
-{
-    m_uiDocument.rootVisualElement.Q<Button>("submit-button").SetEnabled(false);
-}
-```
-
-### 查询时机
-
-```csharp
-// ✅ OnEnable 是推荐查询位置。
-//    这里 UIDocument 一定已初始化好 rootVisualElement。
-private void OnEnable()
-{
-    var root = m_uiDocument.rootVisualElement;
-    m_button = root.Q<Button>("my-button");
-    m_button.clicked += OnButtonClicked;
-}
-
-private void OnDisable()
-{
-    m_button.clicked -= OnButtonClicked;
-}
-
-/// ⚠️ Awake：若 UIDocument 在同一 GameObject 上（会在 Awake 中同步初始化），
-//    此处查询 rootVisualElement 是可以的，但意味着查询和事件订阅会分散在
-//    不同的生命周期方法中。
-//    推荐在 OnEnable 中统一处理查询与事件注册。
-private void Awake()
-{
-    m_uiDocument = GetComponent<UIDocument>(); // 在 Awake 中查找组件没问题
-}
-
-// ✅ CreateGUI 是 EditorWindow 的正确入口
-public void CreateGUI()
-{
-    visualTree.CloneTree(rootVisualElement);
-    var button = rootVisualElement.Q<Button>(); // 这里总是安全的
-}
-```
-
----
-
-## 显示/隐藏模式
-
-### display 属性（脱离布局）
-
-```csharp
-// 隐藏 —— 脱离布局（元素不占空间）
-element.style.display = DisplayStyle.None;
-
-// 显示 —— 回到布局
-element.style.display = DisplayStyle.Flex;
-
-// 辅助方法
-public void SetPanelVisible(bool isVisible)
-{
-    m_panel.style.display = isVisible ? DisplayStyle.Flex : DisplayStyle.None;
-}
-```
-
-### visibility 属性（保留布局空间）
-
-```csharp
-// 隐藏但保留空间
-element.style.visibility = Visibility.Hidden;
-
-// 显示
-element.style.visibility = Visibility.Visible;
-```
-
-> 想让元素完全不参与布局时使用 `display`；需要保留空间（例如避免布局抖动）时使用 `visibility`。
-
----
-
-## 按钮与事件处理
-
-### 按钮点击事件
-
-```csharp
-private Button m_actionButton;
-
-private void OnEnable()
-{
-    var root = m_uiDocument.rootVisualElement;
-    m_actionButton = root.Q<Button>("action-button");
-    m_actionButton.clicked += OnActionButtonClicked;
-}
-
-private void OnDisable()
-{
-    // 始终取消订阅，避免内存泄漏
-    m_actionButton.clicked -= OnActionButtonClicked;
-}
-
-private void OnActionButtonClicked()
-{
-    Debug.Log("Action button clicked");
-}
-```
-
-### 启用/禁用按钮
-
-```csharp
-button.SetEnabled(false);  // 禁用（置灰）
-button.SetEnabled(true);   // 启用
-
-if (button.enabledSelf) { /* 按钮已启用 */ }
-```
-
-### 其它事件类型
-
-```csharp
-// 通用事件注册
-button.RegisterCallback<ClickEvent>(OnClick);
-
-// 指针事件
-element.RegisterCallback<PointerEnterEvent>(evt => Debug.Log("Mouse entered"));
-element.RegisterCallback<PointerLeaveEvent>(evt => Debug.Log("Mouse left"));
-
-// 值变化
-textField.RegisterValueChangedCallback(evt =>
-{
-    Debug.Log($"Value changed to {evt.newValue}");
-});
-slider.RegisterValueChangedCallback(evt =>
-{
-    Debug.Log($"Changed: {evt.previousValue} → {evt.newValue}");
-});
-
-// 键盘
-element.RegisterCallback<KeyDownEvent>(evt =>
-{
-    if (evt.keyCode == KeyCode.Return) Submit();
-});
-
-// 事件传播
-button.RegisterCallback<ClickEvent>(evt =>
-{
-    evt.StopPropagation();
-});
-
-// 清理 —— MonoBehaviour 用 OnDisable，EditorWindow 用 OnDestroy
-private void OnDisable()
-{
-    button.clicked -= OnButtonClicked;
-    button.UnregisterCallback<ClickEvent>(OnClick);
-}
-```
-
-### 使用 EventRegistry（项目标准）
-
-项目中的 `EventRegistry` 工具（位于 `GameSystems` 命名空间）提供集中清理 —— 优先使用它而不是手动订阅/取消订阅：
-
-```csharp
-using GameSystems;
-
-private readonly EventRegistry m_eventRegistry = new();
-
-private void OnEnable()
-{
-    m_eventRegistry.RegisterCallback<ClickEvent>(m_submitButton, OnSubmitClicked);
-    m_eventRegistry.RegisterCallback<ClickEvent>(m_cancelButton, OnCancelClicked);
-    m_eventRegistry.RegisterValueChangedCallback<float>(m_volumeSlider, OnVolumeChanged);
-}
-
-private void OnDisable()
-{
-    m_eventRegistry.Dispose(); // 一次性取消所有注册
-}
-```
-
----
-
-## ListView 与模板生成
-
-### VisualTreeAsset 实例化（手动网格/列表）
-
-```csharp
-public class CardGridController : MonoBehaviour
-{
-    [SerializeField] private UIDocument m_uiDocument;
-    [SerializeField] private VisualTreeAsset m_cardTemplate;
-    [SerializeField] private List<CardDataSO> m_cards;
-
-    private VisualElement m_cardContainer;
-
-    private void OnEnable()
-    {
-        var root = m_uiDocument.rootVisualElement;
-        m_cardContainer = root.Q<VisualElement>("card-container");
-        PopulateCards();
-    }
-
-    private void PopulateCards()
-    {
-        m_cardContainer.Clear();
-
-        foreach (var cardData in m_cards)
-        {
-            // 实例化模板
-            var cardElement = m_cardTemplate.Instantiate();
-
-            // 通过查询或数据绑定填充
-            cardElement.Q<Label>("card-title").text = cardData.Title;
-            cardElement.Q<Label>("card-cost").text = cardData.Cost.ToString();
-            cardElement.dataSource = cardData;
-
-            // 设置按钮（捕获循环变量）
-            var data = cardData;
-            var actionButton = cardElement.Q<Button>("action-button");
-            if (actionButton != null)
-            {
-                actionButton.clicked += () => OnCardActionClicked(data);
-            }
-
-            m_cardContainer.Add(cardElement);
-        }
-    }
-
-    private void OnCardActionClicked(CardDataSO cardData)
-    {
-        Debug.Log($"Card clicked: {cardData.Title}");
-    }
-}
-```
-
-### 使用 makeItem/bindItem 的 ListView（虚拟化）
-
-```csharp
-private void SetupListView()
-{
-    m_listView.makeItem = () => m_itemTemplate.Instantiate();
-
-    m_listView.bindItem = (element, index) =>
-    {
-        var item = m_items[index];
-        element.Q<Label>("item-name").text = item.ItemName;
-        element.Q<Label>("item-cost").text = $"{item.Cost} gold";
-        element.dataSource = item;
-    };
-
-    m_listView.itemsSource = m_items;
-}
-
-// 数据变化时刷新
-public void RefreshList() => m_listView.RefreshItems();
-```
-
-**ListView UXML：**
-```xml
-<ui:ListView name="inventory-list"
-             fixed-item-height="60"
-             virtualization-method="FixedHeight"
-             selection-type="Single" />
-```
-
----
-
-## TabView 与 Tab 样式
-
-### USS 选择器
-
-```css
-/* TabView 容器 */
-.unity-tab-view { }
-.unity-tab-view__content-container { }
-
-/* Tab 头部 */
-.unity-tab { }
-.unity-tab__header { }
-.unity-tab__header:checked { }      /* 激活的 Tab */
-.unity-tab__header:hover { }
-.unity-tab__header-label { }
-.unity-tab__header-underline { }
-```
-
-### 定制 Tab 样式
-
-```css
-.unity-tab__header {
-    background-color: rgb(230, 230, 230);
-    padding: 10px 20px;
-    border-radius: 4px 4px 0 0;
-    -unity-font-style: bold;
-    color: rgb(0, 0, 0);
-}
-
-.unity-tab__header:checked {
-    background-color: rgb(100, 150, 200);
-    color: rgb(255, 255, 255);
-}
-
-.unity-tab__header:hover {
-    background-color: rgb(200, 200, 200);
-}
-
-/* 隐藏下划线 */
-.unity-tab__header-underline {
-    opacity: 0;
-}
-```
-
-### C# Tab 事件
-
-```csharp
-private TabView m_tabView;
-
-private void OnEnable()
-{
-    m_tabView = root.Q<TabView>("main-tabs");
-    m_tabView.activeTabChanged += OnActiveTabChanged;
-}
-
-private void OnDisable()
-{
-    m_tabView.activeTabChanged -= OnActiveTabChanged;
-}
-
-private void OnActiveTabChanged(Tab previousTab, Tab newTab)
-{
-    Debug.Log($"Tab changed to {newTab?.label}");
-}
-```
-
----
-
-## 常用模式与示例
+## 20. 常用模式与示例
 
 ### 全屏 UI
 
@@ -1792,7 +1868,7 @@ private void OnActiveTabChanged(Tab previousTab, Tab newTab)
 
 ---
 
-## 基于数据绑定的 MVP 设计模式
+## 21. 基于数据绑定的 MVP 设计模式
 
 本节演示一种简洁的 **Model-View-Presenter（MVP）** 架构，使用 Unity 6 运行时数据绑定，将数据（Model）、UI 显示（View）与游戏逻辑（Presenter）解耦。
 
@@ -1848,7 +1924,7 @@ private void OnActiveTabChanged(Tab previousTab, Tab newTab)
 
 ### 完整示例：玩家属性面板
 
-#### 1. Model（数据类）
+#### 2. Model（数据类）
 
 ```csharp
 // PlayerStatsModel.cs
@@ -1964,7 +2040,7 @@ namespace Game.Models
 }
 ```
 
-#### 2. View（UI 控制器）
+#### 3. View（UI 控制器）
 
 ```csharp
 // PlayerStatsView.cs
@@ -2043,7 +2119,7 @@ namespace Game.Views
 }
 ```
 
-#### 3. Presenter（游戏逻辑）
+#### 4. Presenter（游戏逻辑）
 
 ```csharp
 // PlayerStatsPresenter.cs
@@ -2131,7 +2207,7 @@ namespace Game.Presenters
 }
 ```
 
-#### 4. UXML（带绑定的 UI 布局）
+#### 5. UXML（带绑定的 UI 布局）
 
 ```xml
 <!-- PlayerStatsPanel.uxml -->
@@ -2213,7 +2289,7 @@ namespace Game.Presenters
 </ui:UXML>
 ```
 
-#### 5. USS（样式）
+#### 6. USS（样式）
 
 ```css
 /* PlayerStats.uss */
@@ -2298,7 +2374,7 @@ namespace Game.Presenters
 
 ---
 
-## 性能建议
+## 22. 性能建议
 
 1. **在 `OnEnable` 中缓存 VisualElement 引用** —— 绝不要在 `Update` 中调用 `Q<>()`；相比 `Awake` 更推荐 `OnEnable`，让查询与事件订阅在同一个方法中
 2. **使用 USS class** 而不是内联 `element.style.*` 来改样式 —— USS 是批量应用、经过优化的
@@ -2311,11 +2387,11 @@ namespace Game.Presenters
 
 ---
 
-## 常见错误速查
+## 23. 常见错误速查
 
 | ❌ 错误 | ✅ 正确 | 说明 |
 |----------|-----------|-------|
-| `color: #FF0000;` | `color: rgb(255, 0, 0);` | USS 不支持十六进制 |
+| `color: #FF0000;` | `color: rgb(255, 0, 0);` | Unity 2022 及更早不支持十六进制，推荐用 rgb() |
 | `text-align: center;` | `-unity-text-align: middle-center;` | 需要 Unity 前缀 |
 | `font-weight: bold;` | `-unity-font-style: bold;` | 属性名不同 |
 | `background: url(...)` | `background-image: url(...)` | 无简写形式 |
@@ -2333,13 +2409,13 @@ namespace Game.Presenters
 | `navbar-item` | `navbar-menu__item` | 使用 BEM 的 `__` |
 | `display: grid` | 仅使用 flexbox | USS 不支持 CSS grid |
 | `calc(50% - 10px)` | 硬编码或用 `flex-grow` | USS 不支持 `calc()` |
-| `UxmlFactory`/`UxmlTraits` | `[UxmlElement]` / `[UxmlAttribute]` | Unity 6 已废弃 |
+| `UxmlFactory`/`UxmlTraits` | `[UxmlElement]` / `[UxmlAttribute]` | Unity 6 推荐新方式（旧API仍兼容） |
 | 运行时 MonoBehaviour 用 `OnDestroy` | 用 `OnDisable` | `OnDestroy` 触发过晚 |
 | 运行时用 `SerializedObject.Bind()` | `binding-path` + `dataSource` | 仅 Editor API |
 
 ---
 
-## 故障排查
+## 24. 故障排查
 
 ### 绑定未更新
 
@@ -2389,13 +2465,3 @@ namespace Game.Presenters
 3. 用 UI Toolkit Debugger 检查计算后的样式
 
 ---
-
-## 补充资源
-
-- **UI Builder**：Window → UI Toolkit → UI Builder
-- **示例**：Window → UI Toolkit → Samples
-- **调试器**：Window → UI Toolkit → Debugger
-- **官方文档**：https://docs.unity3d.com/6000.3/Documentation/Manual/UIElements.html
-
-如遇本文未覆盖的 API 或行为，按需查阅官方文档。本参考针对 **Unity 6.3.4f1** —— 请勿参考或生成旧版 Unity 的代码。
-
