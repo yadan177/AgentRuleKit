@@ -1,0 +1,13 @@
+---
+description: Unity project gateway. Detect project capabilities before making Unity changes and load the relevant shared Unity AI rules.
+alwaysApply: true
+---
+
+Before any Unity task, read `.ai-rules/unity/15-AI通用入口规则.md`.
+
+Use `.ai-rules/unity/00-文档总览.md` to select only the topic rules needed for the task.
+
+- Inspect project configuration, installed packages, assembly definitions, rendering pipeline, resource system, and nearby existing code before choosing APIs.
+- Do not assume a Unity version, package, asset address, test command, or architecture that is not present in the project.
+- Do not upgrade dependencies, migrate rendering or resource systems, or perform unrelated refactors without explicit user authorization.
+- Report changes, validation performed, unverified work, and remaining risks.

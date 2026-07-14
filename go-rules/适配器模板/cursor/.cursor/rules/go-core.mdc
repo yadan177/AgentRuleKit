@@ -1,0 +1,13 @@
+---
+description: Go project gateway. Detect project capabilities before making changes and load only the relevant shared Go AI rules.
+alwaysApply: true
+---
+
+Before any Go task, read `.ai-rules/go/13-AI通用入口规则.md`.
+
+Use `.ai-rules/go/00-文档总览.md` to select only the topic rules needed for the task.
+
+- Inspect `go.mod`, `go.work`, toolchain/version, installed dependencies, package boundaries, nearby code, tests, build tags, and deployment configuration before choosing APIs or commands.
+- Do not assume a Go version, framework, dependency, configuration key, database object, test command, image tag, or architecture that is not present in the project.
+- Do not upgrade Go/dependencies, migrate frameworks or infrastructure, or perform unrelated refactors without explicit user authorization.
+- Report changes, validation performed, unverified work, and remaining risks.

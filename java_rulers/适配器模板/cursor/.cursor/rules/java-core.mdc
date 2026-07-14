@@ -1,0 +1,13 @@
+---
+description: Java project gateway. Detect project capabilities before making changes and load only the relevant shared Java AI rules.
+alwaysApply: true
+---
+
+Before any Java task, read `.ai-rules/java/14-AI通用入口规则.md`.
+
+Use `.ai-rules/java/00-文档总览.md` to select only the topic rules needed for the task.
+
+- Inspect build files, wrappers, JDK/toolchain, installed dependencies, modules, nearby code, tests, and deployment configuration before choosing APIs or commands.
+- Do not assume a Java version, framework, dependency, configuration key, database object, test command, image tag, or architecture that is not present in the project.
+- Do not upgrade dependencies, migrate frameworks or infrastructure, or perform unrelated refactors without explicit user authorization.
+- Report changes, validation performed, unverified work, and remaining risks.

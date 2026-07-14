@@ -1,0 +1,13 @@
+---
+description: JavaScript and TypeScript project gateway. Detect project capabilities before changes and load only relevant shared JS/TS rules.
+alwaysApply: true
+---
+
+Before any JavaScript or TypeScript task, read `.ai-rules/js-ts/01-AI通用入口规则.md`.
+
+Use `.ai-rules/js-ts/00-文档总览.md` to select only the topic rules needed for the task.
+
+- Inspect package.json, lockfiles, workspace, scripts, runtime/package-manager constraints, tsconfig, installed dependencies, nearby code, tests, build, and deployment configuration before choosing APIs or commands.
+- Do not assume a runtime, framework, dependency, environment variable, API, DOM structure, test command, image tag, or architecture not present in the project.
+- Do not upgrade runtimes/dependencies, migrate frameworks, build systems, state/style systems, or infrastructure, or perform unrelated refactors without explicit user authorization.
+- Report changes, validation performed, unverified work, and remaining risks.
