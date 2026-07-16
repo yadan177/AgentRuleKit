@@ -1,46 +1,434 @@
 # 13 - React 组件规则
 
-> 🟢 本文件仅适用于项目已使用 React 及其当前版本、路由、状态、样式和测试体系的组件改动。
->
-> 🔴 不适用：非 React 项目，或未经授权引入 React、状态库、路由库、CSS 方案、服务端组件模式或新测试工具。
+> 🟢 本文件适用于 React 组件设计（useEffect 依赖/状态位置/Props/z-index）。
+
+> 🔴 不适用：业务逻辑实现、UI 样式设计、其他框架（Vue / Angular）
 
 ---
 
-## 1. 组件边界与既有约定
+## 1. 🔴 硬约束 · 这些绝对不要写
 
-> **适用条件与验证**：先检查同目录组件、hooks、状态、数据请求、错误边界、样式、可访问性和测试。以当前 React/框架能力和项目约定为准。
+### 1.1 useEffect 依赖数组漏写 / 多余写
 
-🔴 **必须**：不得为单个页面迁移组件结构、状态管理、路由、服务端/客户端边界或样式体系。Props、事件、数据形状和可访问性行为不得破坏现有调用方。
+```jsx
+// ❌ 错误1：漏依赖，闭包拿到旧值，bug
+function Counter（） {
+  const [count, setCount] = useState（0）;
 
-🟡 **推荐**：组件按职责和复用边界拆分；优先局部状态，只有真正跨组件共享且有明确所有者时才使用既有共享状态方案。
+  useEffect（（） => {
+    const interval = setInterval（（） => {
+      setCount（count + 1）; // count 永远是 0，因为闭包
+    }, 1000）;
+    return （） => clearInterval（interval）;
+  }, []）; // 💥 漏了 count 依赖！
 
-## 2. Effect、异步与清理
+  return <div>{count}</div>; // 永远是 1，不涨
+}
 
-> **适用条件与验证**：仅在项目确实使用 hooks 和当前 lint/框架约定时适用。
+// ❌ 错误2：多余依赖，无限循环
+function Search（） {
+  const [keyword, setKeyword] = useState（''）;
+  const [results, setResults] = useState（[]）;
 
-🔴 **必须**：Effect 只处理与外部系统同步的副作用；依赖项、订阅、请求、timer 和监听器必须与实际闭包值一致，并在重跑/卸载时按项目方式清理或取消。
+  const fetchData = （） => {
+    api.search（keyword）.then（setResults）;
+  };
 
-🟡 **推荐**：可由 render/事件直接推导的值不放入 Effect；不要为了压制 lint 警告而随意忽略依赖，先确认项目的既有处理方式。
+  useEffect（（） => {
+    fetchData（）;
+  }, [fetchData]）; // 💥 fetchData 每次渲染都是新函数，Effect 无限执行！
 
-## 3. 渲染、可访问性与性能
+  // ...
+}
 
-> **适用条件与验证**：语义元素、焦点管理、国际化、虚拟列表、memo 和 Suspense 等以当前项目能力与测量证据为准。
+// ✅ 正确1：函数式更新，不需要依赖
+function Counter2（） {
+  const [count, setCount] = useState（0）;
 
-🔴 **必须**：交互组件保持键盘可达、可读名称和正确焦点行为；列表 key 使用稳定业务标识而非易变索引（除非项目能证明列表静态且无状态）。
+  useEffect（（） => {
+    const interval = setInterval（（） => {
+      setCount（c => c + 1）; // 用函数式更新，不依赖外部 count
+    }, 1000）;
+    return （） => clearInterval（interval）;
+  }, []）; // ✅ 空依赖数组，正确
 
-🟡 **推荐**：性能优化前先测量；不要把 `memo`、`useMemo`、`useCallback` 或虚拟化当成默认写法。
+  return <div>{count}</div>;
+}
 
-## 4. 服务端/客户端与水合边界
+// ✅ 正确2：把函数放到 Effect 里面，或者用 useCallback
+function Search2（） {
+  const [keyword, setKeyword] = useState（''）;
+  const [results, setResults] = useState（[]）;
 
-> **适用条件与验证**：仅在当前 React 框架实际提供 SSR、流式渲染、服务端组件或水合能力时适用；检查项目的文件约定、数据缓存、认证和部署方式。
+  useEffect（（） => {
+    // 把函数移到 Effect 里面，依赖就清晰了
+    const fetchData = （） => {
+      api.search（keyword）.then（setResults）;
+    };
+    fetchData（）;
+  }, [keyword]）; // ✅ 只有 keyword 依赖，正确
+}
+```
 
-🔴 **必须**：服务端与客户端边界不得依赖猜测；浏览器 API、事件处理、敏感数据和缓存只能放在当前框架允许的边界。服务端和客户端输出必须保持可水合的一致行为，不能靠关闭警告掩盖差异。
+> 📌 规则：
+> - **依赖数组里的变量，必须在 Effect 里用到**
+> - **Effect 里用到的变量，必须在依赖数组里**
+> - ESLint `react-hooks/exhaustive-deps 报错，不要随便关
+> - 需要函数式更新能解决的，就不要往依赖数组里加东西
 
-🟡 **推荐**：复用现有数据获取、错误边界和缓存方案；跨边界传递最小、可序列化且不含敏感数据的 props。
+---
 
-## 5. AI 完成检查
+### 1.2 把 useEffect 当万能胶水（不该用的 5 种场景
 
-- [ ] 已确认 React/框架版本、同类组件、状态、样式和测试约定。
-- [ ] Effect、请求、订阅、timer 与事件监听器拥有正确清理路径。
-- [ ] 新 UI 满足项目既有可访问性、错误和加载状态约定。
-- [ ] 已执行相关组件/交互验证，或说明未验证项与风险。
+```jsx
+// ❌ 错误1：数据转换不需要 useEffect
+function UserList（{ users }） {
+  const [activeUsers, setActiveUsers] = useState（[]）;
+
+  useEffect（（） => {
+    // 💥 完全不需要！每次渲染先 set 一下，多一次重渲染
+    setActiveUsers（users.filter（u => u.active））;
+  }, [users]）;
+
+  // ✅ 正确：直接 render 时计算，或者用 useMemo
+  const activeUsers = useMemo（
+    （） => users.filter（u => u.active）,
+    [users]
+  ）;
+}
+
+// ❌ 错误2：事件处理不需要 useEffect
+function Form（） {
+  const [value, setValue] = useState（''）;
+  const [submitted, setSubmitted] = useState（false）;
+
+  useEffect（（） => {
+    if （submitted） {
+      // 💥 提交逻辑为什么要放到 Effect 里？绕了一圈
+      api.submit（value）;
+      setSubmitted（false）;
+    }
+  }, [submitted, value]）;
+
+  return （
+    <button onClick={（） => setSubmitted（true）}>
+      Submit
+    </button>
+  ）;
+
+  // ✅ 正确：直接写到事件处理函数里
+  const handleSubmit = （） => {
+    api.submit（value）;
+  };
+
+  return <button onClick={handleSubmit}>Submit</button>;
+}
+
+// ❌ 错误3：父子通信不需要 useEffect
+function Parent（） {
+  const [data, setData] = useState（null）;
+  return <Child data={data} onReady={（） => console.log（'ready'）} />;
+}
+function Child（{ data, onReady }） {
+  useEffect（（） => {
+    if （data） {
+      // 💥 为什么要等渲染完再回调？渲染和回调绑定在一起了
+      onReady（）;
+    }
+  }, [data, onReady]）;
+
+  // ✅ 正确：放到获取数据的地方直接调用
+}
+
+// ❌ 错误4：初始化逻辑不需要 useEffect
+function App（） {
+  const [inited, setInited] = useState（false）;
+
+  useEffect（（） => {
+    // 💥 多渲染一次，没必要
+    initApp（）;
+    setInited（true）;
+  }, []）;
+
+  // ✅ 正确：如果只跑一次，放到组件外面或者用 ref 保证
+  const inited = useRef（false）;
+  if （!inited.current） {
+    initApp（）;
+    inited.current = true;
+  }
+}
+
+// ❌ 错误5：状态同步不需要 useEffect
+function Parent（{ value }） {
+  return <Child parentValue={value} />;
+}
+function Child（{ parentValue }） {
+  const [localValue, setLocalValue] = useState（''）;
+
+  useEffect（（） => {
+    // 💥 为什么要等渲染完再同步？多一次重渲染
+    setLocalValue（parentValue）;
+  }, [parentValue]）;
+
+  // ✅ 正确：直接用，不需要本地状态同步，或者用 key 重置
+  // const localValue = parentValue;
+}
+```
+
+> 📌 规则：
+> - **useEffect 只用来做 side effect：发请求、操作 DOM、订阅事件**
+> - 数据转换、事件处理、状态同步，**都不应该用 useEffect**
+> - 90% 的 useEffect 都是不该写的
+
+---
+
+### 1.3 组件 Props 传巨型对象（上帝对象）
+
+```jsx
+// ❌ 错误：传整个 user 对象进去，组件依赖了根本用不到的字段
+function UserAvatar（{ user }） {
+  // 组件只用到 avatar 和 name，但是依赖了整个 user 对象
+  // user 任何字段变了，这个组件都会重渲染
+  return <img src={user.avatar} alt={user.name} />;
+}
+
+// 调用方传了一堆没用的
+<UserAvatar user={user} /> // user 里有 20 个字段，组件只用到 2 个
+
+// ✅ 正确：只传用到的字段，依赖清晰，重渲染可控
+function UserAvatar（{ avatar, name }） {
+  // 只依赖这两个字段，其他字段变了不影响
+  return <img src={avatar} alt={name} />;
+}
+
+// 调用方明确传什么
+<UserAvatar avatar={user.avatar} name={user.name} />
+```
+
+> 📌 规则：
+> - **Props 最小化原则：只传组件真正用到的字段**
+> - 不要传"以后可能会用到"的东西
+> - 不要传整个 store / 整个大对象
+
+---
+
+### 1.4 状态放错地方（状态提升过度 / 提升不够）
+
+```jsx
+// ❌ 错误1：状态提得太高，整个 App 都能改
+function App（） {
+  // 💥 搜索框状态只有 Search 组件用，为什么放到最顶层？
+  const [searchKeyword, setSearchKeyword] = useState（''）;
+
+  return （
+    <div>
+      <Header />
+      <Search
+        keyword={searchKeyword}
+        onKeywordChange={setSearchKeyword}
+      />
+      <Content />
+      <Footer />
+    </div>
+  ）;
+}
+
+// ✅ 正确：状态离使用的地方最近
+function Search（） {
+  // 只有 Search 用，就放在 Search 里面
+  const [keyword, setKeyword] = useState（''）;
+}
+
+// ❌ 错误2：状态提升不够，兄弟组件通信绕死
+function Parent（） {
+  return （
+    <div>
+      <Filter /> {/* 在这里选筛选条件 */}
+      <List />   {/* 在这里用筛选条件请求数据 */}
+      {/* 两个组件需要通信，但状态各自在自己里面 */}
+    </div>
+  ）;
+}
+
+// ✅ 正确：提升到共同父组件
+function Parent（） {
+  // 两个兄弟组件都要用，就放在父组件
+  const [filter, setFilter] = useState（{}）;
+  return （
+    <div>
+      <Filter filter={filter} onFilterChange={setFilter} />
+      <List filter={filter} />
+    </div>
+  ）;
+}
+```
+
+> 📌 规则：
+> - **状态放在离使用最近的公共祖先**
+> - 只有一个组件用，就放组件里
+> - 父子都用，放父组件
+> - 兄弟都用，放共同父组件
+> - 全局才用，放全局（Context/Zustand/Redux）
+> - 默认不要什么都放全局
+
+---
+
+### 1.5 巨型组件超过 300 行（什么都干）
+
+```jsx
+// ❌ 错误：一个文件 500 行，数据获取、状态管理、渲染、事件处理全在一起
+function OrderPage（） {
+  // 50 行 state 定义
+  // 3 个 useEffect 发请求
+  // 10 个事件处理函数
+  // 5 个工具函数
+  // 8 个条件渲染分支
+  // return 里 100 行 JSX，嵌套 5 层
+  // = 没人敢改
+}
+
+// ✅ 正确：按职责拆分
+// hooks/useOrderData.js - 只负责拿数据
+function useOrderData（orderId） {
+  const [loading, data, error] = ......;
+  return { loading, data, error };
+}
+
+// components/OrderList.js - 只负责渲染列表
+function OrderList（{ orders, onItemClick }） { ... }
+
+// components/OrderFilter.js - 只负责筛选
+function OrderFilter（{ filter, onFilterChange }） { ... }
+
+// OrderPage.js 只做组装
+function OrderPage（） {
+  const { loading, data, error } = useOrderData（orderId）;
+  const [filter, setFilter] = useState（{}）;
+
+  if （loading） return <Loading />;
+  if （error） return <Error />;
+
+  return （
+    <div>
+      <OrderFilter filter={filter} onFilterChange={setFilter} />
+      <OrderList
+        orders={filterOrders（data.orders, filter）}
+        onItemClick={handleItemClick}
+      />
+    </div>
+  ）;
+}
+```
+
+> 📌 规则：
+> - **单个组件不超过 200 行**
+> - 超过了就拆：自定义 Hook 抽数据逻辑，子组件抽渲染逻辑
+> - 一个组件只做一件事
+
+---
+
+### 1.6 列表没有 key / 索引用 key
+
+```jsx
+const items = [{ id: 1, name: 'a' }, { id: 2, name: 'b' }];
+
+// ❌ 错误1：没 key
+items.map（item => <li>{item.name}</li>）; // React 直接警告，重排性能爆炸
+
+// ❌ 错误2：索引用 key，顺序变了就全乱
+items.map（（item, index） => <li key={index}>{item.name}</li>）;
+// 数组重排、插入、删除，key 没变但是对应不上，状态全乱
+
+// ✅ 正确：用业务唯一 ID 当 key
+items.map（item => <li key={item.id}>{item.name}</li>）;
+```
+
+> 📌 规则：
+> - map 必须有 key
+> - key 必须是**稳定、唯一、和业务相关**（ID/UUID）
+> - 绝对不要用数组索引当 key
+
+---
+
+## 2. 🟡 推荐 · 这些写法尽量避免
+
+### 2.7 嵌套三元超过 3 层
+
+```jsx
+// ❌ 错误：嵌套三元，根本读不懂
+return （
+  <div>
+    {loading
+      ? error
+        ? <Error />
+        : data
+          ? <List data={data} />
+          : <Empty />
+      : <Loading />
+    }
+  </div>
+）;
+
+// ✅ 正确：提前 return，扁平化
+if （loading） return <Loading />;
+if （error） return <Error />;
+if （!data） return <Empty />;
+return <List data={data} />;
+```
+
+---
+
+### 2.8 useState 初始化传函数（懒初始化）
+
+```jsx
+// ❌ 错误：每次渲染都会执行 expensiveCompute
+const [value, setValue] = useState（expensiveCompute（props.data））; // 💥 每次渲染都算
+
+// ✅ 正确：传函数，只执行一次
+const [value, setValue] = useState（（） => expensiveCompute（props.data））; // 只初始化时算一次
+```
+
+> 📌 初始化如果是重计算，一定要用函数式初始化
+
+---
+
+### 2.9 自定义 Hook 命名不以 use 开头
+
+```jsx
+// ❌ 错误：不是 use 开头，React 不认，Hook 规则检查不了
+function getUserId（） {
+  const { userId } = useContext（UserContext）; // 💥 里面用了 Hook 但名字不对
+  return userId;
+}
+
+// ✅ 正确：自定义 Hook 必须以 use 开头
+function useUserId（） {
+  const { userId } = useContext（UserContext）;
+  return userId;
+}
+```
+
+---
+
+## 📌 状态管理选型表
+
+| 场景 | 用什么 | 不要用什么 |
+|------|--------|-----------|
+| 单个组件用 | useState | 别放全局 |
+| 父子组件传 | Props 传 | 别放 Context |
+| 兄弟组件用 | 提升到共同父组件 | 别放全局 |
+| 很多地方都在用 | Zustand / Jotai | 别用 Context + useState 层层传 |
+| 复杂异步状态 / 服务端数据 | React Query / SWR | 别自己写 useEffect + useState |
+| 全局表单状态 | Zustand | 别用 Redux（太重了） |
+
+---
+
+## 📌 写 React 三原则
+
+1. **能不用 useEffect 就不用**：90% 的 useEffect 都是不该写的
+2. **状态最小化**：能算出来的就不要存，能放组件里的就不放父组件，能放父组件的就不放全局
+3. **Props 最小化**：只传真正用到的，别传大对象，别传"以后可能用得到"
+
+---
+
+> 本文件只列常见坑，不写完整 React 教程。遇到不确定的写法，先查 React 官方文档，不要猜。

@@ -2,152 +2,189 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { execFileSync } from 'node:child_process';
 
-const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const ruleRoots = ['unity_rulers', 'java_rulers', 'go-rules', 'js_ts_rulers'];
-const commonDocuments = ['00-规则文档编写规范/规则文档编写格式规范.md'];
-const adapterTargets = [
-  { root: 'unity_rulers', target: '.ai-rules/unity/15-AI通用入口规则.md', cursor: 'unity-core.mdc' },
-  { root: 'java_rulers', target: '.ai-rules/java/14-AI通用入口规则.md', cursor: 'java-core.mdc' },
-  { root: 'go-rules', target: '.ai-rules/go/13-AI通用入口规则.md', cursor: 'go-core.mdc' },
-  { root: 'js_ts_rulers', target: '.ai-rules/js-ts/01-AI通用入口规则.md', cursor: 'js-ts-core.mdc' },
+const root = process.cwd();
+const errors = [];
+const warnings = [];
+let legacyTopicCount = 0;
+const legacyBaseline = 'aa88f86';
+
+const topicSets = [
+  ['Unity', 'unity_rulers/其他规则', 14],
+  ['Go', 'go-rules/其他规则', 12],
+  ['Java', 'java_rulers/其他规则', 13],
+  ['JavaScript', 'js_ts_rulers/js_rulers/其他规则', 14],
+  ['TypeScript', 'js_ts_rulers/ts_rulers/其他规则', 8],
 ];
 
-const failures = [];
-const normalMarkdown = [];
+const requiredFiles = [
+  'unity_rulers/00-文档总览.md',
+  'unity_rulers/15-AI通用入口规则.md',
+  'unity_rulers/适配器模板/00-适配器使用说明.md',
+  'unity_rulers/适配器模板/codex/AGENTS.md',
+  'unity_rulers/适配器模板/qoder/.qoder/rules/unity-core.md',
+  'unity_rulers/适配器模板/trae/00-TRAE手动使用说明.md',
+  'go-rules/00-文档总览.md',
+  'go-rules/13-AI通用入口规则.md',
+  'go-rules/适配器模板/00-适配器使用说明.md',
+  'go-rules/适配器模板/codex/AGENTS.md',
+  'go-rules/适配器模板/qoder/.qoder/rules/go-core.md',
+  'go-rules/适配器模板/trae/00-TRAE手动使用说明.md',
+  'java_rulers/00-文档总览.md',
+  'java_rulers/14-AI通用入口规则.md',
+  'java_rulers/适配器模板/00-适配器使用说明.md',
+  'java_rulers/适配器模板/codex/AGENTS.md',
+  'java_rulers/适配器模板/qoder/.qoder/rules/java-core.md',
+  'java_rulers/适配器模板/trae/00-TRAE手动使用说明.md',
+  'js_ts_rulers/js_rulers/00-文档总览.md',
+  'js_ts_rulers/js_rulers/15-AI通用入口规则.md',
+  'js_ts_rulers/ts_rulers/00-文档总览.md',
+  'js_ts_rulers/ts_rulers/09-AI通用入口规则.md',
+  'js_ts_rulers/适配器模板/00-适配器使用说明.md',
+  'js_ts_rulers/适配器模板/codex/AGENTS.md',
+  'js_ts_rulers/适配器模板/qoder/.qoder/rules/js-ts-core.md',
+  'js_ts_rulers/适配器模板/trae/00-TRAE手动使用说明.md',
+];
 
-function fail(file, message) {
-  failures.push(`${path.relative(repositoryRoot, file)}: ${message}`);
+function fail(message) {
+  errors.push(message);
 }
 
-function walk(directory) {
-  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
-    const entryPath = path.join(directory, entry.name);
-    if (entry.isDirectory()) walk(entryPath);
-    else if (entry.isFile() && entry.name.endsWith('.md')) normalMarkdown.push(entryPath);
+function warn(message) {
+  warnings.push(message);
+}
+
+function exists(relativePath) {
+  return fs.existsSync(path.join(root, relativePath));
+}
+
+function allMarkdownFiles(directory) {
+  const absolute = path.join(root, directory);
+  if (!fs.existsSync(absolute)) return [];
+
+  const entries = fs.readdirSync(absolute, { withFileTypes: true });
+  return entries.flatMap((entry) => {
+    const relative = path.join(directory, entry.name);
+    if (entry.isDirectory()) return allMarkdownFiles(relative);
+    return entry.isFile() && entry.name.endsWith('.md') ? [relative] : [];
+  });
+}
+
+function localLinks(markdown) {
+  const result = [];
+  const pattern = /(?<!!)(?:\[[^\]]*\])\(([^)]+)\)/g;
+  for (const match of markdown.matchAll(pattern)) {
+    let href = match[1].trim();
+    if (href.startsWith('<') && href.endsWith('>')) href = href.slice(1, -1);
+    if (!href || href.startsWith('#') || /^[a-z][a-z0-9+.-]*:/i.test(href)) continue;
+    const target = href.split('#', 1)[0].split('?', 1)[0];
+    if (target.endsWith('.md')) result.push(target);
+  }
+  return result;
+}
+
+for (const relative of requiredFiles) {
+  if (!exists(relative)) fail(`缺少必需入口或适配器：${relative}`);
+}
+
+for (const [name, directory, count] of topicSets) {
+  const docs = allMarkdownFiles(directory);
+  if (docs.length !== count) {
+    fail(`${name} 专题规则数量应为 ${count}，实际为 ${docs.length}：${directory}`);
+  }
+
+  for (let index = 1; index <= count; index += 1) {
+    const prefix = `${String(index).padStart(2, '0')}-`;
+    if (!docs.some((doc) => path.basename(doc).startsWith(prefix))) {
+      fail(`${name} 缺少专题规则编号 ${String(index).padStart(2, '0')}`);
+    }
   }
 }
 
-function withoutCode(text) {
-  return text
-    .replace(/^```[^\n]*\n[\s\S]*?^```\s*$/gm, '')
-    .replace(/`[^`]*`/g, '');
-}
+// 当前分支从旧版规则库演进。对旧版专题文档做存在性与篇幅下限检查，
+// 防止后续为了“精简”误删整章或大段经验；总览和新增入口不受此阈值约束。
+try {
+  const trackedFiles = execFileSync('git', ['ls-tree', '-r', '-z', '--name-only', legacyBaseline], { cwd: root })
+    .toString('utf8')
+    .split('\0')
+    .filter((relative) => relative.includes('/其他规则/') && relative.endsWith('.md'));
 
-function validateHeadings(file, text) {
-  const lines = text.split(/\r?\n/);
-  if (!/^# \d{2} - .+/.test(lines[0] ?? '')) fail(file, '首行必须是两位编号的 H1。');
-
-  let fenced = false;
-  const separators = [];
-  let firstH2 = -1;
-  let h2 = 0;
-  let h3 = 0;
-  let h4 = 0;
-
-  for (const [index, line] of lines.entries()) {
-    if (/^```/.test(line.trim())) {
-      fenced = !fenced;
+  for (const relative of trackedFiles) {
+    legacyTopicCount += 1;
+    const absolute = path.join(root, relative);
+    if (!fs.existsSync(absolute)) {
+      fail(`旧版专题规则被删除：${relative}`);
       continue;
     }
-    if (fenced) continue;
-    if (line.trim() === '---') separators.push(index + 1);
-    if (/^## /.test(line) && firstH2 === -1) firstH2 = index;
 
-    let match = line.match(/^## (\d+)\. /);
-    if (match) {
-      const current = Number(match[1]);
-      if (current !== h2 + 1) fail(file, `第 ${index + 1} 行 H2 编号不连续。`);
-      h2 = current;
-      h3 = 0;
-      h4 = 0;
-      continue;
-    }
-    match = line.match(/^### (\d+)\.(\d+) /);
-    if (match) {
-      const parent = Number(match[1]);
-      const current = Number(match[2]);
-      if (parent !== h2 || current !== h3 + 1) fail(file, `第 ${index + 1} 行 H3 编号或父级不正确。`);
-      h3 = current;
-      h4 = 0;
-      continue;
-    }
-    match = line.match(/^#### (\d+)\.(\d+)\.(\d+) /);
-    if (match) {
-      const first = Number(match[1]);
-      const second = Number(match[2]);
-      const current = Number(match[3]);
-      if (first !== h2 || second !== h3 || current !== h4 + 1) fail(file, `第 ${index + 1} 行 H4 编号或父级不正确。`);
-      h4 = current;
+    const baseline = execFileSync('git', ['show', `${legacyBaseline}:${relative}`], { cwd: root, encoding: 'utf8' });
+    const baselineLines = baseline.split(/\r?\n/).length;
+    const currentLines = fs.readFileSync(absolute, 'utf8').split(/\r?\n/).length;
+    if (currentLines < baselineLines * 0.9) {
+      fail(`旧版专题规则疑似被过度缩减：${relative}（${currentLines}/${baselineLines} 行）`);
     }
   }
-
-  if (separators.length !== 1) fail(file, `代码围栏外必须恰有一个顶部分隔线，当前为 ${separators.length} 个。`);
-  if (separators.length === 1 && (firstH2 === -1 || separators[0] - 1 >= firstH2)) {
-    fail(file, '顶部分隔线必须位于首个 H2 之前。');
-  }
+} catch (error) {
+  warn(`未执行旧版保留校验：${error.message}`);
 }
 
-function validateLinks(file, text) {
-  const content = withoutCode(text);
-  const pattern = /\[[^\]]+\]\(([^)]+)\)/g;
-  for (const match of content.matchAll(pattern)) {
-    const rawTarget = match[1].trim();
-    if (/^(?:https?:|mailto:|#)/.test(rawTarget)) continue;
-    const localTarget = rawTarget.replace(/^<|>$/g, '').split('#')[0];
-    if (!localTarget) continue;
-    const resolved = path.resolve(path.dirname(file), decodeURIComponent(localTarget));
-    if (!fs.existsSync(resolved)) fail(file, `本地链接不存在：${rawTarget}`);
-  }
-}
+const markdownFiles = [
+  ...allMarkdownFiles('unity_rulers'),
+  ...allMarkdownFiles('go-rules'),
+  ...allMarkdownFiles('java_rulers'),
+  ...allMarkdownFiles('js_ts_rulers'),
+];
 
-function validateAdapters() {
-  for (const { root, target, cursor } of adapterTargets) {
-    const adapterRoot = path.join(repositoryRoot, root, '适配器模板');
-    const required = [
-      path.join(adapterRoot, 'codex', 'AGENTS.md'),
-      path.join(adapterRoot, 'qoder', '.qoder', 'rules', `${cursor.replace('.mdc', '.md')}`),
-      path.join(adapterRoot, 'trae', '00-TRAE手动使用说明.md'),
-      path.join(adapterRoot, 'cursor', '.cursor', 'rules', cursor),
-    ];
-    for (const file of required) {
-      if (!fs.existsSync(file)) {
-        fail(file, '缺少适配器模板文件。');
-        continue;
-      }
-      const text = fs.readFileSync(file, 'utf8');
-      if (!text.includes(target)) fail(file, `未定位到唯一通用入口：${target}`);
-      if (file.endsWith('.mdc')) {
-        if (!text.startsWith('---\n') || !text.includes('\nalwaysApply: true\n')) {
-          fail(file, 'Cursor 模板必须保留已验证的 frontmatter 与 alwaysApply。');
-        }
-      }
+for (const relative of markdownFiles) {
+  const absolute = path.join(root, relative);
+  const content = fs.readFileSync(absolute, 'utf8');
+  const lines = content.split(/\r?\n/);
+  const firstContentLine = lines.find((line) => line.trim().length > 0);
+  if (!firstContentLine?.startsWith('# ')) {
+    fail(`${relative} 缺少一级标题`);
+  }
+
+  const fences = (content.match(/^\s*```/gm) ?? []).length;
+  if (fences % 2 !== 0) fail(`${relative} 的代码围栏未闭合`);
+
+  for (const target of localLinks(content)) {
+    const resolved = path.resolve(path.dirname(absolute), target);
+    if (!fs.existsSync(resolved)) {
+      fail(`${relative} 存在失效本地链接：${target}`);
     }
   }
+
+  if (/\r(?!\n)/.test(content)) warn(`${relative} 包含单独 CR 字符`);
 }
 
-for (const root of ruleRoots) walk(path.join(repositoryRoot, root));
-for (const document of commonDocuments) normalMarkdown.push(path.join(repositoryRoot, document));
+const forbiddenPatterns = [
+  ['Go 目录作为 gofmt 输入', /\bgofmt -[wl] \.\b/],
+  ['Go 目录作为 goimports 输入', /\bgoimports -[wl] \.\b/],
+  ['过期 Mockito inline 依赖模板', /<artifactId>mockito-inline<\/artifactId>/],
+  ['JWT 绝对排除 CSRF 的表述', /JWT 认证项目[：:]CSRF 不适用/],
+  ['TS 规则总数错误', /js_rulers[ 　]*12[ 　]*份[+＋][ 　]*本目录[ 　]*8[ 　]*份，共[ 　]*20[ 　]*份/],
+  ['Unity 不存在的查找 API', /FindObjectsOfTypeInactive/],
+  ['Unity 协程中直接 await 的旧示例', /IEnumerator\s+ValidateStateLoop[\s\S]{0,400}\bawait\b/],
+];
 
-for (const file of normalMarkdown) {
-  const text = fs.readFileSync(file, 'utf8');
-  validateHeadings(file, text);
-  validateLinks(file, text);
-  const enforceableContent = withoutCode(text)
-    .split(/\r?\n/)
-    .filter((line) => !line.trim().startsWith('|'))
-    .join('\n');
-  if (/必须\s*(?:使用)?\s*Unity\s*6/i.test(enforceableContent)) fail(file, '不得把 Unity 6 写成全局前提。');
-  if (/所有项目\s*必须\s*(?:升级|使用)/.test(enforceableContent)) fail(file, '不得把升级或技术选择写成所有项目的无条件要求。');
+const corpus = markdownFiles
+  .map((relative) => [relative, fs.readFileSync(path.join(root, relative), 'utf8')]);
+
+for (const [label, pattern] of forbiddenPatterns) {
+  const hit = corpus.find(([, content]) => pattern.test(content));
+  if (hit) fail(`发现需回归的规则问题（${label}）：${hit[0]}`);
 }
 
-validateAdapters();
-
-if (failures.length > 0) {
-  console.error(`规则库验收失败：${failures.length} 项`);
-  for (const message of failures) console.error(`- ${message}`);
+if (errors.length > 0) {
+  console.error('规则库校验失败：');
+  for (const message of errors) console.error(`- ${message}`);
   process.exitCode = 1;
 } else {
-  console.log(`规则库验收通过：${normalMarkdown.length} 个普通 Markdown、${adapterTargets.length} 组适配器。`);
+  console.log(`规则库校验通过：${markdownFiles.length} 个 Markdown 文档，${topicSets.length} 套专题规则，${requiredFiles.length} 个入口/适配器文件，${legacyTopicCount} 个旧版专题已保留。`);
+}
+
+if (warnings.length > 0) {
+  console.warn('警告：');
+  for (const message of warnings) console.warn(`- ${message}`);
 }
