@@ -136,8 +136,8 @@ import styles from './Card.module.css'; // 这里用 CSS Modules
 ```
 
 > 📌 规则：
-> - **颜色必须统一定义在变量里**（CSS Variables / Tailwind theme / theme object）
-> - 业务代码里只能用变量，不能直接写 hex / rgb 值
+> - 需要跨组件或跨页面复用、需要主题切换或需要设计治理的颜色，应统一定义为 token（CSS Variables / Tailwind theme / theme object）。
+> - 业务样式优先引用 token；token 定义、一次性原型、第三方内容适配等边界场景可使用字面量，但必须有明确归属，避免无计划地散落复制。
 > - 颜色变量名要有语义：`--primary` / `--success` / `--warning`，不要叫 `--blue`
 
 ---

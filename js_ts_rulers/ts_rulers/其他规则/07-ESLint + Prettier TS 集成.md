@@ -1,6 +1,6 @@
 # 07 - ESLint + Prettier TS 集成
 
-> 🟢 本文件适用于 ESLint + Prettier 在 TypeScript 项目中的集成。
+> 🟢 本文件适用于项目已经采用 ESLint 和/或 Prettier 时的 TypeScript 集成；具体版本、配置格式和命令以仓库现状为准。
 
 > 🔴 不适用：业务逻辑实现、UI 样式设计
 
@@ -8,17 +8,19 @@
 
 ## 1. 🔴 硬约束 · 这些绝对不要写
 
-### 1.1 没有 typescript-eslint（纯 ESLint 跑 TS）
+### 1.1 ESLint 负责 TS lint 却没有 TS 解析与规则支持
 
 ```bash
-# ❌ 旧版 ESLint 6 + 自定义 parser
+# 旧版项目可能仍使用 parser + plugin 组合；保留能工作的既有配置
 npm install --save-dev eslint @typescript-eslint/parser @typescript-eslint/eslint-plugin
 
-# ✅ 现代 flat config（ESLint 9+）+ typescript-eslint 一站式
+# 若项目选择当前 typescript-eslint + flat config，可使用一站式包
 npm install --save-dev eslint typescript-eslint
 ```
 
-### 1.2 关闭类型化规则（丧失类型 lint 价值）
+只有当 ESLint 实际负责解析和检查 `.ts`/`.tsx` 时，才需要选择与现有 ESLint 版本兼容的 TypeScript 支持。Biome、Oxlint 或项目已有其他工具链不应被本节替换。
+
+### 1.2 不加范围评估地关闭类型化规则
 
 ```js
 // ❌ 关闭 no-unsafe-* 规则（失去类型 lint 意义）
@@ -30,7 +32,7 @@ npm install --save-dev eslint typescript-eslint
 }
 ```
 
-类型化规则是 TS 项目相比 JS 项目的核心价值之一——不要关掉。
+类型化规则能发现更多问题，但会依赖 `tsconfig` 并增加执行成本。应根据源码/测试/生成文件范围配置；不要为了压掉单个告警而全局关闭，也不要把它强加给尚未具备类型化 lint 条件的项目。
 
 ### 1.3 ESLint 与 Prettier 规则冲突
 
@@ -45,20 +47,22 @@ npm install --save-dev eslint typescript-eslint
 }
 ```
 
-**ESLint 管逻辑，Prettier 管格式**。格式规则用 `eslint-config-prettier` 关闭。
+若项目选择 Prettier，通常让 ESLint 管逻辑、Prettier 管格式，并使用 `eslint-config-prettier` 处理冲突；未采用 Prettier 的项目应遵循已有格式化工具和规则。
 
 ---
 
 ## 2. 🟡 推荐 · 团队约定
 
-### 2.1 typescript-eslint 关键规则（强制开启）
+### 2.1 typescript-eslint 关键规则（按项目启用）
+
+下例适用于已经采用最新版 `typescript-eslint`、使用 flat config 且需要类型化 lint 的项目。生成代码、测试工具配置和性能敏感的超大仓库通常需要单独的 files/ignores 范围。
 
 ```js
 // eslint.config.js
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  ...tseslint.configs.strictTypeChecked,           // 推荐 strict + type-checked
+  ...tseslint.configs.strictTypeChecked,           // 可作为严格类型化 lint 的起点
   {
     languageOptions: {
       parserOptions: {
@@ -96,29 +100,23 @@ export default tseslint.config(
 );
 ```
 
-### 2.2 Flat Config（ESLint 9+ 推荐）
+### 2.2 Flat Config（ESLint 9+ 示例）
 
-**完整配置模板**：
+仅在项目已使用 ESLint 9+ 与 `typescript-eslint` 时，可按实际框架增量采用。React 插件不能出现在非 React 项目的基础配置中：
 
 ```js
 // eslint.config.js
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
-import reactPlugin from 'eslint-plugin-react';
-import reactHooksPlugin from 'eslint-plugin-react-hooks';
-import jsxA11yPlugin from 'eslint-plugin-jsx-a11y';
 import prettierConfig from 'eslint-config-prettier';
 
 export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.strictTypeChecked,
-  reactPlugin.configs.recommended,
-  reactHooksPlugin.configs['recommended-latest'],
-  jsxA11yPlugin.recommended,
   {
     ignores: ['dist/', 'build/', 'node_modules/', 'coverage/', '*.config.js'],
   },
-  prettierConfig,                                    // 关闭 ESLint 与 Prettier 冲突规则
+  prettierConfig,                                    // 仅项目使用 Prettier 时保留
   {
     rules: {
       // 项目自定义规则
@@ -137,6 +135,8 @@ export default tseslint.config(
 **协作**：装 `eslint-config-prettier`，关闭 ESLint 中与 Prettier 冲突的规则。
 
 ### 2.4 提交前检查（lint-staged + husky）
+
+仅在项目已经使用或明确决定采用 Git hooks 时配置；CI 仍应保留独立验证，不能依赖开发者本地 hook。
 
 ```json
 // package.json

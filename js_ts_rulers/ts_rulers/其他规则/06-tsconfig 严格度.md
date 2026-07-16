@@ -8,10 +8,10 @@
 
 ## 1. 🔴 硬约束 · 这些绝对不要写
 
-### 1.1 strict: false（关闭类型检查）
+### 1.1 没有迁移计划地关闭严格检查
 
 ```jsonc
-// ❌ 严禁
+// ❌ 已采用严格检查的项目不要为绕过单个错误而整体关闭
 {
   "compilerOptions": {
     "strict": false
@@ -19,7 +19,7 @@
 }
 ```
 
-`strict: false` 等于关闭所有严格选项——失去 TS 的核心价值。
+`strict: false` 会关闭严格选项族的默认值（单独显式设置的选项仍可覆盖），很容易掩盖空值和隐式类型问题。遗留项目若需要逐步迁移，应记录范围、负责人和回收计划，而不是把它当作修复报错的快捷方式。
 
 ### 1.2 隐式 any
 
@@ -51,7 +51,7 @@ const x = arr[10];                                   // TS 推断 number，实�
 console.log(x.toFixed(2));                           // ❌ 运行时崩
 ```
 
-`noUncheckedIndexedAccess: true` 让索引访问变成 `T | undefined`。
+启用 `noUncheckedIndexedAccess: true` 后，索引访问会变成 `T | undefined`；是否启用应结合现有数组/字典代码的迁移成本决定。
 
 ### 1.5 可选属性绕过 undefined
 
@@ -68,16 +68,18 @@ const u: User = { name: undefined };                 // ❌ 不允许显式传 u
 
 ## 2. 🟡 推荐 · 团队约定
 
-### 2.1 推荐配置（strict 全家桶 + 额外严格选项）
+### 2.1 推荐配置（按项目事实裁剪）
+
+下例适用于新建、前端 bundler 构建、目标运行环境支持 ESM 且团队确认可承受严格迁移成本的项目。库项目、Node 服务、遗留项目或已有继承链应从当前 `tsconfig` 增量调整，不要整体覆盖。
 
 ```jsonc
 // tsconfig.json
 {
   "compilerOptions": {
     // ===== 严格选项 =====
-    "strict": true,                                  // 一次性开启所有严格选项
+    "strict": true,                                  // 严格选项族的基线；迁移项目可逐项启用
 
-    // ===== 强烈推荐额外开启 =====
+    // ===== 按代码库成熟度和兼容性评估 =====
     "noUncheckedIndexedAccess": true,                // 数组/对象索引返回 T | undefined
     "exactOptionalPropertyTypes": true,              // 可选字段不能显式传 undefined
     "noImplicitOverride": true,                      // class override 必须显式标注
@@ -89,17 +91,17 @@ const u: User = { name: undefined };                 // ❌ 不允许显式传 u
     "allowUnreachableCode": false,                   // 禁止 unreachable code
 
     // ===== 模块解析 =====
-    "target": "ES2022",                              // 与运行环境匹配
-    "module": "ESNext",
-    "moduleResolution": "Bundler",                   // Vite / Webpack 5
+    "target": "ES2022",                              // 必须与运行环境和产物策略匹配
+    "module": "ESNext",                              // bundler 项目的示例
+    "moduleResolution": "Bundler",                   // 仅 Vite/Webpack/esbuild 等 bundler 项目
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "isolatedModules": true,                         // 每个文件可独立编译
     "verbatimModuleSyntax": true,                    // 强制显式 type import
 
     // ===== 库与兼容性 =====
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "skipLibCheck": true,                            // 跳过 d.ts 文件检查（性能）
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],     // 仅浏览器项目示例
+    "skipLibCheck": true,                            // 以第三方声明质量、构建时长和仓库现状决定
 
     // ===== 输出 =====
     "noEmit": true,                                  // Vite/esbuild 处理 emit

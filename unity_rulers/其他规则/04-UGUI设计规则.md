@@ -9,6 +9,8 @@
 
 ## 1. Canvas 规范
 
+🔴 **AI 开始前**必须确认目标项目是否已采用 UGUI，以及现有 Canvas、输入模块、设计分辨率和平台适配策略。不得因为本规则存在而把 UI Toolkit 或其他既有 UI 体系迁移为 UGUI。
+
 ### 1.1 三种渲染模式
 
 Canvas 有 3 种 Render Mode（创建 Canvas 时选择）：
@@ -20,7 +22,7 @@ Canvas 有 3 种 Render Mode（创建 Canvas 时选择）：
 | **World Space** | 游戏内嵌 UI（看板 / 角色头顶血条）| 作为一个 3D 物体放在场景中 |
 
 **选型决策**：
-- 🔴 **默认选 Overlay**（UI 永远在最上、最快）
+- 🟡 不需要与场景深度交互且项目已有同类界面使用 Overlay 时，可选 **Overlay**。
 - 🟡 需 UI 被场景物体遮挡选 **Camera**
 - 🟡 需 3D 空间感选 **World Space**
 
@@ -135,7 +137,6 @@ Image.fillAmount = 0.5f;  // Pivot = (0.5, 0.5) → 中心点不动，两边收�
 Image.fillAmount = 0.5f;  // Pivot = (0, 0.5) → 左边缘固定，右边缘扩展
 ```
 
----
 
 ## 3. 核心 UI 组件
 
@@ -248,9 +249,8 @@ m_volumeSlider.onValueChanged.AddListener(v => AudioManager.Instance.SetVolume(v
 
 **Dropdown**（下拉框）：
 
-- 🔴 **Unity 6+ 新项目推荐用 TMP_Dropdown**（替代老 Dropdown）
-- 老 Dropdown 性能差（每次展开重新生成项）
-- 复杂选项推荐用 **对象池**（见 03 性能优化）
+- 🟡 项目已采用 TextMeshPro 时，可使用 `TMP_Dropdown`；它不是 Unity 6 才可用的组件，也不应仅因本规则替换已有 Dropdown。
+- 🟡 下拉项的创建成本、虚拟化或对象池需求以选项规模、交互频率和 Profiler 为准。
 
 ## 4. 布局组件
 
@@ -344,13 +344,12 @@ HorizontalLayoutGroup
 - 静态布局**直接设 RectTransform**（不用 Layout 组件）
 - 动态列表用对象池 + 手动设置 RectTransform
 
----
 
 ## 5. 交互与事件
 
 ### 5.1 EventSystem 必备
 
-🔴 **场景中必须有一个 EventSystem**（创建 UI 时会自动生成），所有 UGUI 事件都通过它分发。
+🔴 **使用 UGUI 交互时，场景必须有与当前输入系统兼容的 EventSystem**；不要在已有 EventSystem 的场景中重复创建，所有 UGUI 事件由它分发。
 
 ```text
 Scene
@@ -360,13 +359,13 @@ Scene
 **EventSystem 组件**：
 - `EventSystem`：事件分发核心
 - `Standalone Input Module`：键盘 / 鼠标 / 触屏输入
-- （Unity 6 推荐）`Input System UI Input Module`：新 Input System
+- `Input System UI Input Module`：仅项目启用新 Input System 时使用；旧输入系统沿用对应模块。
 
 ### 5.2 GraphicRaycaster
 
 `GraphicRaycaster` 决定 **Canvas 内哪些 UI 接收事件**（点击 / 拖拽）：
 
-- 每个 Canvas **自动有一个** GraphicRaycaster
+- 需要交互的 Canvas 应确认已挂载并启用 `GraphicRaycaster`；不要假设每个 Canvas 都会自动拥有它
 - 配合 `Raycast Target`（Image / Text 默认开启）
 
 **优化**：
@@ -446,12 +445,12 @@ public class ChildButton : MonoBehaviour, IPointerClickHandler
 
 ### 6.1 批处理（同材质 + 同纹理 → 合批）
 
-**Draw Call 合批原则**：
-- 🔴 **同 Canvas + 同材质 + 同纹理** = 合批（1 个 Draw Call）
-- ❌ **材质不同** = 不合批（每张图 1 个 Draw Call）
-- ❌ **纹理不同** = 不合批（合批要求同贴图）
+**Draw Call 合批判断**：
+- 🟡 同 Canvas、同材质与同纹理是合批的必要基础，但遮罩、裁剪、排序、Shader、额外材质和 UI 层级都可能打断批处理。
+- 🟡 材质或纹理不同通常会增加批次；实际 Draw Call 以目标设备上的 Frame Debugger 与 Profiler 为准。
+- 🔴 不要把“元素数 = Draw Call 数”或“同条件元素一定只有 1 个 Draw Call”当作规则；先抓帧确认。
 
-**优化前**（200 张图标 = 200 Draw Call）：
+**可能的未合批场景**（元素数量不等于实际 Draw Call）：
 ```text
 Canvas
 ├─ Image 1 (Material A, Texture A)
@@ -460,7 +459,7 @@ Canvas
 └─ ... 200 个
 ```
 
-**优化后**（200 张图标 = 1 Draw Call）：
+**可能获得合批的场景**（仍需抓帧验证）：
 ```text
 Canvas
 └─ Image 1~200 (Material A, Texture A 全部相同)  // 合批成 1 个
@@ -468,15 +467,15 @@ Canvas
 
 ### 6.2 图集（Sprite Atlas）
 
-🔴 **所有 UI 静态图必须打图集**（`Sprite Atlas` 资源），不要用单张 Texture。
+🟡 对同屏高频复用的小图标，可评估 `Sprite Atlas` 以降低纹理切换和批次；是否入图集还要平衡内存、加载粒度、平台纹理限制与实际 Frame Debugger 结果。项目已有图集策略时必须沿用。
 
 ```csharp
-// ✅ 好：图集 Sprite（合批）
+// ✅ 适合：项目图集策略中的高频 UI Sprite
 [SerializeField] private Image m_iconImage;
 m_iconImage.sprite = iconAtlas.GetSprite("Icon_Health");
 
-// ❌ 错：单张 Texture（不合批）
-m_iconImage.sprite = singleHealthTexture;  // 破坏合批
+// 🟡 可接受：独立加载、低频或不适合与其他资源共同加载的 Sprite
+m_iconImage.sprite = singleHealthSprite;
 ```
 
 **Sprite Atlas 设置**：
@@ -504,7 +503,7 @@ m_content.material = ...;  // Mask 性能开销
 m_contentMask.padding = new Vector4(10, 10, 10, 10);  // 边距
 ```
 
-> **经验**：除非需要圆角 / 异形遮罩，**一律用 RectMask2D**。
+> **经验**：矩形裁剪可优先评估 `RectMask2D`；圆角、异形、Shader 需求或实际渲染/性能表现不满足时再选择其他方案，并用 Frame Debugger 与 Profiler 验证。
 
 ### 6.4 避免频繁 SetActive
 
@@ -527,11 +526,11 @@ void Update()
 
 ### 6.5 减少 Raycaster 命中目标
 
-**`GraphicRaycaster` 每帧都要检测**所有 `Raycast Target = true` 的 UI：
+**`GraphicRaycaster` 会参与命中检测**所有 `Raycast Target = true` 的 UI。成本受 Canvas 数量、层级、输入频率、目标设备和交互方式影响，不能用固定数量阈值判断：
 
-- 🟡 UI 数量 < 50：性能影响可忽略
-- 🟡 UI 数量 50-200：考虑优化
-- 🔴 UI 数量 > 200：**必须优化**（否则点击 / 拖拽明显卡顿）
+- 🔴 装饰性元素不应接收事件；先关闭其 `raycastTarget`。
+- 🟡 当 Profiler 显示事件系统、射线检测或交互延迟为瓶颈时，再检查命中目标数量与 Canvas 划分。
+- 🟡 UI 数量只是排查信号，不是“< 50 无需看、> 200 必须改”的规则。
 
 **优化方法**：
 - 🔴 装饰性 UI 关掉 `raycastTarget = false`
@@ -567,7 +566,7 @@ m_scoreText.raycastTarget = false;
 | **`Scale With Screen Size`** | UI 整体缩放适配屏幕 | **大多数游戏** ✅ |
 | `Constant Physical Size` | UI 按物理尺寸显示 | AR / VR |
 
-🔴 **默认用 `Scale With Screen Size`**，详见 1.2 Canvas Scaler 设置。
+🟡 大多数屏幕空间界面可使用 `Scale With Screen Size`；像素风、AR/VR 或项目已有适配策略应按实际设计目标选择，详见 1.2 Canvas Scaler 设置。
 
 ### 7.2 Anchor Presets 拉伸方案
 
@@ -635,7 +634,6 @@ private void OnRectTransformDimensionsChange()
 }
 ```
 
----
 
 ## 8. 资源与图集
 
@@ -686,7 +684,7 @@ UI_Bg_Panel_Default_1920x1080
 - `UI_Bg_*`：背景
 - `UI_Fx_*`：特效
 
-### 8.39 -sprite 边框（Sliced）
+### 8.3 -sprite 边框（Sliced）
 
 🔴 **可变大小 UI 必须用 9-sprite**（否则拉伸会失真）。
 
@@ -834,5 +832,3 @@ public class UISettings : ScriptableObject
 ```
 
 > 详见 `02-模式设计规则.md` 2.1 ScriptableObject 架构。
-
----

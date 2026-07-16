@@ -7,6 +7,8 @@
 ---
 
 ## 1. 官方文档（按版本）
+
+🔴 **AI 开始前**必须确认项目实际 Unity 版本、UI Toolkit 包与现有 UI 体系。本文件中的 API、USS 行为和数据绑定示例必须与目标版本和已有代码核对；不得因为本规则存在而把 UGUI、IMGUI 或第三方 UI 方案迁移为 UI Toolkit。
 | 你的 Unity 版本 | 官方文档 URL |
 |---|---|
 | Unity 2021.2 ~ 2021.3 | `https://docs.unity3d.com/2021.3/Documentation/Manual/UIElements.html` |
@@ -18,13 +20,12 @@
 - ✅ UXML/USS 文件名使用 **PascalCase**，与 Unity 约定保持一致（例如 `MainMenu.uxml`、`InventoryPanel.uxml`、`PlayerHUD.uss`）。
 - ✅ UXML 与 USS 放在统一的目录结构中（例如 `Assets/UI/UXML/` 与 `Assets/UI/USS/`）。
 - ✅ USS 文件名与对应 UXML 一致（例如 `MainMenu.uss` 对应 `MainMenu.uxml`）。
----
 
 ## 3. 关键：USS 与 CSS 差异
 
 **USS（Unity Style Sheets）不是标准 CSS**，而是 CSS 的子集加上 Unity 专属扩展。
 
-### 完整对比表
+### 3.1 完整对比表
 
 | 特性 | CSS | USS |
 |---|---|---|
@@ -43,26 +44,26 @@
 | `@media` 查询 | ✅ | ❌ 不支持 |
 | `@import` | ✅ | ❌ — 改用 UXML 的 `<Style src="..."/>` |
 | 字体相对单位 | `em`、`rem` | ❌ — 改用 `px` |
-| 颜色值 | 十六进制 `#FF6432`、`rgb()`、`rgba()` | 推荐 `rgb()` / `rgba()`（Unity 2022 及更早十六进制无效，Unity 6+ 待验证） |
+| 颜色值 | 十六进制 `#FF6432`、`rgb()`、`rgba()` | 支持十六进制、`rgb()`、`rgba()`；沿用项目的主题与可读性约定 |
 | 文本对齐 | `text-align: center` | `-unity-text-align: middle-center` |
 | 字体粗细 | `font-style: bold` | `-unity-font-style: bold` |
 | 背景缩放 | `background-size` | `-unity-background-scale-mode: scale-to-fit` 等 |
 | 9-slice 边框 | 无对应 | `-unity-slice-left/right/top/bottom: Npx` |
 | 盒模型 | 可配置 | 默认 `box-sizing: border-box` |
 
-### 颜色值 —— 重点
+### 3.2 颜色值 —— 重点
 
 ```css
-/* ✅ USS — 仅使用 rgb() 或 rgba() */
+/* ✅ USS — 十六进制、rgb() 与 rgba() 都可用 */
 background-color: rgb(255, 100, 50);
 background-color: rgba(255, 100, 50, 0.8);
 color: rgb(200, 200, 200);
 
-/* ⚠️ Unity 2022 及更早十六进制颜色无效，推荐用 rgb()/rgba() */
+/* ✅ 团队若偏好紧凑写法，也可使用十六进制 */
 background-color: #FF6432;
 ```
 
-### Unity 专属属性
+### 3.3 Unity 专属属性
 
 ```css
 /* 文本 */
@@ -87,7 +88,7 @@ background-color: #FF6432;
 overflow: hidden;    /* USS 用此裁剪子元素 */
 ```
 
-### URL 路径格式
+### 3.4 URL 路径格式
 
 ```css
 /* 工程数据库路径（推荐用于资产） */
@@ -100,7 +101,7 @@ background-image: resource('UI/Icons/icon');
 background-image: url('../Icons/icon.png');
 ```
 
-### 拾取模式（Picking Mode）
+### 3.5 拾取模式（Picking Mode）
 
 ```css
 /* 允许元素接收指针事件（默认） */
@@ -110,11 +111,10 @@ picking-mode: position;
 picking-mode: ignore;
 ```
 
----
 
 ## 4. USS 命名约定（BEM）
 
-### 指南
+### 4.1 指南
 
 - ✅ UXML 的 `name` 和 `class` 值使用 **kebab-case**（例如 `navbar-menu`、`shop-button`）。
 - ✅ 使用 **BEM**（Block-Element-Modifier）以保证可维护性。
@@ -126,7 +126,7 @@ picking-mode: ignore;
 - ❌ 不要依赖深层后代选择器（例如 `.a .b .c`）—— 它们很脆弱。
 - ❌ 不要给一个元素堆叠过多不相关的 class。
 
-### BEM 模式
+### 4.2 BEM 模式
 
 模式：`block-name__element-name--modifier-name`
 
@@ -136,7 +136,7 @@ picking-mode: ignore;
 | **Element** | block 的组成部分（用 `__`） | `__item`、`__button`、`__input-field` |
 | **Modifier** | 变体/状态（用 `--`） | `--active`、`--collapsed`、`--error` |
 
-### BEM 示例
+### 4.3 BEM 示例
 
 **Block 命名：**
 - ✅ `navbar-menu`、`sidebar`、`login-form`
@@ -150,7 +150,7 @@ picking-mode: ignore;
 - ✅ `navbar-menu__item--active`、`button--primary`、`login-form__input-field--error`
 - ❌ `navbar-menu__item-active`（缺 `--`）、`sidebar__toggleButton--collapsed`（camelCase）
 
-### BEM 的 UXML 示例
+### 4.4 BEM 的 UXML 示例
 
 ```xml
 <ui:UXML xmlns:ui="UnityEngine.UIElements">
@@ -168,7 +168,7 @@ picking-mode: ignore;
 </ui:UXML>
 ```
 
-### BEM 的 USS 示例
+### 4.5 BEM 的 USS 示例
 
 ```css
 /* Block 基础 */
@@ -188,7 +188,7 @@ picking-mode: ignore;
 .is-disabled { opacity: 0.5; }
 ```
 
-### 在 C# 中集中选择器
+### 4.6 在 C# 中集中选择器
 
 ```csharp
 // 将选择器集中为常量，避免拼写错误
@@ -201,7 +201,7 @@ var navbar = root.Q<VisualElement>(k_navbarMenu);
 var shopButton = root.Q<Button>(k_shopButton);
 ```
 
-### 在 C# 中切换 class
+### 4.7 在 C# 中切换 class
 
 ```csharp
 var btn = root.Q<Button>(k_shopButton);
@@ -218,7 +218,6 @@ btn.EnableInClassList("is-disabled", false);
 btn.ToggleInClassList("button--primary");
 ```
 
----
 
 ## 5. USS 变量（设计 Token）
 
@@ -263,7 +262,6 @@ USS 变量必须声明在 `:root {}` 中，无法限定在其它选择器上。
 }
 ```
 
----
 
 ## 6. USS 伪类
 
@@ -307,11 +305,10 @@ USS 仅支持以下伪类：
 
 > ❌ `:nth-child()`、`:not()`、`:first-child`、`:last-child`、`:is()`、`:where()` **均不支持**。
 
----
 
 ## 7. USS 常用属性速查
 
-### 显示与可见性
+### 7.1 显示与可见性
 
 ```css
 display: flex;                 /* 默认 —— 可见 */
@@ -326,7 +323,7 @@ overflow: visible;             /* 默认 */
 overflow: hidden;              /* 裁剪内容 */
 ```
 
-### 尺寸
+### 7.2 尺寸
 
 ```css
 width: 100px;
@@ -343,7 +340,7 @@ flex-grow: 1;                  /* 填满可用空间 */
 flex-shrink: 0;                /* 不收缩 */
 ```
 
-### 间距
+### 7.3 间距
 
 ```css
 padding: 10px;
@@ -354,7 +351,7 @@ margin: 10px;
 margin-left: auto;             /* 推至右侧 */
 ```
 
-### 边框
+### 7.4 边框
 
 ```css
 border-width: 2px;
@@ -363,7 +360,7 @@ border-radius: 8px;
 border-top-left-radius: 8px;
 ```
 
-### 背景
+### 7.5 背景
 
 ```css
 background-color: rgb(50, 50, 50);
@@ -374,7 +371,7 @@ background-image: url('project://database/Assets/UI/background.png');
 -unity-background-image-tint-color: rgb(255, 255, 255);
 ```
 
-### 文本
+### 7.6 文本
 
 ```css
 color: rgb(0, 0, 0);
@@ -386,13 +383,12 @@ white-space: nowrap;
 -unity-text-outline-color: rgb(0, 0, 0);
 ```
 
----
 
 ## 8. Flexbox 布局系统
 
 Unity UI Toolkit 使用 **Yoga 布局引擎**，实现了 CSS Flexbox 的一个子集。**没有 grid** —— 每个容器要么是行、要么是列。
 
-### 容器属性（父级）
+### 8.1 容器属性（父级）
 
 ```css
 /* 主轴方向 */
@@ -425,7 +421,7 @@ align-items: center;
 
 > ❌ **`gap` 不是 USS 支持的属性。** 若要间隔 flex 子元素，请使用子元素的 `margin`（如 `margin-right: 8px;` 或 `margin-bottom: 8px;`）。
 
-### 子项属性（Children）
+### 8.2 子项属性（Children）
 
 ```css
 /* 弹性 */
@@ -441,7 +437,7 @@ flex: 1;                       /* flex-grow: 1; flex-shrink: 1; flex-basis: 0; *
 align-self: center;
 ```
 
-### 常用布局模式
+### 8.3 常用布局模式
 
 ```css
 /* 全屏容器 */
@@ -481,7 +477,7 @@ align-self: center;
 }
 ```
 
-### 定位模式
+### 8.4 定位模式
 
 ```css
 /* 相对（默认） —— 参与 flexbox */
@@ -494,7 +490,6 @@ position: absolute;
 left: 0; right: 0; top: 0; bottom: 0;
 ```
 
----
 
 ## 9. 过渡与动画
 
@@ -519,7 +514,7 @@ left: 0; right: 0; top: 0; bottom: 0;
 
 可动画属性包括：`background-color`、`color`、`opacity`、`scale`、`translate`、`rotate`、`width`、`height`、`margin`、`padding`、`border-color`、`border-width`。
 
-### 变换属性
+### 9.1 变换属性
 
 ```css
 scale: 1.5 1.5;
@@ -527,11 +522,10 @@ rotate: 45deg;
 translate: 10px 20px;
 ```
 
----
 
 ## 10. UXML 结构与最佳实践
 
-### 文件结构
+### 10.1 文件结构
 
 ```xml
 <ui:UXML xmlns:ui="UnityEngine.UIElements"
@@ -548,13 +542,13 @@ translate: 10px 20px;
 </ui:UXML>
 ```
 
-### 命名速览
+### 10.2 命名速览
 
 - **`name`**：kebab-case，在所属 block 内唯一（如 `player-panel`、`health-label`）—— 用于 C# 查询
 - **`class`**：BEM 形式，可复用样式（如 `card`、`card__title`、`button--primary`）
 - **文件名**：PascalCase（如 `MainMenu.uxml`、`InventoryPanel.uss`）
 
-### UXML 中的数据绑定
+### 10.3 UXML 中的数据绑定
 
 ```xml
 <ui:VisualElement data-source-type="MyDataClass, Assembly-CSharp" name="data-root">
@@ -562,17 +556,15 @@ translate: 10px 20px;
 </ui:VisualElement>
 ```
 
----
 
 ## 11. UXML 元素速查表
 
 常用 UI Toolkit 元素的速查，附 UXML 示例和关键属性。
 
----
 
-### 文本元素
+### 11.1 文本元素
 
-#### Label
+#### 11.1.1 Label
 
 静态、不可编辑的文本。
 
@@ -581,7 +573,7 @@ translate: 10px 20px;
 <ui:Label text="Styled Label" class="title-text" />
 ```
 
-#### TextField
+#### 11.1.2 TextField
 
 单行可编辑文本输入。
 
@@ -592,11 +584,10 @@ translate: 10px 20px;
 <ui:TextField multiline="true" label="Description" />
 ```
 
----
 
-### 按钮元素
+### 11.2 按钮元素
 
-#### Button
+#### 11.2.1 Button
 
 可点击的按钮。
 
@@ -608,7 +599,7 @@ translate: 10px 20px;
 </ui:Button>
 ```
 
-#### Toggle
+#### 11.2.2 Toggle
 
 复选框式的开关控件。
 
@@ -617,7 +608,7 @@ translate: 10px 20px;
 <ui:Toggle label="Auto-Save" value="false" />
 ```
 
-#### RadioButton & RadioButtonGroup
+#### 11.2.3 RadioButton & RadioButtonGroup
 
 互斥选择。
 
@@ -629,11 +620,10 @@ translate: 10px 20px;
 </ui:RadioButtonGroup>
 ```
 
----
 
-### 数值输入元素
+### 11.3 数值输入元素
 
-#### IntegerField
+#### 11.3.1 IntegerField
 
 整数输入。
 
@@ -641,7 +631,7 @@ translate: 10px 20px;
 <ui:IntegerField label="Count" value="10" name="count-field" />
 ```
 
-#### FloatField
+#### 11.3.2 FloatField
 
 浮点数输入。
 
@@ -649,7 +639,7 @@ translate: 10px 20px;
 <ui:FloatField label="Speed" value="1.5" name="speed-field" />
 ```
 
-#### Slider
+#### 11.3.3 Slider
 
 水平滑块，在范围内选择浮点值。
 
@@ -658,7 +648,7 @@ translate: 10px 20px;
 <ui:Slider low-value="0" high-value="1" value="0.5" show-input-field="true" />
 ```
 
-#### SliderInt
+#### 11.3.4 SliderInt
 
 仅整数的滑块。
 
@@ -667,7 +657,7 @@ translate: 10px 20px;
 <ui:SliderInt low-value="0" high-value="100" value="50" show-input-field="true" />
 ```
 
-#### MinMaxSlider
+#### 11.3.5 MinMaxSlider
 
 双滑块选区间。
 
@@ -680,11 +670,10 @@ translate: 10px 20px;
                  name="price-range" />
 ```
 
----
 
-### 选择元素
+### 11.4 选择元素
 
-#### DropdownField
+#### 11.4.1 DropdownField
 
 下拉菜单。
 
@@ -695,7 +684,7 @@ translate: 10px 20px;
                   name="weapon-dropdown" />
 ```
 
-#### EnumField
+#### 11.4.2 EnumField
 
 由 C# 枚举填充的下拉。
 
@@ -705,7 +694,7 @@ translate: 10px 20px;
               value="MiddleCenter" />
 ```
 
-#### PopupField
+#### 11.4.3 PopupField
 
 类似下拉，需要代码配置。
 
@@ -713,11 +702,10 @@ translate: 10px 20px;
 <ui:PopupField label="Select Option" name="popup-field" />
 ```
 
----
 
-### 显示元素
+### 11.5 显示元素
 
-#### ProgressBar
+#### 11.5.1 ProgressBar
 
 可视化进度条。
 
@@ -729,7 +717,7 @@ translate: 10px 20px;
                 name="health-bar" />
 ```
 
-#### Image
+#### 11.5.2 Image
 
 显示精灵或贴图。
 
@@ -738,7 +726,7 @@ translate: 10px 20px;
 <ui:Image name="icon" style="width: 64px; height: 64px;" />
 ```
 
-#### HelpBox
+#### 11.5.3 HelpBox
 
 信息/警告/错误提示。
 
@@ -748,11 +736,10 @@ translate: 10px 20px;
 <ui:HelpBox text="Error: Invalid input" message-type="Error" />
 ```
 
----
 
-### 容器元素
+### 11.6 容器元素
 
-#### VisualElement
+#### 11.6.1 VisualElement
 
 用于分组和布局的基础容器。
 
@@ -768,7 +755,7 @@ translate: 10px 20px;
 </ui:VisualElement>
 ```
 
-#### ScrollView
+#### 11.6.2 ScrollView
 
 可滚动容器，用于超出视口的内容。
 
@@ -803,7 +790,7 @@ translate: 10px 20px;
 | `vertical-scroller-visibility` | `Auto`、`AlwaysVisible`、`Hidden` | 滚动条显隐 |
 | `touch-scroll-type` | `Unrestricted`、`Elastic`、`Clamped` | 触摸行为 |
 
-#### GroupBox
+#### 11.6.3 GroupBox
 
 带标签的视觉分组容器。
 
@@ -815,7 +802,7 @@ translate: 10px 20px;
 </ui:GroupBox>
 ```
 
-#### Foldout
+#### 11.6.4 Foldout
 
 可折叠/展开的容器。
 
@@ -831,7 +818,7 @@ translate: 10px 20px;
 </ui:Foldout>
 ```
 
-#### Box
+#### 11.6.5 Box
 
 带默认边框样式的简单容器。
 
@@ -841,7 +828,7 @@ translate: 10px 20px;
 </ui:Box>
 ```
 
-#### TemplateContainer
+#### 11.6.6 TemplateContainer
 
 实例化 UXML 模板的占位符。
 
@@ -849,7 +836,7 @@ translate: 10px 20px;
 <ui:TemplateContainer name="card-slot" />
 ```
 
-#### IMGUIContainer
+#### 11.6.7 IMGUIContainer
 
 嵌入旧版 IMGUI 渲染。**仅限 Editor UI。**
 
@@ -857,11 +844,10 @@ translate: 10px 20px;
 <ui:IMGUIContainer name="imgui-preview" />
 ```
 
----
 
-### 列表与树
+### 11.7 列表与树
 
-#### ListView
+#### 11.7.1 ListView
 
 虚拟化列表，用于高效展示大数据集。通过 C# 的 `makeItem`/`bindItem` 填充。
 
@@ -905,7 +891,7 @@ listView.itemsSource = m_items;
 listView.RefreshItems();
 ```
 
-#### TreeView
+#### 11.7.2 TreeView
 
 用于嵌套数据的层级树。
 
@@ -928,7 +914,7 @@ treeView.bindItem = (element, index) =>
 treeView.SetRootItems(m_rootItems);
 ```
 
-#### MultiColumnListView
+#### 11.7.3 MultiColumnListView
 
 类似表格的多列可排序列表。
 
@@ -967,7 +953,7 @@ table.columns["name-column"].bindCell = (element, index) =>
 table.itemsSource = m_data;
 ```
 
-#### MultiColumnTreeView
+#### 11.7.4 MultiColumnTreeView
 
 多列的层级树（如文件浏览器）。
 
@@ -983,11 +969,10 @@ table.itemsSource = m_data;
 </ui:MultiColumnTreeView>
 ```
 
----
 
-### Tab 元素
+### 11.8 Tab 元素
 
-#### TabView & Tab
+#### 11.8.1 TabView & Tab
 
 用于在多个内容面板间切换的 Tab 界面。USS 选择器参见 [TabView 与 Tab 样式](#tabview-与-tab-样式)。
 
@@ -1026,9 +1011,8 @@ table.itemsSource = m_data;
 | `closeable` | 是否显示关闭按钮 |
 | `view-data-key` | 持久化键 |
 
----
 
-### 可绑定输入元素
+### 11.9 可绑定输入元素
 
 这些元素常通过 `binding-path` 绑定到数据属性：
 
@@ -1056,9 +1040,8 @@ table.itemsSource = m_data;
 </ui:ProgressBar>
 ```
 
----
 
-### 速查表
+### 11.10 速查表
 
 | 元素 | 用途 | 关键属性 |
 |---------|---------|----------------|
@@ -1086,11 +1069,10 @@ table.itemsSource = m_data;
 | `Box` | 带边框容器 | — |
 | `HelpBox` | 信息/警告/错误 | `text`、`message-type` |
 
----
 
 ## 12. 元素查询
 
-### 基础查询
+### 12.1 基础查询
 
 ```csharp
 // 按 name
@@ -1117,7 +1099,7 @@ var activeItems = root.Query<VisualElement>()
     .ToList();
 ```
 
-### 空安全
+### 12.2 空安全
 
 ```csharp
 var button = root.Q<Button>("optional-button");
@@ -1130,7 +1112,7 @@ if (button != null)
 root.Q<Button>("optional-button")?.SetEnabled(false);
 ```
 
-### 缓存查询 —— 绝不要在 Update 中调用
+### 12.3 缓存查询 —— 绝不要在 Update 中调用
 
 ```csharp
 // ✅ 好 —— 在 OnEnable 中缓存（推荐用于 UIDocument MonoBehaviour）
@@ -1155,7 +1137,7 @@ private void Update()
 }
 ```
 
-### 查询时机
+### 12.4 查询时机
 
 ```csharp
 // ✅ OnEnable 是推荐查询位置。
@@ -1189,11 +1171,10 @@ public void CreateGUI()
 }
 ```
 
----
 
 ## 13. 显示/隐藏模式
 
-### display 属性（脱离布局）
+### 13.1 display 属性（脱离布局）
 
 ```csharp
 // 隐藏 —— 脱离布局（元素不占空间）
@@ -1209,7 +1190,7 @@ public void SetPanelVisible(bool isVisible)
 }
 ```
 
-### visibility 属性（保留布局空间）
+### 13.2 visibility 属性（保留布局空间）
 
 ```csharp
 // 隐藏但保留空间
@@ -1221,11 +1202,10 @@ element.style.visibility = Visibility.Visible;
 
 > 想让元素完全不参与布局时使用 `display`；需要保留空间（例如避免布局抖动）时使用 `visibility`。
 
----
 
 ## 14. 按钮与事件处理
 
-### 按钮点击事件
+### 14.1 按钮点击事件
 
 ```csharp
 private Button m_actionButton;
@@ -1249,7 +1229,7 @@ private void OnActionButtonClicked()
 }
 ```
 
-### 启用/禁用按钮
+### 14.2 启用/禁用按钮
 
 ```csharp
 button.SetEnabled(false);  // 禁用（置灰）
@@ -1258,7 +1238,7 @@ button.SetEnabled(true);   // 启用
 if (button.enabledSelf) { /* 按钮已启用 */ }
 ```
 
-### 其它事件类型
+### 14.3 其它事件类型
 
 ```csharp
 // 通用事件注册
@@ -1298,33 +1278,18 @@ private void OnDisable()
 }
 ```
 
-### 使用 EventRegistry（项目标准）
+### 14.4 项目已有订阅管理器时（可选）
 
-项目中的 `EventRegistry` 工具（位于 `GameSystems` 命名空间）提供集中清理 —— 优先使用它而不是手动订阅/取消订阅：
+默认做法仍是上一节展示的**成对注册与反注册**。只有项目已经定义并在当前模块使用订阅管理器（例如事件作用域、生命周期容器）时，才能沿用它的公开 API：
 
-```csharp
-using GameSystems;
+- 不要因为本规则新建 `EventRegistry`、`GameSystems` 或任意自定义命名空间。
+- 先确认它的所有权、可重复 `Dispose` 行为，以及 `OnDisable` 后再次 `OnEnable` 是否需要重新创建。
+- 未确认时，使用具名回调并在同一生命周期边界调用 `UnregisterCallback`；不要用无法反注册的匿名 lambda。
 
-private readonly EventRegistry m_eventRegistry = new();
-
-private void OnEnable()
-{
-    m_eventRegistry.RegisterCallback<ClickEvent>(m_submitButton, OnSubmitClicked);
-    m_eventRegistry.RegisterCallback<ClickEvent>(m_cancelButton, OnCancelClicked);
-    m_eventRegistry.RegisterValueChangedCallback<float>(m_volumeSlider, OnVolumeChanged);
-}
-
-private void OnDisable()
-{
-    m_eventRegistry.Dispose(); // 一次性取消所有注册
-}
-```
-
----
 
 ## 15. ListView 与模板生成
 
-### VisualTreeAsset 实例化（手动网格/列表）
+### 15.1 VisualTreeAsset 实例化（手动网格/列表）
 
 ```csharp
 public class CardGridController : MonoBehaviour
@@ -1375,7 +1340,7 @@ public class CardGridController : MonoBehaviour
 }
 ```
 
-### 使用 makeItem/bindItem 的 ListView（虚拟化）
+### 15.2 使用 makeItem/bindItem 的 ListView（虚拟化）
 
 ```csharp
 private void SetupListView()
@@ -1405,11 +1370,10 @@ public void RefreshList() => m_listView.RefreshItems();
              selection-type="Single" />
 ```
 
----
 
 ## 16. TabView 与 Tab 样式
 
-### USS 选择器
+### 16.1 USS 选择器
 
 ```css
 /* TabView 容器 */
@@ -1425,7 +1389,7 @@ public void RefreshList() => m_listView.RefreshItems();
 .unity-tab__header-underline { }
 ```
 
-### 定制 Tab 样式
+### 16.2 定制 Tab 样式
 
 ```css
 .unity-tab__header {
@@ -1451,7 +1415,7 @@ public void RefreshList() => m_listView.RefreshItems();
 }
 ```
 
-### C# Tab 事件
+### 16.3 C# Tab 事件
 
 ```csharp
 private TabView m_tabView;
@@ -1473,13 +1437,12 @@ private void OnActiveTabChanged(Tab previousTab, Tab newTab)
 }
 ```
 
----
 
 ## 17. 自定义 VisualElement —— **按版本选 API**
 
-> **重要**：`[UxmlElement]` / `[UxmlAttribute]` **仅 Unity 6+**。Unity 2022 及更早必须用 `UxmlFactory` / `UxmlTraits`（旧标准 API，仍受支持）。
+> **重要**：`[UxmlElement]` / `[UxmlAttribute]` 从 Unity 2023.2 起可用；Unity 2022 及更早必须使用 `UxmlFactory` / `UxmlTraits`。即使版本满足，也要按当前包与目标平台编译验证，再决定是否迁移既有 UXML。
 
-### ✅ 全版本通用：`UxmlFactory` / `UxmlTraits` 写法（推荐用于 Unity 2022）
+### 17.1 ✅ 兼容写法：`UxmlFactory` / `UxmlTraits`（Unity 2022 及更早必用）
 
 ```csharp
 using UnityEngine.UIElements;
@@ -1517,12 +1480,12 @@ public class HealthBar : VisualElement
 }
 ```
 
-> Unity 6 起，下方 `[UxmlElement]` 写法是更新的官方推荐。但 Unity 2022 及更早**必须**用上方 `UxmlFactory` 写法。
+> 从 Unity 2023.2 起可评估下方 `[UxmlElement]` 写法；Unity 2022 及更早**必须**用上方 `UxmlFactory` 写法。跨版本项目要以最低支持版本决定实现，而不是只看本机编辑器版本。
 
-### ❌ 仅 Unity 6+：`[UxmlElement]` 写法
+### 17.2 ✅ Unity 2023.2+：`[UxmlElement]` 写法
 
 ```csharp
-// ❌ 仅 Unity 6+ —— Unity 2022 及更早版本不能使用
+// ✅ Unity 2023.2+；Unity 2022 及更早版本不能使用
 [UxmlElement]
 public partial class HealthBar : VisualElement
 {
@@ -1532,9 +1495,9 @@ public partial class HealthBar : VisualElement
 }
 ```
 
-🟡 **Unity 6 有更简洁的新方式（UxmlFactory 仍兼容但非首选）：**
+🟡 **Unity 2023.2+ 有更简洁的新方式（UxmlFactory 仍可用于兼容场景）：**
 ```csharp
-// Unity 6 之前 —— 不要这样写
+// Unity 2023.2 之前，或项目需兼容旧版本时，使用该写法
 public new class UxmlFactory : UxmlFactory<MyElement, UxmlTraits> { }
 public new class UxmlTraits : VisualElement.UxmlTraits
 {
@@ -1542,7 +1505,7 @@ public new class UxmlTraits : VisualElement.UxmlTraits
 }
 ```
 
-✅ **统一使用 —— Unity 6.3 API：**
+✅ **已验证 Unity 2023.2+ 时使用：**
 ```csharp
 using UnityEngine.UIElements;
 
@@ -1552,7 +1515,7 @@ using UnityEngine.UIElements;
 [UxmlElement]
 public partial class HealthBar : VisualElement
 {
-    // 在 UXML 中作为属性暴露 —— Unity 6.3 会自动生成注册代码
+    // 在 UXML 中作为属性暴露 —— 由当前支持版本的代码生成流程处理
     [UxmlAttribute]
     public float maxHealth { get; set; } = 100f;
 
@@ -1589,17 +1552,16 @@ public partial class HealthBar : VisualElement
 <MyNamespace.HealthBar max-health="100" label="HP" name="player-health" />
 ```
 
----
 
-## 18. 数据绑定（**Unity 6+** 专属）
+## 18. 数据绑定（按 Unity 版本与包支持）
 
-> **重要**：运行时数据绑定（`INotifyBindablePropertyChanged` / `[CreateProperty]` / `SetBinding()`）**仅 Unity 6 及以上版本支持**。Unity 2022 及更早版本请使用替代方案（见下方）。
+> **重要**：UI Toolkit 运行时数据绑定从 Unity 2023.2 起已可用，Unity 6 继续扩展和完善相关 API。开始实现前必须检查目标 Unity 版本、已安装包、官方 API 文档，并用最小 UXML/C# 样例编译验证；不要把“仅 Unity 6 支持”当作结论。
 
-Unity 6 引入了完整的**运行时**数据绑定系统。这与仅限 Editor 的 `SerializedObject.Bind()` 完全不同。
+运行时数据绑定与仅限 Editor 的 `SerializedObject.Bind()` 不同。低于支持版本、或项目尚未验证该功能时，请使用显式更新与成对订阅作为兼容方案。
 
-### ⚠️ Unity 2022 及更早版本：替代方案
+### 18.1 ⚠️ 未支持或未验证运行时数据绑定时：替代方案
 
-如果工程是 Unity 2022 或更早版本（**没有运行时数据绑定**），请使用以下替代方案：
+如果工程低于支持版本、相关包/API 不可用，或团队尚未验证运行时数据绑定，请使用以下替代方案：
 
 ```csharp
 // Unity 2022 推荐写法：手动订阅 INotifyPropertyChanged
@@ -1640,9 +1602,9 @@ private void OnEnable()
 }
 ```
 
-> 升级到 Unity 6 后，可使用下方原方案（`INotifyBindablePropertyChanged` + `SetBinding`）。
+> 升级 Unity 或包版本后，也必须重新编译并验证绑定 API；不要仅根据版本号迁移现有 UI。
 
-### 响应式数据源（运行时更新）—— **Unity 6+**
+### 18.2 响应式数据源（运行时更新）—— 已验证支持时
 
 实现 `INotifyBindablePropertyChanged` 以使 UI 在数据运行时变化时自动更新：
 
@@ -1697,7 +1659,7 @@ public class PlayerDataSO : ScriptableObject, INotifyBindablePropertyChanged
 
 > ⚠️ **若没有 `INotifyBindablePropertyChanged`**，绑定只会在首次赋值时更新 —— 后续的数据变化不会反映到 UI。
 
-### 简单数据源（只读 / 一次性）
+### 18.3 简单数据源（只读 / 一次性）
 
 对于静态或一次性的绑定，不需要 `INotifyBindablePropertyChanged`：
 
@@ -1721,7 +1683,7 @@ public class ItemDataSO : ScriptableObject
 
 此模式适用于数据在运行时不会变化，或你手动重新赋值 `dataSource` 来触发刷新的场景。
 
-### 在 UXML 中绑定
+### 18.4 在 UXML 中绑定
 
 ```xml
 <ui:UXML xmlns:ui="UnityEngine.UIElements">
@@ -1734,7 +1696,7 @@ public class ItemDataSO : ScriptableObject
 
 > ⚠️ `binding-path` **区分大小写** —— 必须与 C# 中的属性名完全一致。
 
-### 在 C# 中设置数据源
+### 18.5 在 C# 中设置数据源
 
 ```csharp
 public class UIController : MonoBehaviour
@@ -1753,7 +1715,7 @@ public class UIController : MonoBehaviour
 }
 ```
 
-### 通过 SetBinding() 手动绑定（C#）
+### 18.6 通过 SetBinding() 手动绑定（C#）
 
 对于没有在 UXML 中声明的程序化绑定：
 
@@ -1779,7 +1741,7 @@ slider.SetBinding("value", new DataBinding
 });
 ```
 
-### 绑定模式
+### 18.7 绑定模式
 
 | 模式 | 方向 | 适用场景 |
 |---|---|---|
@@ -1788,7 +1750,6 @@ slider.SetBinding("value", new DataBinding
 | `BindingMode.TwoWay` | 双向 | 设置、可编辑字段 |
 | `BindingMode.ToTargetOnce` | 数据 → UI（仅一次） | 仅初始值，不再更新 |
 
----
 
 ## 19. 数据绑定 — Editor / SerializedObject
 
@@ -1814,13 +1775,12 @@ field.BindProperty(property);
 rootVisualElement.Add(field);
 ```
 
-运行时 UI 请使用 `SetBinding()` 与 `binding-path` —— 参见上文 [数据绑定（Unity 6+）](#数据绑定unity-6)。
+运行时 UI 仅在当前项目已验证支持时使用 `SetBinding()` 与 `binding-path` —— 参见上文第 18 节的数据绑定版本检查。
 
----
 
 ## 20. 常用模式与示例
 
-### 全屏 UI
+### 20.1 全屏 UI
 
 ```xml
 <ui:VisualElement name="root" style="flex-grow: 1;">
@@ -1828,7 +1788,7 @@ rootVisualElement.Add(field);
 </ui:VisualElement>
 ```
 
-### 头部 / 内容 / 底部
+### 20.2 头部 / 内容 / 底部
 
 ```xml
 <ui:VisualElement style="flex-grow: 1;">
@@ -1838,7 +1798,7 @@ rootVisualElement.Add(field);
 </ui:VisualElement>
 ```
 
-### 居中模态框
+### 20.3 居中模态框
 
 ```css
 .overlay {
@@ -1857,7 +1817,7 @@ rootVisualElement.Add(field);
 }
 ```
 
-### 两栏布局
+### 20.4 两栏布局
 
 ```xml
 <ui:VisualElement style="flex-direction: row; flex-grow: 1;">
@@ -1866,30 +1826,26 @@ rootVisualElement.Add(field);
 </ui:VisualElement>
 ```
 
----
 
 ## 21. 基于数据绑定的 MVP 设计模式
 
-本节演示一种简洁的 **Model-View-Presenter（MVP）** 架构，使用 Unity 6 运行时数据绑定，将数据（Model）、UI 显示（View）与游戏逻辑（Presenter）解耦。
+本节演示一种简洁的 **Model-View-Presenter（MVP）** 架构。仅当当前 Unity 版本与包已经验证运行时数据绑定时，才使用示例中的绑定 API；否则保持相同职责边界，改用显式更新与成对订阅。
 
-### View 命名约定
+### 21.1 View 命名约定
 
 **View 类以 `*View` 后缀结尾**，以便将 UI 表示层类与控制器区分开：
 
 | 类类型 | 示例 | 位置 | 职责 |
 |------------|---------|----------|-----------------|
-| View | `BuildingsView.cs` | `Assets/UI Toolkit/Scripts/Map/` | UI 显示与事件订阅（继承 `UITKBaseClass`） |
-| View | `DiplomacyView.cs` | `Assets/UI Toolkit/Scripts/Diplomacy/` | 渲染关系数据、订阅外交事件 |
-| View | `ArmyRecruitView.cs` | `Assets/UI Toolkit/Scripts/Army/` | 显示可招募单位、处理招募 UI |
-| Presenter/Controller | `BuildingsController.cs` | `Assets/Scripts/Map/` | 游戏逻辑、数据操作、事件编排 |
-| Presenter/Controller | `DiplomacyController.cs` | `Assets/Scripts/Diplomacy/` | 管理关系、条约、AI 决策 |
-| Model | `FactionDataSO.cs` | `Assets/Scripts/Core/` | 纯数据 —— 不含 UI 或逻辑 |
+| View | `InventoryView.cs` | 项目约定的 UI 目录 | UI 显示与事件订阅 |
+| Presenter/Controller | `InventoryPresenter.cs` | 项目约定的功能目录 | 游戏逻辑、数据操作、事件编排 |
+| Model | `InventoryModel.cs` | 项目约定的数据目录 | 纯数据 —— 不含 UI 或逻辑 |
 
 **为何使用此约定？**
 - ✅ 立即传达："这个类负责 UI 表示"
 - ✅ 易于与 Controller/Presenter（包含游戏逻辑）区分
 - ✅ 与行业 MVP/MVC 约定保持一致
-- ✅ 所有 `*View` 类都继承 `UITKBaseClass`，并使用模板方法模式
+- ✅ 若项目已有 View 基类、目录或模板方法，沿用其约定；未定义时不要凭本节新增 `UITKBaseClass` 一类基础设施
 
 **View 职责（纯 MVP View）：**
 - 通过 `InitializeElements()` 缓存 UI 元素引用
@@ -1898,7 +1854,7 @@ rootVisualElement.Add(field);
 - 通过事件将用户输入反馈给 Presenter
 - **不包含业务逻辑** —— 只负责 UI 渲染和事件处理
 
-### 架构概览
+### 21.2 架构概览
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -1922,9 +1878,9 @@ rootVisualElement.Add(field);
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### 完整示例：玩家属性面板
+### 21.3 完整示例：玩家属性面板
 
-#### 2. Model（数据类）
+#### 21.3.1 2. Model（数据类）
 
 ```csharp
 // PlayerStatsModel.cs
@@ -2040,11 +1996,10 @@ namespace Game.Models
 }
 ```
 
-#### 3. View（UI 控制器）
+#### 21.3.2 3. View（UI 控制器）
 
 ```csharp
 // PlayerStatsView.cs
-using GameSystems;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -2068,9 +2023,6 @@ namespace Game.Views
         private Button m_damageButton;
         private Button m_restButton;
 
-        // EventRegistry 自动处理清理 —— 避免 lambda 无法反注册的问题
-        private readonly EventRegistry m_eventRegistry = new();
-
         private void Awake()
         {
             m_uiDocument = GetComponent<UIDocument>();
@@ -2092,16 +2044,21 @@ namespace Game.Views
             m_restButton = root.Q<Button>("rest-button");
 
             if (m_healButton != null)
-                m_eventRegistry.RegisterCallback<ClickEvent>(m_healButton, OnHealClicked);
+                m_healButton.RegisterCallback<ClickEvent>(OnHealClicked);
             if (m_damageButton != null)
-                m_eventRegistry.RegisterCallback<ClickEvent>(m_damageButton, OnDamageClicked);
+                m_damageButton.RegisterCallback<ClickEvent>(OnDamageClicked);
             if (m_restButton != null)
-                m_eventRegistry.RegisterCallback<ClickEvent>(m_restButton, OnRestClicked);
+                m_restButton.RegisterCallback<ClickEvent>(OnRestClicked);
         }
 
         private void OnDisable()
         {
-            m_eventRegistry.Dispose(); // 一次性取消所有回调
+            if (m_healButton != null)
+                m_healButton.UnregisterCallback<ClickEvent>(OnHealClicked);
+            if (m_damageButton != null)
+                m_damageButton.UnregisterCallback<ClickEvent>(OnDamageClicked);
+            if (m_restButton != null)
+                m_restButton.UnregisterCallback<ClickEvent>(OnRestClicked);
         }
 
         private void OnHealClicked(ClickEvent evt) => m_presenter?.OnHealClicked();
@@ -2119,7 +2076,7 @@ namespace Game.Views
 }
 ```
 
-#### 4. Presenter（游戏逻辑）
+#### 21.3.3 4. Presenter（游戏逻辑）
 
 ```csharp
 // PlayerStatsPresenter.cs
@@ -2207,7 +2164,7 @@ namespace Game.Presenters
 }
 ```
 
-#### 5. UXML（带绑定的 UI 布局）
+#### 21.3.4 5. UXML（带绑定的 UI 布局）
 
 ```xml
 <!-- PlayerStatsPanel.uxml -->
@@ -2289,7 +2246,7 @@ namespace Game.Presenters
 </ui:UXML>
 ```
 
-#### 6. USS（样式）
+#### 21.3.5 6. USS（样式）
 
 ```css
 /* PlayerStats.uss */
@@ -2363,7 +2320,7 @@ namespace Game.Presenters
 }
 ```
 
-### 关键要点
+### 21.4 关键要点
 
 1. **Model 实现 `INotifyBindablePropertyChanged`** —— 运行时数据变化时 UI 自动更新所必需
 2. **所有可绑定属性都加上 `[CreateProperty]`** —— 让属性对绑定系统可见
@@ -2372,26 +2329,24 @@ namespace Game.Presenters
 5. **View 将用户输入转发给 Presenter** —— 保持关注点分离
 6. **Presenter 只修改 Model** —— UI 通过绑定自动更新
 
----
 
 ## 22. 性能建议
 
 1. **在 `OnEnable` 中缓存 VisualElement 引用** —— 绝不要在 `Update` 中调用 `Q<>()`；相比 `Awake` 更推荐 `OnEnable`，让查询与事件订阅在同一个方法中
 2. **使用 USS class** 而不是内联 `element.style.*` 来改样式 —— USS 是批量应用、经过优化的
-3. **使用 `ListView`** 来处理超过 ~20 项的列表 —— 虚拟化渲染避免离屏项的每帧开销
+3. **按数据量与 Profiling 结果评估 `ListView`** —— 它能虚拟化离屏项；“约 20 项”只能作为开始测试的提示，不是切换阈值
 4. **避免在每帧或频繁执行的代码中调用 `Query<>().ToList()`** —— 会产生 GC 分配
 5. **使用 USS 变量**管理颜色与尺寸 —— 减少冗余，便于主题化
 6. **尽量减少 UXML 嵌套** —— 每一层都增加遍历开销
 7. **避免每帧切换 `display: none`** —— 若元素必须留在布局中，请改用 `visibility: hidden`
-8. **使用 `EventRegistry`** 统一清理 —— 避免手动维护订阅/取消订阅
+8. **保持订阅的所有权与清理路径明确** —— 项目已有订阅管理器时沿用；否则使用具名回调并成对反注册
 
----
 
 ## 23. 常见错误速查
 
 | ❌ 错误 | ✅ 正确 | 说明 |
 |----------|-----------|-------|
-| `color: #FF0000;` | `color: rgb(255, 0, 0);` | Unity 2022 及更早不支持十六进制，推荐用 rgb() |
+| 混用无约定的颜色格式 | 统一采用项目约定的 `#hex`、`rgb()` 或 `rgba()` | 三种格式均可用；重点是主题一致与可读性 |
 | `text-align: center;` | `-unity-text-align: middle-center;` | 需要 Unity 前缀 |
 | `font-weight: bold;` | `-unity-font-style: bold;` | 属性名不同 |
 | `background: url(...)` | `background-image: url(...)` | 无简写形式 |
@@ -2413,11 +2368,10 @@ namespace Game.Presenters
 | 运行时 MonoBehaviour 用 `OnDestroy` | 用 `OnDisable` | `OnDestroy` 触发过晚 |
 | 运行时用 `SerializedObject.Bind()` | `binding-path` + `dataSource` | 仅 Editor API |
 
----
 
 ## 24. 故障排查
 
-### 绑定未更新
+### 24.1 绑定未更新
 
 1. ✅ 属性已加 `[CreateProperty]`
 2. ✅ 类已实现 `INotifyBindablePropertyChanged`
@@ -2425,43 +2379,41 @@ namespace Game.Presenters
 4. ✅ 已在 C# 中赋值 `dataSource`
 5. ✅ `binding-path` 与属性名完全一致（区分大小写）
 
-### 元素不可见
+### 24.2 元素不可见
 
 1. 检查 `display` 不为 `None`
 2. 检查 `visibility` 不为 `Hidden`
 3. 检查父级有 `flex-grow: 1` 或显式尺寸
 4. 打开 **UI Toolkit Debugger**（Window → UI Toolkit → Debugger）
 
-### 按钮无响应
+### 24.3 按钮无响应
 
 1. 确认在 `OnEnable`（而不是构造器）中订阅
 2. 检查未被禁用（`button.SetEnabled(false)`）
 3. 检查没有覆盖元素拦截指针事件
 4. 检查 `picking-mode` 为 `position`（不是 `ignore`）
 
-### 查询返回 null
+### 24.4 查询返回 null
 
 1. 确认 UXML 中已设置 `name` 属性
 2. 在 `OnEnable` 中查询（UIDocument 场景下不要在 `Awake`）
 3. 使用正确的类型（`Q<Button>` 而非 `Q<VisualElement>`）
 4. 检查拼写 —— name 匹配区分大小写
 
-### 模板未渲染
+### 24.5 模板未渲染
 
 1. `VisualTreeAsset` 已在 Inspector 中赋值
 2. 添加到层级前先调用 `Instantiate()`
 3. 在 Console 中检查 UXML 解析错误
 
-### ListView 不显示
+### 24.6 ListView 不显示
 
 1. 已设置 `itemsSource`
 2. 已同时赋值 `makeItem` 与 `bindItem`
 3. 数据变化后调用了 `RefreshItems()`
 
-### USS 未生效
+### 24.7 USS 未生效
 
 1. USS 已在 UXML 中通过 `<Style src="..." />` 引用
 2. class 名严格匹配（区分大小写）
 3. 用 UI Toolkit Debugger 检查计算后的样式
-
----
