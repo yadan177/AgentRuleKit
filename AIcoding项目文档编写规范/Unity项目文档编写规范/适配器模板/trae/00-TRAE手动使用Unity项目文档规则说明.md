@@ -1,4 +1,4 @@
-# 00 - TRAE 手动使用 Unity 项目文档规则说明
+# 00 - TRAE 手动使用 Unity 技术文档规则说明
 
 ---
 
@@ -6,8 +6,8 @@
 
 未核实当前 TRAE 版本稳定的项目规则路径前，请按任务手动附加：
 
-1. `.ai-rules/unity-project-docs/04-UnityAI项目文档任务入口.md`。
-2. `.ai-rules/unity-project-docs/00-Unity项目文档编写规范总览.md`。
+1. `.ai-rules/unity-project-docs/其他规则/04-UnityAI技术文档任务入口.md`。
+2. `.ai-rules/unity-project-docs/其他规则/00-Unity技术文档编写规范总览.md`。
 3. 当前任务相关的 Unity 专题规则。
 
 ## 2. 推荐提示词

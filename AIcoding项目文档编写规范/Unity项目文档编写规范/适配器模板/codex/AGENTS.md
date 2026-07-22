@@ -1,10 +1,10 @@
-# 00 - Unity 项目文档 Codex 入口规则
+# 00 - Unity 技术文档 Codex 入口规则
 
 ---
 
 ## 1. 任务路由
 
-执行 Unity 项目文档任务前，读取 `.ai-rules/unity-project-docs/04-UnityAI项目文档任务入口.md`，再按总览选择专题规则。
+执行 Unity 技术文档任务前，读取 `.ai-rules/unity-project-docs/其他规则/04-UnityAI技术文档任务入口.md`，再按总览选择专题规则。
 
 ## 2. 项目事实优先
 
