@@ -1,7 +1,6 @@
 # 05 - Unity UI Toolkit 设计规则
 
-> 🟢 本文件适用于 Unity UI Toolkit 界面（UXML/USS/BEM/Flexbox/数据绑定）。
-
+> 🟢 本文件适用于 Unity UI Toolkit 界面（UXML/USS/BEM/Flexbox/数据绑定）。<br>
 > 🔴 不适用：业务逻辑实现、美术资源制作、旧版 IMGUI
 
 ---

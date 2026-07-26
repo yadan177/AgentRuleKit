@@ -1,7 +1,6 @@
 # 13 - React 组件规则
 
-> 🟢 本文件适用于 React 组件设计（useEffect 依赖/状态位置/Props/z-index）。
-
+> 🟢 本文件适用于 React 组件设计（useEffect 依赖/状态位置/Props/z-index）。<br>
 > 🔴 不适用：业务逻辑实现、UI 样式设计、其他框架（Vue / Angular）
 
 ---

@@ -1,7 +1,6 @@
 # 14 - CSS 与样式体系规则
 
-> 🟢 本文件适用于 CSS 与样式体系选型（Tailwind/CSS-in-JS/CSS Modules）。
-
+> 🟢 本文件适用于 CSS 与样式体系选型（Tailwind/CSS-in-JS/CSS Modules）。<br>
 > 🔴 不适用：业务逻辑实现、组件设计
 
 ---

@@ -1,7 +1,6 @@
 # 06 - Java Web/API 设计规则
 
-> 🟢 本文件适用于 Java 项目的 Web API 设计（RESTful/Controller/参数校验/限流等）。
-
+> 🟢 本文件适用于 Java 项目的 Web API 设计（RESTful/Controller/参数校验/限流等）。<br>
 > 🔴 不适用：业务逻辑实现、UI 样式细节、数据库 schema 设计
 
 ---

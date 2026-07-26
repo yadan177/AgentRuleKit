@@ -1,7 +1,6 @@
 # 04 - UGUI 设计规则
 
-> 🟢 本文件适用于 Unity UGUI 界面（Canvas/RectTransform/布局系统）。
-
+> 🟢 本文件适用于 Unity UGUI 界面（Canvas/RectTransform/布局系统）。<br>
 > 🔴 不适用：业务逻辑实现、美术资源制作
 
 ---

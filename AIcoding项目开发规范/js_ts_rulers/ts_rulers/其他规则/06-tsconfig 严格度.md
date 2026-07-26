@@ -1,7 +1,6 @@
 # 06 - tsconfig 严格度
 
-> 🟢 本文件适用于 tsconfig.json 的严格度配置。
-
+> 🟢 本文件适用于 tsconfig.json 的严格度配置。<br>
 > 🔴 不适用：业务逻辑实现、UI 样式设计
 
 ---

@@ -1,7 +1,6 @@
 # 07 - ESLint + Prettier TS 集成
 
-> 🟢 本文件适用于项目已经采用 ESLint 和/或 Prettier 时的 TypeScript 集成；具体版本、配置格式和命令以仓库现状为准。
-
+> 🟢 本文件适用于项目已经采用 ESLint 和/或 Prettier 时的 TypeScript 集成；具体版本、配置格式和命令以仓库现状为准。<br>
 > 🔴 不适用：业务逻辑实现、UI 样式设计
 
 ---
