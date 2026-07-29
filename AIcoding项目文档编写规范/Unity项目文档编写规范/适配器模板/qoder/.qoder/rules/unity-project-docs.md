@@ -1,10 +1,10 @@
-# 00 - Unity 项目文档 Qoder 入口规则
+# 00 - Unity 技术文档 Qoder 入口规则
 
 ---
 
 ## 1. 使用要求
 
-将本规则设为始终生效。执行 Unity 项目文档任务前，读取 `.ai-rules/unity-project-docs/04-UnityAI项目文档任务入口.md`，再按总览选择专题规则。
+将本规则设为始终生效。执行 Unity 技术文档任务前，读取 `.ai-rules/unity-project-docs/其他规则/04-UnityAI技术文档任务入口.md`，再按总览选择专题规则。
 
 ## 2. 执行约束
 
