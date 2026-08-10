@@ -13,12 +13,12 @@
 // ❌ == 隐式转换
 if (count == '5') { /* 类型不一致仍 true */ }
 
-// ❌ arguments（deopt + 类型难）
+// ❌ arguments(deopt + 类型难)
 function sum() {
   return Array.prototype.reduce.call(arguments, (a, b) => a + b, 0);
 }
 
-// ❌ with / eval（运行时禁用）
+// ❌ with / eval(运行时禁用)
 with (obj) { name = 'a'; }
 eval('name = "a"');
 
@@ -33,7 +33,7 @@ function sum(...nums: number[]) { return nums.reduce((a, b) => a + b, 0); }
 ### 1.2 没有类型注解
 
 ```ts
-// ❌ 完全依赖推断（库代码不可用）
+// ❌ 完全依赖推断(库代码不可用)
 export function getUser(id) { /* ... */ }
 
 // ✅ 函数参数 / 返回类型必加
@@ -94,7 +94,7 @@ class Counter {
   }
 }
 
-// ✅ 箭头函数（继承外层 this）
+// ✅ 箭头函数(继承外层 this)
 increment() {
   setTimeout(() => {
     this.count++;                                    // ✅
@@ -132,7 +132,7 @@ async function getUser(id: number): Promise<User> {
 ### 1.7 import 不区分类型和值
 
 ```ts
-// ❌ 全部用 import（运行时仍加载类型 import）
+// ❌ 全部用 import(运行时仍加载类型 import)
 import { User, getUser } from './user';
 
 // ✅ 类型 import 用 import type
@@ -180,7 +180,7 @@ namespace MyLib {
   export function setup(c: Config) {}
 }
 
-// ❌ 用 namespace 装运行时（不推荐）
+// ❌ 用 namespace 装运行时(不推荐)
 namespace MyLib {
   export const VERSION = '1.0.0';                   // 用 ES module 替代
 }
@@ -221,7 +221,7 @@ declare module '*.module.css' {
 **现代项目用 TC39 Stage 3 装饰器**（TS 5.0+ 默认开启）：
 
 ```ts
-// ✅ TC39 新装饰器（标准路径）
+// ✅ TC39 新装饰器(标准路径)
 function logged(target: any, propertyKey: string, descriptor: PropertyDescriptor) {
   const original = descriptor.value;
   descriptor.value = function (...args: unknown[]) {

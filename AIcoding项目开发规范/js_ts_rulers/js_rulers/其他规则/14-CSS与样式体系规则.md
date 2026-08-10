@@ -7,7 +7,7 @@
 
 ## 1. 🔴 硬约束 · 这些绝对不要写
 
-### 1.1 多种样式方案混着写（一个项目用N套）
+### 1.1 没有边界地混用样式方案
 
 ```css
 // ❌ 错误：同一个项目 Tailwind + styled-components + CSS Modules 全用，没人能维护
@@ -24,9 +24,9 @@ import styles from './Card.module.css'; // 这里用 CSS Modules
 ```
 
 > 📌 规则：
-> - **一个项目只选一种样式方案**，三选一：Tailwind / CSS-in-JS / CSS Modules
-> - 选定了就全项目统一，不要混搭
-> - 老项目迁移要做就做全，不要一半一半
+> - 优先沿用项目现有样式体系，不因本规则引入 Tailwind、CSS-in-JS 或 CSS Modules。
+> - 一个项目可以因组件库、遗留模块或渐进迁移同时存在多种方案，但必须明确各自适用目录、优先级、设计 token 来源和退出计划。
+> - 新代码遵循所属模块边界；迁移应分阶段验证，不要求一次性重写全项目。
 
 ---
 
@@ -46,9 +46,8 @@ import styles from './Card.module.css'; // 这里用 CSS Modules
 ```
 
 > 📌 规则：
-> - **99% 的场景不应该用 !important**
-> - 除非是覆盖第三方库的内联样式，而且没有其他办法
-> - 用了 !important 必须写注释说明为什么
+> - 优先通过层叠层、选择器边界、组件 API 或 token 解决优先级问题。
+> - 覆盖第三方样式、可访问性辅助类等确有必要时可以使用 `!important`，并遵循项目现有约定说明原因。
 
 ---
 
@@ -65,15 +64,15 @@ import styles from './Card.module.css'; // 这里用 CSS Modules
 
 > 📌 规则：
 > - **必须统一 z-index 分层体系**，定义在一个地方
-> - 推荐分层：`100 - dropdown` / `200 - tooltip` / `300 - modal` / `400 - loading`
-> - 不要用超过 3 位数的 z-index
+> - 层级值由项目设计系统统一定义；示例数字不能直接作为所有项目的默认值。
+> - 数值大小不是问题本身，关键是 stacking context、语义层级与统一 token。
 
 ---
 
 ### 1.4 内联样式写逻辑样式
 
 ```jsx
-// ❌ 错误：把所有样式都塞进 style 里，可读性爆炸
+// ❌ 错误：把所有样式都塞进 style 里,可读性爆炸
 <div style={{
   display: 'flex',
   justifyContent: 'center',
@@ -83,9 +82,9 @@ import styles from './Card.module.css'; // 这里用 CSS Modules
   backgroundColor: isActive ? 'blue' : 'white',
   color: isActive ? 'white' : 'black',
   borderRadius: '4px',
-  boxShadow: '0 2px 8px rgba（0,0,0,0.1）'
+  boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
 }}>
-  把 CSS 全写在 style 里，这和写内联有什么区别？
+  把 CSS 全写在 style 里,这和写内联有什么区别？
 </div>
 ```
 
@@ -164,21 +163,21 @@ import styles from './Card.module.css'; // 这里用 CSS Modules
 ### 2.8 Tailwind 原子类超过 5 个不提取
 
 ```jsx
-// ❌ 错误：同一个组合的原子类重复写 N 次，改一个地方要改 10 处
+// ❌ 错误：同一个组合的原子类重复写 N 次,改一个地方要改 10 处
 <div className="flex items-center justify-between p-4 bg-white rounded-lg shadow">...</div>
 <div className="flex items-center justify-between p-4 bg-white rounded-lg shadow">...</div>
 <div className="flex items-center justify-between p-4 bg-white rounded-lg shadow">...</div>
-/* 每个卡片都写一遍，某天要把 p-4 改成 p-6，你得找全 */
+/* 每个卡片都写一遍,某天要把 p-4 改成 p-6,你得找全 */
 ```
 
 ```jsx
 // ✅ 正确：超过 5 个就提取成组件 / @apply
-function Card（{ children }） {
-  return （
+function Card({ children }) {
+  return (
     <div className="flex items-center justify-between p-4 bg-white rounded-lg shadow">
       {children}
     </div>
-  ）;
+  );
 }
 
 // 或者用 @apply

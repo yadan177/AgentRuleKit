@@ -46,7 +46,7 @@ function getName(user: User | null) {
 
 ```ts
 const arr = [1, 2, 3];
-const x = arr[10];                                   // TS 推断 number，实际 undefined
+const x = arr[10];                                   // TS 推断 number,实际 undefined
 console.log(x.toFixed(2));                           // ❌ 运行时崩
 ```
 
@@ -161,7 +161,7 @@ const u2: User = { name: 'alice' };
 // ❌ 库没类型
 import oldLib from 'no-types-lib';
 
-// ✅ 写 .d.ts（见 [05-声明文件](./05-声明文件.md)）
+// ✅ 写 .d.ts(见 [05-声明文件](./05-声明文件.md))
 ```
 
 ### 2.5 增量编译

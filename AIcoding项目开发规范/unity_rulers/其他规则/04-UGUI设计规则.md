@@ -538,7 +538,7 @@ void Update()
 
 ### 6.6 关闭不必要的 Raycast Target
 
-🔴 **每个 Image / Text 默认 `raycastTarget = true`**，不需要的必须关掉：
+🔴 Unity UI 图形组件可能默认参与射线检测。只有实际承担点击、拖拽或阻挡职责的组件才保留 `raycastTarget = true`；纯展示组件应关闭，并结合父级 `CanvasGroup` 和事件穿透需求验证：
 
 ```csharp
 // ✅ 关闭纯装饰图的 Raycast Target

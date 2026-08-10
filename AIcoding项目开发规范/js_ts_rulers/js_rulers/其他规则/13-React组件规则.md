@@ -10,62 +10,62 @@
 ### 1.1 useEffect 依赖数组漏写 / 多余写
 
 ```jsx
-// ❌ 错误1：漏依赖，闭包拿到旧值，bug
-function Counter（） {
-  const [count, setCount] = useState（0）;
+// ❌ 错误1：漏依赖,闭包拿到旧值,bug
+function Counter() {
+  const [count, setCount] = useState(0);
 
-  useEffect（（） => {
-    const interval = setInterval（（） => {
-      setCount（count + 1）; // count 永远是 0，因为闭包
-    }, 1000）;
-    return （） => clearInterval（interval）;
-  }, []）; // 💥 漏了 count 依赖！
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCount(count + 1); // count 永远是 0,因为闭包
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []); // 💥 漏了 count 依赖！
 
-  return <div>{count}</div>; // 永远是 1，不涨
+  return <div>{count}</div>; // 永远是 1,不涨
 }
 
-// ❌ 错误2：多余依赖，无限循环
-function Search（） {
-  const [keyword, setKeyword] = useState（''）;
-  const [results, setResults] = useState（[]）;
+// ❌ 错误2：多余依赖,无限循环
+function Search() {
+  const [keyword, setKeyword] = useState('');
+  const [results, setResults] = useState([]);
 
-  const fetchData = （） => {
-    api.search（keyword）.then（setResults）;
+  const fetchData = () => {
+    api.search(keyword).then(setResults);
   };
 
-  useEffect（（） => {
-    fetchData（）;
-  }, [fetchData]）; // 💥 fetchData 每次渲染都是新函数，Effect 无限执行！
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]); // 💥 fetchData 每次渲染都是新函数,Effect 无限执行！
 
   // ...
 }
 
-// ✅ 正确1：函数式更新，不需要依赖
-function Counter2（） {
-  const [count, setCount] = useState（0）;
+// ✅ 正确1：函数式更新,不需要依赖
+function Counter2() {
+  const [count, setCount] = useState(0);
 
-  useEffect（（） => {
-    const interval = setInterval（（） => {
-      setCount（c => c + 1）; // 用函数式更新，不依赖外部 count
-    }, 1000）;
-    return （） => clearInterval（interval）;
-  }, []）; // ✅ 空依赖数组，正确
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCount(c => c + 1); // 用函数式更新,不依赖外部 count
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []); // ✅ 空依赖数组,正确
 
   return <div>{count}</div>;
 }
 
-// ✅ 正确2：把函数放到 Effect 里面，或者用 useCallback
-function Search2（） {
-  const [keyword, setKeyword] = useState（''）;
-  const [results, setResults] = useState（[]）;
+// ✅ 正确2：把函数放到 Effect 里面,或者用 useCallback
+function Search2() {
+  const [keyword, setKeyword] = useState('');
+  const [results, setResults] = useState([]);
 
-  useEffect（（） => {
-    // 把函数移到 Effect 里面，依赖就清晰了
-    const fetchData = （） => {
-      api.search（keyword）.then（setResults）;
+  useEffect(() => {
+    // 把函数移到 Effect 里面,依赖就清晰了
+    const fetchData = () => {
+      api.search(keyword).then(setResults);
     };
-    fetchData（）;
-  }, [keyword]）; // ✅ 只有 keyword 依赖，正确
+    fetchData();
+  }, [keyword]); // ✅ 只有 keyword 依赖,正确
 }
 ```
 
@@ -81,95 +81,95 @@ function Search2（） {
 
 ```jsx
 // ❌ 错误1：数据转换不需要 useEffect
-function UserList（{ users }） {
-  const [activeUsers, setActiveUsers] = useState（[]）;
+function UserList({ users }) {
+  const [activeUsers, setActiveUsers] = useState([]);
 
-  useEffect（（） => {
-    // 💥 完全不需要！每次渲染先 set 一下，多一次重渲染
-    setActiveUsers（users.filter（u => u.active））;
-  }, [users]）;
+  useEffect(() => {
+    // 💥 完全不需要！每次渲染先 set 一下,多一次重渲染
+    setActiveUsers(users.filter(u => u.active));
+  }, [users]);
 
-  // ✅ 正确：直接 render 时计算，或者用 useMemo
-  const activeUsers = useMemo（
-    （） => users.filter（u => u.active）,
+  // ✅ 正确：直接 render 时计算,或者用 useMemo
+  const activeUsers = useMemo(
+    () => users.filter(u => u.active),
     [users]
-  ）;
+  );
 }
 
 // ❌ 错误2：事件处理不需要 useEffect
-function Form（） {
-  const [value, setValue] = useState（''）;
-  const [submitted, setSubmitted] = useState（false）;
+function Form() {
+  const [value, setValue] = useState('');
+  const [submitted, setSubmitted] = useState(false);
 
-  useEffect（（） => {
-    if （submitted） {
+  useEffect(() => {
+    if (submitted) {
       // 💥 提交逻辑为什么要放到 Effect 里？绕了一圈
-      api.submit（value）;
-      setSubmitted（false）;
+      api.submit(value);
+      setSubmitted(false);
     }
-  }, [submitted, value]）;
+  }, [submitted, value]);
 
-  return （
-    <button onClick={（） => setSubmitted（true）}>
+  return (
+    <button onClick={() => setSubmitted(true)}>
       Submit
     </button>
-  ）;
+  );
 
   // ✅ 正确：直接写到事件处理函数里
-  const handleSubmit = （） => {
-    api.submit（value）;
+  const handleSubmit = () => {
+    api.submit(value);
   };
 
   return <button onClick={handleSubmit}>Submit</button>;
 }
 
 // ❌ 错误3：父子通信不需要 useEffect
-function Parent（） {
-  const [data, setData] = useState（null）;
-  return <Child data={data} onReady={（） => console.log（'ready'）} />;
+function Parent() {
+  const [data, setData] = useState(null);
+  return <Child data={data} onReady={() => console.log('ready')} />;
 }
-function Child（{ data, onReady }） {
-  useEffect（（） => {
-    if （data） {
+function Child({ data, onReady }) {
+  useEffect(() => {
+    if (data) {
       // 💥 为什么要等渲染完再回调？渲染和回调绑定在一起了
-      onReady（）;
+      onReady();
     }
-  }, [data, onReady]）;
+  }, [data, onReady]);
 
   // ✅ 正确：放到获取数据的地方直接调用
 }
 
 // ❌ 错误4：初始化逻辑不需要 useEffect
-function App（） {
-  const [inited, setInited] = useState（false）;
+function App() {
+  const [inited, setInited] = useState(false);
 
-  useEffect（（） => {
-    // 💥 多渲染一次，没必要
-    initApp（）;
-    setInited（true）;
-  }, []）;
+  useEffect(() => {
+    // 💥 多渲染一次,没必要
+    initApp();
+    setInited(true);
+  }, []);
 
-  // ✅ 正确：如果只跑一次，放到组件外面或者用 ref 保证
-  const inited = useRef（false）;
-  if （!inited.current） {
-    initApp（）;
+  // ✅ 正确：如果只跑一次,放到组件外面或者用 ref 保证
+  const inited = useRef(false);
+  if (!inited.current) {
+    initApp();
     inited.current = true;
   }
 }
 
 // ❌ 错误5：状态同步不需要 useEffect
-function Parent（{ value }） {
+function Parent({ value }) {
   return <Child parentValue={value} />;
 }
-function Child（{ parentValue }） {
-  const [localValue, setLocalValue] = useState（''）;
+function Child({ parentValue }) {
+  const [localValue, setLocalValue] = useState('');
 
-  useEffect（（） => {
+  useEffect(() => {
     // 💥 为什么要等渲染完再同步？多一次重渲染
-    setLocalValue（parentValue）;
-  }, [parentValue]）;
+    setLocalValue(parentValue);
+  }, [parentValue]);
 
-  // ✅ 正确：直接用，不需要本地状态同步，或者用 key 重置
+  // ✅ 正确：直接用,不需要本地状态同步,或者用 key 重置
   // const localValue = parentValue;
 }
 ```
@@ -184,19 +184,19 @@ function Child（{ parentValue }） {
 ### 1.3 组件 Props 传巨型对象（上帝对象）
 
 ```jsx
-// ❌ 错误：传整个 user 对象进去，组件依赖了根本用不到的字段
-function UserAvatar（{ user }） {
-  // 组件只用到 avatar 和 name，但是依赖了整个 user 对象
-  // user 任何字段变了，这个组件都会重渲染
+// ❌ 错误：传整个 user 对象进去,组件依赖了根本用不到的字段
+function UserAvatar({ user }) {
+  // 组件只用到 avatar 和 name,但是依赖了整个 user 对象
+  // user 任何字段变了,这个组件都会重渲染
   return <img src={user.avatar} alt={user.name} />;
 }
 
 // 调用方传了一堆没用的
-<UserAvatar user={user} /> // user 里有 20 个字段，组件只用到 2 个
+<UserAvatar user={user} /> // user 里有 20 个字段,组件只用到 2 个
 
-// ✅ 正确：只传用到的字段，依赖清晰，重渲染可控
-function UserAvatar（{ avatar, name }） {
-  // 只依赖这两个字段，其他字段变了不影响
+// ✅ 正确：只传用到的字段,依赖清晰,重渲染可控
+function UserAvatar({ avatar, name }) {
+  // 只依赖这两个字段,其他字段变了不影响
   return <img src={avatar} alt={name} />;
 }
 
@@ -214,12 +214,12 @@ function UserAvatar（{ avatar, name }） {
 ### 1.4 状态放错地方（状态提升过度 / 提升不够）
 
 ```jsx
-// ❌ 错误1：状态提得太高，整个 App 都能改
-function App（） {
-  // 💥 搜索框状态只有 Search 组件用，为什么放到最顶层？
-  const [searchKeyword, setSearchKeyword] = useState（''）;
+// ❌ 错误1：状态提得太高,整个 App 都能改
+function App() {
+  // 💥 搜索框状态只有 Search 组件用,为什么放到最顶层？
+  const [searchKeyword, setSearchKeyword] = useState('');
 
-  return （
+  return (
     <div>
       <Header />
       <Search
@@ -229,36 +229,36 @@ function App（） {
       <Content />
       <Footer />
     </div>
-  ）;
+  );
 }
 
 // ✅ 正确：状态离使用的地方最近
-function Search（） {
-  // 只有 Search 用，就放在 Search 里面
-  const [keyword, setKeyword] = useState（''）;
+function Search() {
+  // 只有 Search 用,就放在 Search 里面
+  const [keyword, setKeyword] = useState('');
 }
 
-// ❌ 错误2：状态提升不够，兄弟组件通信绕死
-function Parent（） {
-  return （
+// ❌ 错误2：状态提升不够,兄弟组件通信绕死
+function Parent() {
+  return (
     <div>
       <Filter /> {/* 在这里选筛选条件 */}
       <List />   {/* 在这里用筛选条件请求数据 */}
-      {/* 两个组件需要通信，但状态各自在自己里面 */}
+      {/* 两个组件需要通信,但状态各自在自己里面 */}
     </div>
-  ）;
+  );
 }
 
 // ✅ 正确：提升到共同父组件
-function Parent（） {
-  // 两个兄弟组件都要用，就放在父组件
-  const [filter, setFilter] = useState（{}）;
-  return （
+function Parent() {
+  // 两个兄弟组件都要用,就放在父组件
+  const [filter, setFilter] = useState({});
+  return (
     <div>
       <Filter filter={filter} onFilterChange={setFilter} />
       <List filter={filter} />
     </div>
-  ）;
+  );
 }
 ```
 
@@ -275,47 +275,47 @@ function Parent（） {
 ### 1.5 巨型组件超过 300 行（什么都干）
 
 ```jsx
-// ❌ 错误：一个文件 500 行，数据获取、状态管理、渲染、事件处理全在一起
-function OrderPage（） {
+// ❌ 错误：一个文件 500 行,数据获取、状态管理、渲染、事件处理全在一起
+function OrderPage() {
   // 50 行 state 定义
   // 3 个 useEffect 发请求
   // 10 个事件处理函数
   // 5 个工具函数
   // 8 个条件渲染分支
-  // return 里 100 行 JSX，嵌套 5 层
+  // return 里 100 行 JSX,嵌套 5 层
   // = 没人敢改
 }
 
 // ✅ 正确：按职责拆分
 // hooks/useOrderData.js - 只负责拿数据
-function useOrderData（orderId） {
+function useOrderData(orderId) {
   const [loading, data, error] = ......;
   return { loading, data, error };
 }
 
 // components/OrderList.js - 只负责渲染列表
-function OrderList（{ orders, onItemClick }） { ... }
+function OrderList({ orders, onItemClick }) { ... }
 
 // components/OrderFilter.js - 只负责筛选
-function OrderFilter（{ filter, onFilterChange }） { ... }
+function OrderFilter({ filter, onFilterChange }) { ... }
 
 // OrderPage.js 只做组装
-function OrderPage（） {
-  const { loading, data, error } = useOrderData（orderId）;
-  const [filter, setFilter] = useState（{}）;
+function OrderPage() {
+  const { loading, data, error } = useOrderData(orderId);
+  const [filter, setFilter] = useState({});
 
-  if （loading） return <Loading />;
-  if （error） return <Error />;
+  if (loading) return <Loading />;
+  if (error) return <Error />;
 
-  return （
+  return (
     <div>
       <OrderFilter filter={filter} onFilterChange={setFilter} />
       <OrderList
-        orders={filterOrders（data.orders, filter）}
+        orders={filterOrders(data.orders, filter)}
         onItemClick={handleItemClick}
       />
     </div>
-  ）;
+  );
 }
 ```
 
@@ -332,20 +332,20 @@ function OrderPage（） {
 const items = [{ id: 1, name: 'a' }, { id: 2, name: 'b' }];
 
 // ❌ 错误1：没 key
-items.map（item => <li>{item.name}</li>）; // React 直接警告，重排性能爆炸
+items.map(item => <li>{item.name}</li>); // React 直接警告,重排性能爆炸
 
-// ❌ 错误2：索引用 key，顺序变了就全乱
-items.map（（item, index） => <li key={index}>{item.name}</li>）;
-// 数组重排、插入、删除，key 没变但是对应不上，状态全乱
+// ❌ 错误2：索引用 key,顺序变了就全乱
+items.map((item, index) => <li key={index}>{item.name}</li>);
+// 数组重排、插入、删除,key 没变但是对应不上,状态全乱
 
 // ✅ 正确：用业务唯一 ID 当 key
-items.map（item => <li key={item.id}>{item.name}</li>）;
+items.map(item => <li key={item.id}>{item.name}</li>);
 ```
 
 > 📌 规则：
 > - map 必须有 key
-> - key 必须是**稳定、唯一、和业务相关**（ID/UUID）
-> - 绝对不要用数组索引当 key
+> - key 在同级列表中必须稳定且唯一，优先使用数据自身 ID。
+> - 列表会插入、删除、排序或子项持有状态时，不得使用数组索引；静态且永不重排、没有稳定 ID 的展示列表可以使用索引，但应确认这些前提。
 
 ---
 
@@ -354,8 +354,8 @@ items.map（item => <li key={item.id}>{item.name}</li>）;
 ### 2.7 嵌套三元超过 3 层
 
 ```jsx
-// ❌ 错误：嵌套三元，根本读不懂
-return （
+// ❌ 错误：嵌套三元,根本读不懂
+return (
   <div>
     {loading
       ? error
@@ -366,12 +366,12 @@ return （
       : <Loading />
     }
   </div>
-）;
+);
 
-// ✅ 正确：提前 return，扁平化
-if （loading） return <Loading />;
-if （error） return <Error />;
-if （!data） return <Empty />;
+// ✅ 正确：提前 return,扁平化
+if (loading) return <Loading />;
+if (error) return <Error />;
+if (!data) return <Empty />;
 return <List data={data} />;
 ```
 
@@ -381,10 +381,10 @@ return <List data={data} />;
 
 ```jsx
 // ❌ 错误：每次渲染都会执行 expensiveCompute
-const [value, setValue] = useState（expensiveCompute（props.data））; // 💥 每次渲染都算
+const [value, setValue] = useState(expensiveCompute(props.data)); // 💥 每次渲染都算
 
-// ✅ 正确：传函数，只执行一次
-const [value, setValue] = useState（（） => expensiveCompute（props.data））; // 只初始化时算一次
+// ✅ 正确：传函数,只执行一次
+const [value, setValue] = useState(() => expensiveCompute(props.data)); // 只初始化时算一次
 ```
 
 > 📌 初始化如果是重计算，一定要用函数式初始化
@@ -394,15 +394,15 @@ const [value, setValue] = useState（（） => expensiveCompute（props.data）�
 ### 2.9 自定义 Hook 命名不以 use 开头
 
 ```jsx
-// ❌ 错误：不是 use 开头，React 不认，Hook 规则检查不了
-function getUserId（） {
-  const { userId } = useContext（UserContext）; // 💥 里面用了 Hook 但名字不对
+// ❌ 错误：不是 use 开头,React 不认,Hook 规则检查不了
+function getUserId() {
+  const { userId } = useContext(UserContext); // 💥 里面用了 Hook 但名字不对
   return userId;
 }
 
 // ✅ 正确：自定义 Hook 必须以 use 开头
-function useUserId（） {
-  const { userId } = useContext（UserContext）;
+function useUserId() {
+  const { userId } = useContext(UserContext);
   return userId;
 }
 ```

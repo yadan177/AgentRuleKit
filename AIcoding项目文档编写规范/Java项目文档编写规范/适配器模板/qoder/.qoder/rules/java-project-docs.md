@@ -4,7 +4,7 @@
 
 ## 1. 使用要求
 
-将本规则设为始终生效。执行 Java 技术文档任务前，读取 `.ai-rules/java-project-docs/其他规则/04-JavaAI技术文档任务入口.md`，再按总览选择专题规则。
+将本规则设为始终生效。执行 Java 技术文档任务，或 Java 实现任务判断存在文档影响时，读取 `.ai-rules/java-project-docs/其他规则/04-JavaAI技术文档任务入口.md` 和 `.ai-rules/java-project-docs/其他规则/01-技术文档组织与维护规范.md`，再按总览选择专题规则。
 
 ## 2. 执行约束
 

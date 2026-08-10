@@ -22,7 +22,7 @@ npm install --save-dev eslint typescript-eslint
 ### 1.2 不加范围评估地关闭类型化规则
 
 ```js
-// ❌ 关闭 no-unsafe-* 规则（失去类型 lint 意义）
+// ❌ 关闭 no-unsafe-* 规则(失去类型 lint 意义)
 {
   rules: {
     '@typescript-eslint/no-unsafe-assignment': 'off',
@@ -36,7 +36,7 @@ npm install --save-dev eslint typescript-eslint
 ### 1.3 ESLint 与 Prettier 规则冲突
 
 ```js
-// ❌ ESLint 自己处理格式（与 Prettier 冲突）
+// ❌ ESLint 自己处理格式(与 Prettier 冲突)
 {
   rules: {
     'indent': ['error', 2],

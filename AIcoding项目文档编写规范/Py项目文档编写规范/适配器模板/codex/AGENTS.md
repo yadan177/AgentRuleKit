@@ -4,7 +4,7 @@
 
 ## 1. 任务路由
 
-执行 Python 技术文档任务前，读取 `.ai-rules/python-project-docs/其他规则/04-PythonAI技术文档任务入口.md` 和 `.ai-rules/python-project-docs/其他规则/01-技术文档组织与维护规范.md`，再按总览选择专题规则。
+执行 Python 技术文档任务，或 Python 实现任务判断存在文档影响时，读取 `.ai-rules/python-project-docs/其他规则/04-PythonAI技术文档任务入口.md` 和 `.ai-rules/python-project-docs/其他规则/01-技术文档组织与维护规范.md`，再按总览选择专题规则。
 
 ## 2. 项目事实优先
 

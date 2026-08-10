@@ -4,11 +4,14 @@
 
 ## 1. 使用方式
 
-未核实当前 TRAE 版本稳定的项目规则路径前，请按任务手动附加：
+未核实当前 TRAE 版本稳定的项目规则路径前，执行技术文档任务或实现任务判断存在文档影响时，请按任务手动附加：
 
 1. `.ai-rules/unity-project-docs/其他规则/04-UnityAI技术文档任务入口.md`。
-2. `.ai-rules/unity-project-docs/其他规则/00-Unity技术文档编写规范总览.md`。
-3. 当前任务相关的 Unity 专题规则。
+2. `.ai-rules/unity-project-docs/其他规则/01-技术文档组织与维护规范.md`。
+3. `.ai-rules/unity-project-docs/其他规则/00-Unity技术文档编写规范总览.md`。
+4. 当前任务相关的 Unity 专题规则。
+
+TRAE 当前采用手动附加；没有实际附加时不得宣称自动执行了文档门禁。
 
 ## 2. 推荐提示词
 
