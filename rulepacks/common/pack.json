@@ -1,0 +1,12 @@
+{
+  "$schema": "../../schemas/rulepack.schema.json",
+  "id": "common",
+  "version": "0.1.0",
+  "status": "ready",
+  "kind": "common",
+  "entry": "entry.md",
+  "dependencies": [],
+  "rules": [
+    "entry.md"
+  ]
+}

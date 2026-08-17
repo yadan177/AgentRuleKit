@@ -1,0 +1,16 @@
+{
+  "$schema": "../../schemas/adapter.schema.json",
+  "id": "trae",
+  "version": "0.1.0",
+  "status": "planned",
+  "capabilities": {
+    "rules": "manual-guide",
+    "skills": "unverified",
+    "commands": "unverified",
+    "mcp": "unverified",
+    "hooks": "unverified"
+  },
+  "outputs": {
+    "guides": "adapters/trae/guides"
+  }
+}

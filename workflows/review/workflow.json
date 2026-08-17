@@ -1,0 +1,6 @@
+{
+  "id": "review",
+  "version": "0.1.0",
+  "status": "implemented-in-codex",
+  "intent": "依据已安装的任务相关规则和项目覆盖规则审查代码"
+}

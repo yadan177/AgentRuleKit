@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentrulekit.dev/schemas/project-config.schema.json",
+  "title": "AgentRuleKit project configuration",
+  "type": "object",
+  "required": ["schemaVersion", "source", "rulepacks", "targets", "project", "updates"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "const": 1 },
+    "source": { "type": "object" },
+    "rulepacks": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "targets": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "project": { "type": "object" },
+    "updates": { "type": "object" }
+  },
+  "additionalProperties": false
+}

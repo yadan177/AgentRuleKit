@@ -1,0 +1,4 @@
+interface:
+  display_name: "AgentRuleKit Bootstrap"
+  short_description: "检测项目技术栈并初始化 AgentRuleKit 共享开发规则"
+  default_prompt: "使用 $rules-bootstrap 检测当前工程技术栈并初始化 AgentRuleKit 规则。"

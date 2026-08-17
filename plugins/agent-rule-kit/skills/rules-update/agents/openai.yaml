@@ -1,0 +1,4 @@
+interface:
+  display_name: "AgentRuleKit Update"
+  short_description: "检查已安装规则完整性并安全准备规则版本更新"
+  default_prompt: "使用 $rules-update 检查 AgentRuleKit 规则状态，并在应用更新前审查差异。"

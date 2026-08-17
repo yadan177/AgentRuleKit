@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentrulekit.dev/schemas/project-lock.schema.json",
+  "title": "AgentRuleKit project lock",
+  "type": "object",
+  "required": ["schemaVersion", "toolkitVersion", "source", "rulepacks", "targets", "managedFiles"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "const": 1 },
+    "toolkitVersion": { "type": "string" },
+    "source": { "type": "string" },
+    "rulepacks": { "type": "object", "additionalProperties": { "type": "string" } },
+    "targets": { "type": "object", "additionalProperties": { "type": "string" } },
+    "managedFiles": { "type": "object", "additionalProperties": { "type": "string" } }
+  },
+  "additionalProperties": false
+}

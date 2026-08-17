@@ -1,0 +1,18 @@
+{
+  "name": "agent-rule-kit",
+  "version": "0.1.0",
+  "description": "在 Codex 工程中安装并应用版本化工程规则",
+  "author": {
+    "name": "AgentRuleKit maintainers"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "AgentRuleKit",
+    "shortDescription": "在 Codex 工程中应用共享工程规则。",
+    "longDescription": "在 Codex 工程中初始化、审查、判断文档影响，并安全维护 AgentRuleKit 规则。",
+    "developerName": "AgentRuleKit maintainers",
+    "category": "Productivity",
+    "capabilities": ["项目规则", "可复用工作流"],
+    "defaultPrompt": "为当前工程初始化 AgentRuleKit，并展示检测到的技术栈。"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentrulekit.dev/schemas/rulepack.schema.json",
+  "title": "AgentRuleKit rule pack",
+  "type": "object",
+  "required": ["id", "version", "status", "kind", "rules"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9/-]*$" },
+    "version": { "type": "string" },
+    "status": { "enum": ["scaffolded", "ready", "deprecated"] },
+    "kind": { "enum": ["development", "documentation", "common"] },
+    "entry": { "type": ["string", "null"] },
+    "dependencies": {
+      "type": "array",
+      "items": { "type": "string" },
+      "uniqueItems": true
+    },
+    "rules": { "type": "array", "items": { "type": "string" } }
+  },
+  "additionalProperties": false
+}

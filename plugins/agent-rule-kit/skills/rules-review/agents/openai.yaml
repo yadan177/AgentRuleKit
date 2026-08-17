@@ -1,0 +1,4 @@
+interface:
+  display_name: "AgentRuleKit Review"
+  short_description: "依据已安装规则审查代码变更并输出可定位问题"
+  default_prompt: "使用 $rules-review 按当前工程已安装的 AgentRuleKit 规则审查代码变更。"

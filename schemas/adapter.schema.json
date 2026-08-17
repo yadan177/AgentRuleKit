@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentrulekit.dev/schemas/adapter.schema.json",
+  "title": "AgentRuleKit adapter",
+  "type": "object",
+  "required": ["id", "version", "status", "capabilities", "outputs"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+    "version": { "type": "string" },
+    "status": { "enum": ["planned", "implemented", "deprecated"] },
+    "capabilities": { "type": "object" },
+    "outputs": { "type": "object" }
+  },
+  "additionalProperties": false
+}

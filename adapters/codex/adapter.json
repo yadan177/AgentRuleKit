@@ -1,0 +1,17 @@
+{
+  "$schema": "../../schemas/adapter.schema.json",
+  "id": "codex",
+  "version": "0.1.0",
+  "status": "implemented",
+  "capabilities": {
+    "rules": "native",
+    "skills": "native",
+    "commands": "supported",
+    "mcp": "supported",
+    "hooks": "supported"
+  },
+  "outputs": {
+    "projectEntry": "AGENTS.md",
+    "pluginRoot": "plugins/agent-rule-kit"
+  }
+}

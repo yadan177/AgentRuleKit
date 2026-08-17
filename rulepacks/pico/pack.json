@@ -1,0 +1,15 @@
+{
+  "$schema": "../../schemas/rulepack.schema.json",
+  "id": "pico",
+  "version": "0.1.0",
+  "status": "ready",
+  "kind": "development",
+  "entry": "PICO Unity SDK.md",
+  "dependencies": [
+    "common",
+    "unity"
+  ],
+  "rules": [
+    "PICO Unity SDK.md"
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "name": "agent-rule-kit",
+  "version": "0.1.0",
+  "private": true,
+  "description": "面向 AI 编程代理的跨工具工程规则与工作流分发系统",
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "npm run build --workspace @agentrulekit/core && npm run build --workspace @agentrulekit/cli",
+    "check": "npm run build && npm run test",
+    "clean": "npm run clean --workspaces --if-present",
+    "dev": "npm run dev --workspace @agentrulekit/cli --",
+    "manifests": "node scripts/generate-rulepack-manifests.mjs",
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspace @agentrulekit/core && npm run build --workspace @agentrulekit/core && npm run typecheck --workspace @agentrulekit/cli",
+    "validate": "npm run check"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "typescript": "^5.9.3"
+  }
+}

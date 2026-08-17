@@ -1,0 +1,14 @@
+{
+  "$schema": "../../schemas/rulepack.schema.json",
+  "id": "rule-authoring",
+  "version": "0.1.0",
+  "status": "ready",
+  "kind": "common",
+  "entry": "规则文档编写格式规范.md",
+  "dependencies": [
+    "common"
+  ],
+  "rules": [
+    "规则文档编写格式规范.md"
+  ]
+}

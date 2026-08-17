@@ -39,6 +39,13 @@ Desktop.ini
 *.log
 logs/
 
+# Node.js / TypeScript
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+.npm/
+
 # OS noise
 .directory
 .DS_Store?
