@@ -2,8 +2,11 @@ import { createHash } from "node:crypto";
 import {
   access,
   cp,
+  lstat,
+  mkdtemp,
   mkdir,
   readFile,
+  readdir,
   rename,
   rm,
   writeFile,
@@ -21,7 +24,9 @@ import {
 } from "./managed-block.js";
 import type {
   ProjectConfig,
+  ProjectChange,
   ProjectLock,
+  ProjectPlan,
   RulePackManifest,
   StackId,
   ValidationIssue,
@@ -30,6 +35,7 @@ import type {
 
 const TOOLKIT_VERSION = "0.1.0";
 const PACK_ID_PATTERN = /^[a-z0-9][a-z0-9/-]*$/;
+const TRANSACTION_PREFIX = ".agent-rules.transaction-";
 
 async function exists(filePath: string): Promise<boolean> {
   try {
@@ -164,108 +170,283 @@ export async function createDefaultConfig(
 export async function loadProjectConfig(root: string): Promise<ProjectConfig> {
   const configPath = path.join(root, "agent-rules.yaml");
   const config = parse(await readFile(configPath, "utf8")) as ProjectConfig;
-  if (config.schemaVersion !== 1) {
-    throw new Error(`不支持的 AgentRuleKit schema 版本：${String(config.schemaVersion)}`);
+  if (!config || config.schemaVersion !== 1) {
+    throw new Error(`不支持的 AgentRuleKit schema 版本：${String(config?.schemaVersion)}`);
   }
+  assertSupportedConfig(config);
   return config;
+}
+
+function assertSupportedConfig(config: ProjectConfig): void {
+  if (config.updates?.channel !== "stable" || config.updates.strategy !== "manual") {
+    throw new Error("当前版本仅支持 stable 通道与人工批准更新；不会静默忽略其他策略");
+  }
+  if (!Array.isArray(config.targets) || config.targets.length !== 1 || config.targets[0] !== "codex") {
+    throw new Error("当前版本仅支持 codex 目标工具");
+  }
+  if (!Array.isArray(config.rulepacks) || !config.project?.overrides) {
+    throw new Error("项目配置缺少规则包或项目覆盖规则路径");
+  }
 }
 
 export async function generateCodexProject(
   root: string,
   config: ProjectConfig,
 ): Promise<ProjectLock> {
+  return applyCodexProject(root, config);
+}
+
+interface PreparedProject {
+  plan: ProjectPlan;
+  files: Map<string, string>;
+  agentsContent: string;
+  lock: ProjectLock;
+}
+
+async function hasSymlinkAncestor(base: string, relativePath: string): Promise<boolean> {
+  let current = path.resolve(base);
+  for (const segment of relativePath.split(/[\\/]/)) {
+    current = path.join(current, segment);
+    try {
+      if ((await lstat(current)).isSymbolicLink()) return true;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    }
+  }
+  return false;
+}
+
+async function prepareCodexProject(root: string, config: ProjectConfig, sourceRootOverride?: string, sourceVersion?: string, sourceDigest?: string): Promise<PreparedProject> {
+  assertSupportedConfig(config);
   const resolvedRoot = path.resolve(root);
-  const sourceRoot = resolveSourceRoot(resolvedRoot, config);
+  if ((await listInterruptedTransactions(resolvedRoot)).length) {
+    throw new Error("检测到未完成的规则更新事务；请先运行 agent-rule recover <project-directory> 查看并恢复");
+  }
+  const sourceRoot = sourceRootOverride ?? resolveSourceRoot(resolvedRoot, config);
   const packs = await resolveRulePacks(sourceRoot, config.rulepacks);
   const rulesDirectory = path.join(resolvedRoot, ".agent-rules");
-  const stagingDirectory = path.join(resolvedRoot, `.agent-rules.staging-${process.pid}`);
-  const backupDirectory = path.join(resolvedRoot, `.agent-rules.backup-${process.pid}`);
-  const overridesPath = path.join(resolvedRoot, config.project.overrides);
   const agentsPath = path.join(resolvedRoot, "AGENTS.md");
-  const existingAgents = (await exists(agentsPath))
-    ? await readFile(agentsPath, "utf8")
-    : "";
-  const entries = Object.fromEntries(
-    packs.map(({ manifest }) => [manifest.id, manifest.entry as string]),
-  );
-  const agentsContent = mergeManagedBlock(existingAgents, renderCodexBlock(config, entries));
-
-  await rm(stagingDirectory, { recursive: true, force: true });
-  await rm(backupDirectory, { recursive: true, force: true });
-  if (await exists(rulesDirectory)) {
-    await cp(rulesDirectory, stagingDirectory, { recursive: true });
-  } else {
-    await mkdir(stagingDirectory, { recursive: true });
-  }
-
   const lockPath = path.join(resolvedRoot, ".agent-rules.lock.json");
-  if (await exists(lockPath)) {
-    const oldLock = JSON.parse(await readFile(lockPath, "utf8")) as ProjectLock;
-    for (const managedPath of Object.keys(oldLock.managedFiles)) {
-      if (managedPath.startsWith(".agent-rules/")) {
-        const relativePath = managedPath.slice(".agent-rules/".length);
-        await rm(resolveInside(stagingDirectory, relativePath), { recursive: true, force: true });
-      }
+  const oldAgents = (await exists(agentsPath)) ? await readFile(agentsPath, "utf8") : "";
+  const oldLockContent = (await exists(lockPath)) ? await readFile(lockPath, "utf8") : undefined;
+  const oldLock = oldLockContent ? JSON.parse(oldLockContent) as ProjectLock : undefined;
+  const entries = Object.fromEntries(packs.map(({ manifest }) => [manifest.id, manifest.entry as string]));
+  const block = renderCodexBlock(config, entries);
+  const agentsContent = mergeManagedBlock(oldAgents, block);
+  const files = new Map<string, string>();
+  const managedFiles: Record<string, string> = {};
+  const conflicts: ValidationIssue[] = [];
+  for (const controlPath of ["AGENTS.md", ".agent-rules.lock.json", "agent-rules.yaml"]) {
+    if (await hasSymlinkAncestor(resolvedRoot, controlPath)) {
+      conflicts.push({ code: "symlink-path", message: `控制文件是符号链接：${controlPath}` });
     }
   }
-
-  const stagingOverrides = resolveInside(
-    stagingDirectory,
-    path.relative(rulesDirectory, overridesPath),
-  );
-  await mkdir(path.dirname(stagingOverrides), { recursive: true });
-  if (!(await exists(stagingOverrides))) {
-    await writeFile(
-      stagingOverrides,
-      "# 项目覆盖规则\n\n在此添加项目特有规则。AgentRuleKit 更新时会保留本文件。\n",
-      "utf8",
-    );
+  if (!oldLock && oldAgents.includes(CODEX_BLOCK_START)) {
+    conflicts.push({ code: "unknown-managed-block", message: "AGENTS.md 已含受控区块，但缺少可验证的锁文件" });
   }
 
-  const managedFiles: Record<string, string> = {};
   for (const { directory, manifest } of packs) {
-    const targetPack = resolveInside(stagingDirectory, manifest.id);
-    await mkdir(targetPack, { recursive: true });
     const installedManifest = { ...manifest };
     delete installedManifest.$schema;
-    const manifestContent = `${JSON.stringify(installedManifest, null, 2)}\n`;
-    await writeFile(path.join(targetPack, "pack.json"), manifestContent, "utf8");
-    managedFiles[toPortablePath(path.join(".agent-rules", manifest.id, "pack.json"))] =
-      digest(manifestContent);
-
+    const manifestPath = toPortablePath(path.join(".agent-rules", manifest.id, "pack.json"));
+    files.set(manifestPath, `${JSON.stringify(installedManifest, null, 2)}\n`);
     for (const rule of manifest.rules) {
-      const content = await readFile(resolveInside(directory, rule), "utf8");
-      const targetFile = resolveInside(targetPack, rule);
-      await mkdir(path.dirname(targetFile), { recursive: true });
-      await writeFile(targetFile, content, "utf8");
-      managedFiles[toPortablePath(path.join(".agent-rules", manifest.id, rule))] = digest(content);
+      const relativePath = toPortablePath(path.join(".agent-rules", manifest.id, rule));
+      if (files.has(relativePath)) throw new Error(`规则包目标路径重复：${relativePath}`);
+      files.set(relativePath, await readFile(resolveInside(directory, rule), "utf8"));
     }
   }
-
-  if (await exists(rulesDirectory)) await rename(rulesDirectory, backupDirectory);
-  try {
-    await rename(stagingDirectory, rulesDirectory);
-  } catch (error) {
-    if (await exists(backupDirectory)) await rename(backupDirectory, rulesDirectory);
-    throw error;
-  }
-  await rm(backupDirectory, { recursive: true, force: true });
-  await writeFile(agentsPath, agentsContent, "utf8");
+  for (const [relativePath, content] of files) managedFiles[relativePath] = digest(content);
 
   const lock: ProjectLock = {
     schemaVersion: 1,
     toolkitVersion: TOOLKIT_VERSION,
+    sourceType: config.source.type,
     source: config.source.type === "workspace" ? config.source.path ?? "." : config.source.repository ?? "",
+    ...(sourceVersion ? { sourceVersion } : {}),
+    ...(sourceDigest ? { sourceDigest } : {}),
     rulepacks: Object.fromEntries(packs.map(({ manifest }) => [manifest.id, manifest.version])),
     targets: Object.fromEntries(config.targets.map((target) => [target, TOOLKIT_VERSION])),
     managedFiles,
+    managedBlockDigest: digest(block),
   };
-  await writeFile(
-    path.join(resolvedRoot, ".agent-rules.lock.json"),
-    `${JSON.stringify(lock, null, 2)}\n`,
-    "utf8",
-  );
-  return lock;
+  const changes: ProjectChange[] = [];
+  const candidates = new Set([...Object.keys(oldLock?.managedFiles ?? {}), ...files.keys()]);
+  for (const relativePath of [...candidates].sort()) {
+    if (!relativePath.startsWith(".agent-rules/")) {
+      conflicts.push({ code: "unsafe-lock-path", message: `锁文件路径不在受管目录：${relativePath}` });
+      continue;
+    }
+    const absolutePath = resolveInside(resolvedRoot, relativePath);
+    if (await hasSymlinkAncestor(resolvedRoot, relativePath)) {
+      conflicts.push({ code: "symlink-path", message: `受管路径包含符号链接：${relativePath}` });
+      continue;
+    }
+    const before = (await exists(absolutePath)) ? await readFile(absolutePath, "utf8") : undefined;
+    const after = files.get(relativePath);
+    const recorded = oldLock?.managedFiles[relativePath];
+    if (recorded && (before === undefined || digest(before) !== recorded)) {
+      conflicts.push({ code: "managed-file-drift", message: `受管文件已发生漂移：${relativePath}` });
+    }
+    if (!recorded && before !== undefined && after !== undefined) {
+      conflicts.push({ code: "unknown-file-collision", message: `拒绝接管已有文件：${relativePath}` });
+    }
+    if (before !== after) {
+      changes.push({ path: relativePath, action: before === undefined ? "add" : after === undefined ? "remove" : "modify", before, after });
+    }
+  }
+  if (oldLock?.managedBlockDigest) {
+    const start = oldAgents.indexOf(CODEX_BLOCK_START);
+    const end = oldAgents.indexOf(CODEX_BLOCK_END);
+    const oldBlock = start >= 0 && end >= start ? oldAgents.slice(start, end + CODEX_BLOCK_END.length) : "";
+    if (digest(oldBlock) !== oldLock.managedBlockDigest) {
+      conflicts.push({ code: "managed-block-drift", message: "AGENTS.md 受控区块已被手工修改" });
+    }
+  }
+  if (oldAgents !== agentsContent) changes.push({ path: "AGENTS.md", action: oldAgents ? "modify" : "add", before: oldAgents || undefined, after: agentsContent });
+  const newLockContent = `${JSON.stringify(lock, null, 2)}\n`;
+  if (oldLockContent !== newLockContent) changes.push({ path: ".agent-rules.lock.json", action: oldLockContent ? "modify" : "add", before: oldLockContent, after: newLockContent });
+  if (await hasSymlinkAncestor(resolvedRoot, ".agent-rules")) {
+    conflicts.push({ code: "symlink-path", message: "受管目录 .agent-rules 是符号链接" });
+  }
+  const overrideRelative = toPortablePath(config.project.overrides);
+  const overrideTarget = resolveInside(resolvedRoot, overrideRelative);
+  const overlapsManagedFile = [...files.keys()].some((managedPath) =>
+    managedPath === overrideRelative || managedPath.startsWith(`${overrideRelative}/`) || overrideRelative.startsWith(`${managedPath}/`));
+  if (!overrideRelative.startsWith(".agent-rules/") || !overrideTarget.startsWith(`${rulesDirectory}${path.sep}`) || overlapsManagedFile) {
+    conflicts.push({ code: "unsafe-overrides", message: `项目覆盖规则路径不安全：${overrideRelative}` });
+  }
+  return { plan: { changes, conflicts, from: oldLock?.rulepacks ?? {}, to: lock.rulepacks }, files, agentsContent, lock };
+}
+
+export async function planCodexProject(root: string, config: ProjectConfig, sourceRootOverride?: string, sourceVersion?: string, sourceDigest?: string): Promise<ProjectPlan> {
+  return (await prepareCodexProject(root, config, sourceRootOverride, sourceVersion, sourceDigest)).plan;
+}
+
+export async function applyCodexProject(root: string, config: ProjectConfig, configContent?: string, sourceRootOverride?: string, sourceVersion?: string, sourceDigest?: string): Promise<ProjectLock> {
+  const resolvedRoot = path.resolve(root);
+  const prepared = await prepareCodexProject(resolvedRoot, config, sourceRootOverride, sourceVersion, sourceDigest);
+  if (prepared.plan.conflicts.length) {
+    throw new Error(prepared.plan.conflicts.map((issue) => `[${issue.code}] ${issue.message}`).join("\n"));
+  }
+  const rulesDirectory = path.join(resolvedRoot, ".agent-rules");
+  const transaction = await mkdtemp(path.join(resolvedRoot, TRANSACTION_PREFIX));
+  const staging = path.join(transaction, "staging");
+  const backup = path.join(transaction, "backup");
+  const agentsPath = path.join(resolvedRoot, "AGENTS.md");
+  const lockPath = path.join(resolvedRoot, ".agent-rules.lock.json");
+  const configPath = path.join(resolvedRoot, "agent-rules.yaml");
+  const snapshots = new Map<string, string | undefined>();
+  let movedRules = false;
+  let installedRules = false;
+  let completed = false;
+  try {
+    if (await exists(rulesDirectory)) await cp(rulesDirectory, staging, { recursive: true });
+    else await mkdir(staging);
+    const oldLock = (await exists(lockPath)) ? JSON.parse(await readFile(lockPath, "utf8")) as ProjectLock : undefined;
+    for (const relativePath of Object.keys(oldLock?.managedFiles ?? {})) {
+      await rm(resolveInside(staging, relativePath.slice(".agent-rules/".length)), { force: true });
+    }
+    const overrides = resolveInside(staging, config.project.overrides.slice(".agent-rules/".length));
+    await mkdir(path.dirname(overrides), { recursive: true });
+    if (!(await exists(overrides))) {
+      await writeFile(overrides, "# 项目覆盖规则\n\n在此添加项目特有规则。AgentRuleKit 更新时会保留本文件。\n", "utf8");
+    }
+    for (const [relativePath, content] of prepared.files) {
+      const target = resolveInside(staging, relativePath.slice(".agent-rules/".length));
+      await mkdir(path.dirname(target), { recursive: true });
+      await writeFile(target, content, "utf8");
+    }
+    for (const filePath of [agentsPath, lockPath, ...(configContent === undefined ? [] : [configPath])]) {
+      snapshots.set(filePath, (await exists(filePath)) ? await readFile(filePath, "utf8") : undefined);
+    }
+    await writeFile(path.join(transaction, "journal.json"), JSON.stringify({
+      schemaVersion: 1,
+      hadRules: await exists(rulesDirectory),
+      snapshots: Object.fromEntries([...snapshots].map(([filePath, content]) => [path.basename(filePath), content ?? null])),
+    }), "utf8");
+    if (await exists(rulesDirectory)) {
+      await rename(rulesDirectory, backup);
+      movedRules = true;
+    }
+    await rename(staging, rulesDirectory);
+    installedRules = true;
+    await writeFile(agentsPath, prepared.agentsContent, "utf8");
+    await writeFile(lockPath, `${JSON.stringify(prepared.lock, null, 2)}\n`, "utf8");
+    if (configContent !== undefined) await writeFile(configPath, configContent, "utf8");
+    completed = true;
+    return prepared.lock;
+  } catch (error) {
+    try {
+      for (const [filePath, content] of snapshots) {
+        if (content === undefined) await rm(filePath, { force: true });
+        else await writeFile(filePath, content, "utf8");
+      }
+      if (installedRules) await rm(rulesDirectory, { recursive: true, force: true });
+      if (movedRules) await rename(backup, rulesDirectory);
+      completed = true;
+    } catch (rollbackError) {
+      throw new Error(`应用失败且回滚未完成；恢复副本保留在 ${transaction}：${String(rollbackError)}`, { cause: error });
+    }
+    throw error;
+  } finally {
+    if (completed) await rm(transaction, { recursive: true, force: true });
+  }
+}
+
+export async function listInterruptedTransactions(root: string): Promise<string[]> {
+  const resolvedRoot = path.resolve(root);
+  const entries = await readdir(resolvedRoot, { withFileTypes: true });
+  const pending: string[] = [];
+  for (const entry of entries) {
+    if (entry.isDirectory() && entry.name.startsWith(TRANSACTION_PREFIX)) {
+      const directory = path.join(resolvedRoot, entry.name);
+      if (await exists(path.join(directory, "journal.json"))) pending.push(directory);
+    }
+  }
+  return pending;
+}
+
+export async function recoverInterruptedProject(root: string): Promise<string | undefined> {
+  const resolvedRoot = path.resolve(root);
+  const pending = await listInterruptedTransactions(resolvedRoot);
+  if (!pending.length) return undefined;
+  if (pending.length > 1) throw new Error("发现多个未完成事务；请人工检查，不自动选择恢复对象");
+  const transaction = pending[0]!;
+  const journal = JSON.parse(await readFile(path.join(transaction, "journal.json"), "utf8")) as {
+    schemaVersion: number;
+    hadRules: boolean;
+    snapshots: Record<string, string | null>;
+  };
+  if (journal.schemaVersion !== 1 || typeof journal.hadRules !== "boolean" || !journal.snapshots || typeof journal.snapshots !== "object") throw new Error("恢复记录格式不合法");
+  for (const basename of Object.keys(journal.snapshots)) {
+    if (!["AGENTS.md", ".agent-rules.lock.json", "agent-rules.yaml"].includes(basename)) {
+      throw new Error(`恢复记录包含未知控制文件：${basename}`);
+    }
+    if (await hasSymlinkAncestor(resolvedRoot, basename)) throw new Error(`恢复目标包含符号链接：${basename}`);
+  }
+  const rulesDirectory = path.join(resolvedRoot, ".agent-rules");
+  const backup = path.join(transaction, "backup");
+  const incomplete = path.join(transaction, "incomplete");
+  const hasBackup = await exists(backup);
+  if (journal.hadRules && !hasBackup && !(await exists(rulesDirectory))) {
+    throw new Error("原规则目录与备份都不存在；请人工恢复");
+  }
+  if (!journal.hadRules || hasBackup) {
+    if (await exists(rulesDirectory)) await rename(rulesDirectory, incomplete);
+    if (journal.hadRules) await rename(backup, rulesDirectory);
+  }
+  const savedControls = path.join(transaction, "incomplete-controls");
+  await mkdir(savedControls);
+  for (const [basename, previous] of Object.entries(journal.snapshots)) {
+    const destination = path.join(resolvedRoot, basename);
+    if (await exists(destination)) await cp(destination, path.join(savedControls, basename));
+    if (previous === null) await rm(destination, { force: true });
+    else await writeFile(destination, previous, "utf8");
+  }
+  const recovered = path.join(resolvedRoot, `.agent-rules.recovered-${path.basename(transaction).slice(TRANSACTION_PREFIX.length)}`);
+  await rename(transaction, recovered);
+  return recovered;
 }
 
 export async function initializeProject(
@@ -279,8 +460,24 @@ export async function initializeProject(
   }
 
   const config = await createDefaultConfig(resolvedRoot, sourceRoot);
-  await writeFile(configPath, stringify(config), "utf8");
-  await generateCodexProject(resolvedRoot, config);
+  await applyCodexProject(resolvedRoot, config, stringify(config));
+  return config;
+}
+
+export async function initializeGithubProject(
+  root: string,
+  sourceRoot: string,
+  repository: string,
+  releaseVersion: string,
+  releaseDigest?: string,
+): Promise<ProjectConfig> {
+  const resolvedRoot = path.resolve(root);
+  if (await exists(path.join(resolvedRoot, "agent-rules.yaml"))) {
+    throw new Error("agent-rules.yaml 已存在；请使用 diff/update，不要再次运行 init");
+  }
+  const config = await createDefaultConfig(resolvedRoot, sourceRoot);
+  config.source = { type: "github", repository };
+  await applyCodexProject(resolvedRoot, config, stringify(config), sourceRoot, releaseVersion, releaseDigest);
   return config;
 }
 
@@ -290,7 +487,6 @@ export async function validateProject(root: string): Promise<ValidationResult> {
   const requiredFiles = [
     "agent-rules.yaml",
     ".agent-rules.lock.json",
-    ".agent-rules/overrides.md",
     "AGENTS.md",
   ];
 
@@ -302,6 +498,9 @@ export async function validateProject(root: string): Promise<ValidationResult> {
 
   if (issues.length === 0) {
     const config = await loadProjectConfig(resolvedRoot);
+    if (!(await exists(resolveInside(resolvedRoot, config.project.overrides)))) {
+      issues.push({ code: "missing-overrides", message: `缺少项目覆盖规则 ${config.project.overrides}` });
+    }
     if (!config.targets.includes("codex")) {
       issues.push({ code: "missing-target", message: "尚未将 Codex 配置为目标工具" });
     }
@@ -317,6 +516,20 @@ export async function validateProject(root: string): Promise<ValidationResult> {
     const lock = JSON.parse(
       await readFile(path.join(resolvedRoot, ".agent-rules.lock.json"), "utf8"),
     ) as ProjectLock;
+    if (lock.managedBlockDigest) {
+      const start = agents.indexOf(CODEX_BLOCK_START);
+      const end = agents.indexOf(CODEX_BLOCK_END);
+      const block = start >= 0 && end >= start ? agents.slice(start, end + CODEX_BLOCK_END.length) : "";
+      if (digest(block) !== lock.managedBlockDigest) {
+        issues.push({ code: "managed-block-drift", message: "AGENTS.md 受控区块已发生漂移" });
+      }
+    }
+    const configuredSource = config.source.type === "workspace" ? config.source.path ?? "." : config.source.repository ?? "";
+    if (lock.sourceType && lock.sourceType !== config.source.type) issues.push({ code: "source-type-mismatch", message: "配置与锁文件的规则源类型不一致" });
+    if (lock.source !== configuredSource) issues.push({ code: "source-mismatch", message: "配置与锁文件的规则源不一致" });
+    for (const id of config.rulepacks) {
+      if (!lock.rulepacks[id]) issues.push({ code: "missing-locked-pack", message: `锁文件缺少规则包 ${id}` });
+    }
     for (const [relativePath, expectedDigest] of Object.entries(lock.managedFiles)) {
       const absolutePath = resolveInside(resolvedRoot, relativePath);
       if (!(await exists(absolutePath))) {

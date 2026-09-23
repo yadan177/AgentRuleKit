@@ -15,7 +15,7 @@ export function renderCodexBlock(
   return `${CODEX_BLOCK_START}
 ## AgentRuleKit
 
-修改工程前，先读取 \`.agent-rules/overrides.md\`，再读取与当前任务相关的已安装规则包。
+修改工程前，先读取 \`${config.project.overrides}\`，再读取与当前任务相关的已安装规则包。
 
 已配置规则包：
 

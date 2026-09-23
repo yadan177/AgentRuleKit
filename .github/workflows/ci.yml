@@ -5,15 +5,50 @@ on:
   push:
     branches:
       - main
+    tags:
+      - 'v*'
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node: [22, 24]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: ${{ matrix.node }}
           cache: npm
       - run: npm ci
       - run: npm run check
+      - run: npm pack --dry-run --workspace agentrulekit
+      - name: 校验 Codex 插件和 Skills
+        if: runner.os == 'Linux' && matrix.node == 24
+        shell: bash
+        run: |
+          node --check plugins/agent-rule-kit/hooks/session_start.mjs
+          node -e 'JSON.parse(require("fs").readFileSync("plugins/agent-rule-kit/hooks/hooks.json", "utf8"))'
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: 核对版本并打包权威规则源
+        shell: bash
+        run: |
+          node scripts/verify-release-version.mjs "$GITHUB_REF_NAME"
+          tar -czf agentrulekit-rulepacks.tar.gz rulepacks
+      - name: 发布规则包 Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" agentrulekit-rulepacks.tar.gz --verify-tag --generate-notes

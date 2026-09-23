@@ -8,10 +8,14 @@
     "$schema": { "type": "string" },
     "schemaVersion": { "const": 1 },
     "toolkitVersion": { "type": "string" },
+    "sourceType": { "enum": ["workspace", "github"] },
     "source": { "type": "string" },
+    "sourceVersion": { "type": "string" },
+    "sourceDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
     "rulepacks": { "type": "object", "additionalProperties": { "type": "string" } },
     "targets": { "type": "object", "additionalProperties": { "type": "string" } },
-    "managedFiles": { "type": "object", "additionalProperties": { "type": "string" } }
+    "managedFiles": { "type": "object", "additionalProperties": { "type": "string" } },
+    "managedBlockDigest": { "type": "string" }
   },
   "additionalProperties": false
 }

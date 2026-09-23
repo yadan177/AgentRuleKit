@@ -5,18 +5,15 @@ description: 检查工程中已安装 AgentRuleKit 文件的完整性和更新�
 
 # 规则更新
 
-只使用当前 CLI 已支持的能力，不得模拟当前版本无法执行的远程规则更新。
+规则更新由用户决定是否应用。自动检查只负责提醒，不得代替用户批准。
 
 ## 执行流程
 
 1. 在目标工程中定位 `agent-rules.yaml` 和 `.agent-rules.lock.json`。
-2. 运行 `agent-rule check <project-root>`，优先报告缺失文件或受控区块损坏。
-3. 调用更新命令前检查已安装 CLI 的帮助信息。
-4. 若当前版本支持 `diff` 和 `update`，应用更新前必须先预览差异。
-5. 保留 `.agent-rules/overrides.md` 和受控区块之外的全部内容。
-6. 执行任何受支持的重新生成或更新后，运行 `agent-rule validate <project-root>`。
-7. 报告旧版本、新版本、变更文件、验证结果和未解决冲突。
+2. 运行 `agent-rule validate <project-root>` 检查本地完整性；失败时先报告漂移或缺失，不得覆盖。
+3. 运行 `agent-rule check <project-root>` 检查规则源版本。网络失败时报告未知，不得说已是最新。
+4. 运行 `agent-rule diff <project-root>`，向用户说明版本、改动文件和重要差异。冲突时停止。
+5. 只有用户明确同意应用此次更新，才运行 `agent-rule update <project-root> --apply`。
+6. 应用后运行 `agent-rule validate <project-root>`，报告结果和未解决问题。
 
-## 当前基础版本限制
-
-`0.1.0` 支持从配置中的本地工作区规则源重新生成、校验完整性并检测文件漂移，但不支持远程规则注册表同步。使用远程来源时应在验证后停止，并明确报告当前限制。
+`.agent-rules/overrides.md`、未知文件与 `AGENTS.md` 受控区块外的内容应始终保留。`check` 返回码 3 表示存在待更新版本或文件，不代表命令失败。

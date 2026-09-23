@@ -2,6 +2,7 @@
   "name": "@agentrulekit/core",
   "version": "0.1.0",
   "private": true,
+  "license": "Apache-2.0",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -14,10 +15,11 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
-    "test": "node --test dist/**/*.test.js",
+    "test": "node --test dist/core.test.js dist/release.test.js",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "tar": "^7.5.22",
     "yaml": "^2.8.1"
   }
 }

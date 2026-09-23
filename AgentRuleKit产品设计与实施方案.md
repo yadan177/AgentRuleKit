@@ -99,7 +99,7 @@ AI 只读取当前任务相关的入口和专题规则，避免在每次任务�
 
 ### 4.6 更新必须可审查
 
-规则更新先检查、再展示差异、最后应用。自动化更新通过 Pull Request 交付，不直接修改开发者工作区。
+规则更新先检查、再展示差异、最后由用户明确同意应用。首版自动化仅负责后台检查和提醒，不直接修改开发者工作区。
 
 ## 5. 核心概念
 
@@ -258,8 +258,11 @@ updates:
 ```json
 {
   "schemaVersion": 1,
-  "toolkitVersion": "1.0.0",
-  "sourceCommit": "<git-commit>",
+  "toolkitVersion": "0.1.0",
+  "sourceType": "github",
+  "source": "yadan177/AgentRuleKit",
+  "sourceVersion": "0.1.0",
+  "sourceDigest": "sha256:<release-asset-digest>",
   "rulepacks": {
     "common": "1.0.0",
     "typescript": "1.0.0",
@@ -268,9 +271,10 @@ updates:
   "targets": {
     "codex": "1.0.0"
   },
-  "files": {
+  "managedFiles": {
     ".agent-rules/common/entry.md": "sha256:<digest>"
-  }
+  },
+  "managedBlockDigest": "sha256:<digest>"
 }
 ```
 
@@ -278,7 +282,7 @@ updates:
 
 ## 10. CLI 产品形态
 
-CLI 是跨平台产品核心，暂定命令名为 `agent-rule`。计划通过 npm 发布，也可以通过 GitHub Release 提供独立可执行文件。
+CLI 是跨平台产品核心，命令名为 `agent-rule`。首版准备通过 npm 发布，规则源通过 GitHub Release 分发；独立可执行文件属于后续扩展。
 
 ### 10.1 命令清单
 
@@ -288,14 +292,17 @@ agent-rule detect               检测技术栈并输出证据
 agent-rule add <pack>           添加规则包
 agent-rule remove <pack>        移除规则包
 agent-rule target add codex     添加目标工具
-agent-rule generate             重新生成目标工具配置
+agent-rule generate             update 的兼容命令，默认预览
 agent-rule check                检查规则版本和本地漂移
 agent-rule diff                 展示待更新差异
-agent-rule update               应用经确认的规则更新
+agent-rule update --apply       应用经确认的规则更新
+agent-rule recover --apply      恢复中断更新前的项目文件
 agent-rule validate             校验配置、规则和生成结果
 agent-rule doctor               检查运行环境与适配能力
 agent-rule version              输出 CLI 和规则包版本
 ```
+
+`add`、`remove`、`target` 和 `doctor` 属于后续规划，当前 `0.1.0` 尚未实现。`version` 当前只输出 CLI 版本。
 
 ### 10.2 初始化流程
 
@@ -344,14 +351,15 @@ Codex Plugin 是 Codex 用户的工作流入口，不承担项目规则版本管
 plugins/agent-rule-kit/
 ├── .codex-plugin/
 │   └── plugin.json
+├── hooks/
+│   ├── hooks.json
+│   └── session_start.mjs
 └── skills/
     ├── rules-bootstrap/
     │   └── SKILL.md
     ├── rules-review/
     │   └── SKILL.md
     ├── rules-doc-impact/
-    │   └── SKILL.md
-    ├── rules-security-review/
     │   └── SKILL.md
     └── rules-update/
         └── SKILL.md
@@ -366,7 +374,6 @@ plugins/agent-rule-kit/
 | `rules-bootstrap` | 用户希望给工程安装规则 | 检测技术栈、确认规则包、调用初始化流程 |
 | `rules-review` | 用户要求代码审查 | 加载相关规则并输出有证据的审查结果 |
 | `rules-doc-impact` | 功能发生变化 | 判断技术文档影响并路由到文档规则 |
-| `rules-security-review` | 安全审查 | 加载安全规则并检查信任边界 |
 | `rules-update` | 检查或升级规则 | 先检查和展示差异，再执行更新 |
 
 Skill 的描述必须聚焦，让 Codex 能够根据任务选择正确 Skill。一个 Skill 不应承载所有开发活动。
@@ -376,7 +383,8 @@ Skill 的描述必须聚焦，让 Codex 能够根据任务选择正确 Skill。�
 开发与团队测试阶段使用 GitHub 或本地 marketplace。计划中的安装流程为：
 
 ```bash
-codex plugin marketplace add your-org/agent-rule-kit
+codex plugin marketplace add yadan177/AgentRuleKit
+codex plugin add agent-rule-kit@agentrulekit
 ```
 
 然后在 Codex CLI 中运行 `/plugins`，或在 Codex 桌面端 Plugins 页面中安装 AgentRuleKit，并在安装后开启新会话。
@@ -396,13 +404,13 @@ codex plugin marketplace upgrade
 npm 包发布后的计划命令：
 
 ```bash
-npm install -g @agentrulekit/cli
+npm install -g agentrulekit
 ```
 
 不希望全局安装时：
 
 ```bash
-npx @agentrulekit/cli init
+npx agentrulekit init
 ```
 
 在 npm 包正式发布前，可通过仓库脚本或本地 workspace 进行开发测试。文档不得把尚未发布的包描述为已可公开安装。
@@ -414,7 +422,7 @@ cd <target-project>
 agent-rule init
 ```
 
-也可以用于无人值守环境：
+以下无人值守参数仍属于后续规划，当前版本不可使用：
 
 ```bash
 agent-rule init \
@@ -434,7 +442,7 @@ agent-rule init \
 ```bash
 agent-rule check
 agent-rule diff
-agent-rule update
+agent-rule update --apply
 agent-rule validate
 ```
 
@@ -451,26 +459,9 @@ agent-rule validate
 9. 保留 `overrides.md` 和非受管内容。
 10. 更新 lock 文件并输出 Git diff 建议。
 
-### 13.2 自动更新
+### 13.2 自动检查，手动应用
 
-自动更新采用“检查并创建 Pull Request”，不直接提交到默认分支：
-
-```text
-Scheduled CI
-    -> agent-rule check --ci
-    -> agent-rule update --output <temporary-worktree>
-    -> agent-rule validate
-    -> create pull request
-```
-
-更新 PR 至少包含：
-
-1. 旧版本与新版本。
-2. 受影响规则包。
-3. 强制规则变化摘要。
-4. 生成文件变化。
-5. 验证结果。
-6. 需要人工确认的兼容性问题。
+Codex 插件的会话开始 Hook 最多每天检查一次 GitHub Release。发现新版本时，它只把提醒交给后续对话；不主动开启新对话，也不运行 `update --apply`。用户可随时主动运行 `check` 和 `diff`。Hook 需在 Codex 中单独信任；未安装或未信任插件时，CLI 手动流程仍完整可用。自动创建更新 Pull Request 可作为后续可选能力，不属于首版。
 
 ### 13.3 本地自定义规则
 
@@ -626,7 +617,7 @@ outputs:
 
 1. GitHub Release 和 npm 发布。
 2. CHANGELOG 和迁移检查。
-3. 自动更新 PR 工作流。
+3. 发布与回滚检查，以及可选的自动更新 PR 工作流研究。
 4. 稳定版 `1.0.0` 发布。
 
 ### 阶段 E：扩展其他工具
@@ -656,7 +647,7 @@ outputs:
 4. 规则安装到项目并提交 Git，保证团队一致性。
 5. 项目本地规则与受管公共规则分离。
 6. 更新通过 lock 文件、校验值和差异审查完成。
-7. 自动更新默认创建 Pull Request，不静默修改默认分支。
+7. 首版自动检查只提醒，应用更新必须由用户明确触发；不静默修改默认分支。
 8. 第一阶段不建设 MCP 和桌面软件。
 9. 后续通过 Adapter 扩展 Cursor、TRAE、Qoder 等工具。
 10. 第一阶段 CLI 使用 TypeScript/Node.js 实现，并通过 npm workspace 组织核心包和 CLI 包。

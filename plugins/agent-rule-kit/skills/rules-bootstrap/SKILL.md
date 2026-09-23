@@ -13,7 +13,7 @@ description: 通过检测技术栈、创建项目配置与 Codex 入口并验证
 2. 检查已有的 `agent-rules.yaml`、`.agent-rules/`、`.agent-rules.lock.json` 和 `AGENTS.md`。
 3. 运行 `agent-rule detect <project-root>`，审查每个技术栈的检测证据。
 4. 若 `agent-rules.yaml` 已存在，不得运行 `init`；审查现有配置后才能运行 `generate`。
-5. 若工程尚未初始化，运行 `agent-rule init <project-root>`。
+5. 若工程尚未初始化，运行 `agent-rule init <project-root>` 从公开 Release 安装；仅在用户明确指定本地规则源时使用 `--source-workspace <source-root>`。
 6. 运行 `agent-rule validate <project-root>`。
 7. 报告检测到的技术栈、配置的规则包、生成文件、保留文件和验证结果。
 
