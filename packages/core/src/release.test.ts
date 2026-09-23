@@ -53,3 +53,17 @@ test("GitHub Release 资产经 SHA-256 验证后才解包", async () => {
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("网络错误和损坏的 Release 归档会在写入项目之前失败", async () => {
+  const unavailable = (async () => new Response("unavailable", { status: 503 })) as typeof fetch;
+  await assert.rejects(findLatestRelease("yadan177/AgentRuleKit", unavailable), /HTTP 503/);
+  const bytes = Buffer.from("not a tar archive");
+  const release = {
+    version: "0.2.0",
+    assetUrl: "https://github.com/yadan177/AgentRuleKit/releases/download/v0.2.0/agentrulekit-rulepacks.tar.gz",
+    digest: `sha256:${createHash("sha256").update(bytes).digest("hex")}`,
+  };
+  await assert.rejects(downloadRulepacks(release, unavailable), /HTTP 503/);
+  const corrupt = (async () => new Response(new Uint8Array(bytes), { status: 200 })) as typeof fetch;
+  await assert.rejects(downloadRulepacks(release, corrupt));
+});
