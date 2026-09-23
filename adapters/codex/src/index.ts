@@ -1,4 +1,4 @@
-import type { ProjectConfig } from "./types.js";
+import type { ProjectConfig, TargetAdapter } from "@agentrulekit/core";
 
 export const CODEX_BLOCK_START = "<!-- agent-rule:start -->";
 export const CODEX_BLOCK_END = "<!-- agent-rule:end -->";
@@ -25,19 +25,10 @@ ${configuredPacks}
 ${CODEX_BLOCK_END}`;
 }
 
-export function mergeManagedBlock(existing: string, block: string): string {
-  const start = existing.indexOf(CODEX_BLOCK_START);
-  const end = existing.indexOf(CODEX_BLOCK_END);
-
-  if ((start === -1) !== (end === -1)) {
-    throw new Error("AGENTS.md 包含边界不完整的 AgentRuleKit 受控区块");
-  }
-
-  if (start !== -1 && end !== -1) {
-    const endOffset = end + CODEX_BLOCK_END.length;
-    return `${existing.slice(0, start)}${block}${existing.slice(endOffset)}`;
-  }
-
-  const prefix = existing.trimEnd();
-  return prefix ? `${prefix}\n\n${block}\n` : `${block}\n`;
-}
+export const codexAdapter: TargetAdapter = {
+  id: "codex",
+  entryFile: "AGENTS.md",
+  blockStart: CODEX_BLOCK_START,
+  blockEnd: CODEX_BLOCK_END,
+  renderManagedBlock: renderCodexBlock,
+};

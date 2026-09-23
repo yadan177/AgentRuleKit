@@ -6,19 +6,20 @@
   "description": "面向 AI 编程代理的跨工具工程规则与工作流分发系统",
   "type": "module",
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "adapters/codex"
   ],
   "engines": {
     "node": ">=22"
   },
   "scripts": {
-    "build": "npm run build --workspace @agentrulekit/core && npm run build --workspace agentrulekit",
+    "build": "npm run build --workspace @agentrulekit/core && npm run build --workspace @agentrulekit/adapter-codex && npm run build --workspace agentrulekit",
     "check": "npm run build && npm run test",
     "clean": "npm run clean --workspaces --if-present",
     "dev": "npm run dev --workspace agentrulekit --",
     "manifests": "node scripts/generate-rulepack-manifests.mjs",
     "test": "npm run test --workspaces --if-present && node --test scripts/tests/session-start.test.mjs scripts/tests/cli-e2e.test.mjs scripts/tests/package-install.test.mjs",
-    "typecheck": "npm run typecheck --workspace @agentrulekit/core && npm run build --workspace @agentrulekit/core && npm run typecheck --workspace agentrulekit",
+    "typecheck": "npm run typecheck --workspace @agentrulekit/core && npm run build --workspace @agentrulekit/core && npm run typecheck --workspace @agentrulekit/adapter-codex && npm run build --workspace @agentrulekit/adapter-codex && npm run typecheck --workspace agentrulekit",
     "validate": "npm run check"
   },
   "devDependencies": {

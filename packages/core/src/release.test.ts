@@ -9,6 +9,7 @@ import { c } from "tar";
 
 import { assertReleaseAssetUnchanged, downloadRulepacks, findLatestRelease } from "./release.js";
 import { initializeGithubProject, validateProject } from "./project.js";
+import { testAdapter } from "./test-adapter.js";
 
 test("GitHub Release 资产经 SHA-256 验证后才解包", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "agentrulekit-release-test-"));
@@ -36,14 +37,14 @@ test("GitHub Release 资产经 SHA-256 验证后才解包", async () => {
       assert.equal(await readFile(path.join(downloaded.sourceRoot, "rulepacks", "common", "pack.json"), "utf8"), manifest);
       const target = path.join(root, "external-project");
       await mkdir(target);
-      const config = await initializeGithubProject(target, downloaded.sourceRoot, "yadan177/AgentRuleKit", downloaded.version, release.digest);
+      const config = await initializeGithubProject(target, testAdapter, downloaded.sourceRoot, "yadan177/AgentRuleKit", downloaded.version, release.digest);
       assert.deepEqual(config.source, { type: "github", repository: "yadan177/AgentRuleKit" });
       const lock = JSON.parse(await readFile(path.join(target, ".agent-rules.lock.json"), "utf8"));
       assert.equal(lock.sourceType, "github");
       assert.equal(lock.sourceDigest, release.digest);
       assert.doesNotThrow(() => assertReleaseAssetUnchanged(lock, release));
       assert.throws(() => assertReleaseAssetUnchanged(lock, { ...release, digest: `sha256:${"0".repeat(64)}` }), /可能已被替换/);
-      assert.deepEqual(await validateProject(target), { valid: true, issues: [] });
+      assert.deepEqual(await validateProject(target, testAdapter), { valid: true, issues: [] });
       assert.equal(await readFile(path.join(target, ".agent-rules", "common", "entry.md"), "utf8"), "# 远程规则\n");
     } finally {
       await downloaded.cleanup();

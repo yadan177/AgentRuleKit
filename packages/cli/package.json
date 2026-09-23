@@ -20,5 +20,9 @@
   "dependencies": {
     "tar": "^7.5.22",
     "yaml": "^2.8.1"
+  },
+  "devDependencies": {
+    "@agentrulekit/adapter-codex": "0.1.0",
+    "@agentrulekit/core": "0.1.0"
   }
 }

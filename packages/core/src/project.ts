@@ -15,13 +15,9 @@ import path from "node:path";
 
 import { parse, stringify } from "yaml";
 
+import { assertTargetAdapter, extractManagedBlock, mergeManagedBlock } from "./adapter.js";
+import type { TargetAdapter } from "./adapter.js";
 import { detectProject } from "./detect.js";
-import {
-  CODEX_BLOCK_END,
-  CODEX_BLOCK_START,
-  mergeManagedBlock,
-  renderCodexBlock,
-} from "./managed-block.js";
 import type {
   ProjectConfig,
   ProjectChange,
@@ -52,6 +48,12 @@ function digest(content: string): string {
 
 function toPortablePath(filePath: string): string {
   return filePath.split(path.sep).join(path.posix.sep);
+}
+
+function isManagedPath(relativePath: string): boolean {
+  if (!relativePath.startsWith(".agent-rules/") || relativePath.includes("\\")) return false;
+  const segments = relativePath.split("/");
+  return segments.length > 1 && segments.every((segment) => segment !== "" && segment !== "." && segment !== "..");
 }
 
 function resolveInside(base: string, relativePath: string): string {
@@ -137,8 +139,10 @@ function resolveSourceRoot(root: string, config: ProjectConfig): string {
 
 export async function createDefaultConfig(
   root: string,
+  adapter: TargetAdapter,
   sourceRoot: string = root,
 ): Promise<ProjectConfig> {
+  assertTargetAdapter(adapter);
   const detection = await detectProject(root);
   const rulepacks = [
     "common",
@@ -156,7 +160,7 @@ export async function createDefaultConfig(
       path: toPortablePath(relativeSource),
     },
     rulepacks: [...new Set(rulepacks)],
-    targets: ["codex"],
+    targets: [adapter.id],
     project: {
       overrides: ".agent-rules/overrides.md",
     },
@@ -177,29 +181,25 @@ export async function loadProjectConfig(root: string): Promise<ProjectConfig> {
   return config;
 }
 
-function assertSupportedConfig(config: ProjectConfig): void {
+function assertSupportedConfig(config: ProjectConfig, adapter?: TargetAdapter): void {
   if (config.updates?.channel !== "stable" || config.updates.strategy !== "manual") {
     throw new Error("当前版本仅支持 stable 通道与人工批准更新；不会静默忽略其他策略");
   }
-  if (!Array.isArray(config.targets) || config.targets.length !== 1 || config.targets[0] !== "codex") {
-    throw new Error("当前版本仅支持 codex 目标工具");
+  if (!Array.isArray(config.targets) || config.targets.length !== 1 || typeof config.targets[0] !== "string") {
+    throw new Error("当前版本仅支持一个目标工具");
+  }
+  if (adapter && config.targets[0] !== adapter.id) {
+    throw new Error(`项目配置的目标工具不是 ${adapter.id}`);
   }
   if (!Array.isArray(config.rulepacks) || !config.project?.overrides) {
     throw new Error("项目配置缺少规则包或项目覆盖规则路径");
   }
 }
 
-export async function generateCodexProject(
-  root: string,
-  config: ProjectConfig,
-): Promise<ProjectLock> {
-  return applyCodexProject(root, config);
-}
-
 interface PreparedProject {
   plan: ProjectPlan;
   files: Map<string, string>;
-  agentsContent: string;
+  entryContent: string;
   lock: ProjectLock;
 }
 
@@ -216,8 +216,9 @@ async function hasSymlinkAncestor(base: string, relativePath: string): Promise<b
   return false;
 }
 
-async function prepareCodexProject(root: string, config: ProjectConfig, sourceRootOverride?: string, sourceVersion?: string, sourceDigest?: string): Promise<PreparedProject> {
-  assertSupportedConfig(config);
+async function prepareProject(root: string, config: ProjectConfig, adapter: TargetAdapter, sourceRootOverride?: string, sourceVersion?: string, sourceDigest?: string): Promise<PreparedProject> {
+  assertTargetAdapter(adapter);
+  assertSupportedConfig(config, adapter);
   const resolvedRoot = path.resolve(root);
   if ((await listInterruptedTransactions(resolvedRoot)).length) {
     throw new Error("检测到未完成的规则更新事务；请先运行 agent-rule recover <project-directory> 查看并恢复");
@@ -225,24 +226,27 @@ async function prepareCodexProject(root: string, config: ProjectConfig, sourceRo
   const sourceRoot = sourceRootOverride ?? resolveSourceRoot(resolvedRoot, config);
   const packs = await resolveRulePacks(sourceRoot, config.rulepacks);
   const rulesDirectory = path.join(resolvedRoot, ".agent-rules");
-  const agentsPath = path.join(resolvedRoot, "AGENTS.md");
+  const entryPath = path.join(resolvedRoot, adapter.entryFile);
   const lockPath = path.join(resolvedRoot, ".agent-rules.lock.json");
-  const oldAgents = (await exists(agentsPath)) ? await readFile(agentsPath, "utf8") : "";
+  const oldEntry = (await exists(entryPath)) ? await readFile(entryPath, "utf8") : "";
   const oldLockContent = (await exists(lockPath)) ? await readFile(lockPath, "utf8") : undefined;
   const oldLock = oldLockContent ? JSON.parse(oldLockContent) as ProjectLock : undefined;
   const entries = Object.fromEntries(packs.map(({ manifest }) => [manifest.id, manifest.entry as string]));
-  const block = renderCodexBlock(config, entries);
-  const agentsContent = mergeManagedBlock(oldAgents, block);
+  const block = adapter.renderManagedBlock(config, entries);
+  if (!block.startsWith(adapter.blockStart) || !block.endsWith(adapter.blockEnd)) {
+    throw new Error(`适配器 ${adapter.id} 生成的受控区块边界不合法`);
+  }
+  const entryContent = mergeManagedBlock(oldEntry, block, adapter);
   const files = new Map<string, string>();
   const managedFiles: Record<string, string> = {};
   const conflicts: ValidationIssue[] = [];
-  for (const controlPath of ["AGENTS.md", ".agent-rules.lock.json", "agent-rules.yaml"]) {
+  for (const controlPath of [adapter.entryFile, ".agent-rules.lock.json", "agent-rules.yaml"]) {
     if (await hasSymlinkAncestor(resolvedRoot, controlPath)) {
       conflicts.push({ code: "symlink-path", message: `控制文件是符号链接：${controlPath}` });
     }
   }
-  if (!oldLock && oldAgents.includes(CODEX_BLOCK_START)) {
-    conflicts.push({ code: "unknown-managed-block", message: "AGENTS.md 已含受控区块，但缺少可验证的锁文件" });
+  if (!oldLock && oldEntry.includes(adapter.blockStart)) {
+    conflicts.push({ code: "unknown-managed-block", message: `${adapter.entryFile} 已含受控区块，但缺少可验证的锁文件` });
   }
 
   for (const { directory, manifest } of packs) {
@@ -273,7 +277,7 @@ async function prepareCodexProject(root: string, config: ProjectConfig, sourceRo
   const changes: ProjectChange[] = [];
   const candidates = new Set([...Object.keys(oldLock?.managedFiles ?? {}), ...files.keys()]);
   for (const relativePath of [...candidates].sort()) {
-    if (!relativePath.startsWith(".agent-rules/")) {
+    if (!isManagedPath(relativePath)) {
       conflicts.push({ code: "unsafe-lock-path", message: `锁文件路径不在受管目录：${relativePath}` });
       continue;
     }
@@ -296,14 +300,12 @@ async function prepareCodexProject(root: string, config: ProjectConfig, sourceRo
     }
   }
   if (oldLock?.managedBlockDigest) {
-    const start = oldAgents.indexOf(CODEX_BLOCK_START);
-    const end = oldAgents.indexOf(CODEX_BLOCK_END);
-    const oldBlock = start >= 0 && end >= start ? oldAgents.slice(start, end + CODEX_BLOCK_END.length) : "";
+    const oldBlock = extractManagedBlock(oldEntry, adapter) ?? "";
     if (digest(oldBlock) !== oldLock.managedBlockDigest) {
-      conflicts.push({ code: "managed-block-drift", message: "AGENTS.md 受控区块已被手工修改" });
+      conflicts.push({ code: "managed-block-drift", message: `${adapter.entryFile} 受控区块已被手工修改` });
     }
   }
-  if (oldAgents !== agentsContent) changes.push({ path: "AGENTS.md", action: oldAgents ? "modify" : "add", before: oldAgents || undefined, after: agentsContent });
+  if (oldEntry !== entryContent) changes.push({ path: adapter.entryFile, action: oldEntry ? "modify" : "add", before: oldEntry || undefined, after: entryContent });
   const newLockContent = `${JSON.stringify(lock, null, 2)}\n`;
   if (oldLockContent !== newLockContent) changes.push({ path: ".agent-rules.lock.json", action: oldLockContent ? "modify" : "add", before: oldLockContent, after: newLockContent });
   if (await hasSymlinkAncestor(resolvedRoot, ".agent-rules")) {
@@ -316,16 +318,16 @@ async function prepareCodexProject(root: string, config: ProjectConfig, sourceRo
   if (!overrideRelative.startsWith(".agent-rules/") || !overrideTarget.startsWith(`${rulesDirectory}${path.sep}`) || overlapsManagedFile) {
     conflicts.push({ code: "unsafe-overrides", message: `项目覆盖规则路径不安全：${overrideRelative}` });
   }
-  return { plan: { changes, conflicts, from: oldLock?.rulepacks ?? {}, to: lock.rulepacks }, files, agentsContent, lock };
+  return { plan: { changes, conflicts, from: oldLock?.rulepacks ?? {}, to: lock.rulepacks }, files, entryContent, lock };
 }
 
-export async function planCodexProject(root: string, config: ProjectConfig, sourceRootOverride?: string, sourceVersion?: string, sourceDigest?: string): Promise<ProjectPlan> {
-  return (await prepareCodexProject(root, config, sourceRootOverride, sourceVersion, sourceDigest)).plan;
+export async function planProject(root: string, config: ProjectConfig, adapter: TargetAdapter, sourceRootOverride?: string, sourceVersion?: string, sourceDigest?: string): Promise<ProjectPlan> {
+  return (await prepareProject(root, config, adapter, sourceRootOverride, sourceVersion, sourceDigest)).plan;
 }
 
-export async function applyCodexProject(root: string, config: ProjectConfig, configContent?: string, sourceRootOverride?: string, sourceVersion?: string, sourceDigest?: string): Promise<ProjectLock> {
+export async function applyProject(root: string, config: ProjectConfig, adapter: TargetAdapter, configContent?: string, sourceRootOverride?: string, sourceVersion?: string, sourceDigest?: string): Promise<ProjectLock> {
   const resolvedRoot = path.resolve(root);
-  const prepared = await prepareCodexProject(resolvedRoot, config, sourceRootOverride, sourceVersion, sourceDigest);
+  const prepared = await prepareProject(resolvedRoot, config, adapter, sourceRootOverride, sourceVersion, sourceDigest);
   if (prepared.plan.conflicts.length) {
     throw new Error(prepared.plan.conflicts.map((issue) => `[${issue.code}] ${issue.message}`).join("\n"));
   }
@@ -333,7 +335,7 @@ export async function applyCodexProject(root: string, config: ProjectConfig, con
   const transaction = await mkdtemp(path.join(resolvedRoot, TRANSACTION_PREFIX));
   const staging = path.join(transaction, "staging");
   const backup = path.join(transaction, "backup");
-  const agentsPath = path.join(resolvedRoot, "AGENTS.md");
+  const entryPath = path.join(resolvedRoot, adapter.entryFile);
   const lockPath = path.join(resolvedRoot, ".agent-rules.lock.json");
   const configPath = path.join(resolvedRoot, "agent-rules.yaml");
   const snapshots = new Map<string, string | undefined>();
@@ -357,7 +359,7 @@ export async function applyCodexProject(root: string, config: ProjectConfig, con
       await mkdir(path.dirname(target), { recursive: true });
       await writeFile(target, content, "utf8");
     }
-    for (const filePath of [agentsPath, lockPath, ...(configContent === undefined ? [] : [configPath])]) {
+    for (const filePath of [entryPath, lockPath, ...(configContent === undefined ? [] : [configPath])]) {
       snapshots.set(filePath, (await exists(filePath)) ? await readFile(filePath, "utf8") : undefined);
     }
     await writeFile(path.join(transaction, "journal.json"), JSON.stringify({
@@ -371,7 +373,7 @@ export async function applyCodexProject(root: string, config: ProjectConfig, con
     }
     await rename(staging, rulesDirectory);
     installedRules = true;
-    await writeFile(agentsPath, prepared.agentsContent, "utf8");
+    await writeFile(entryPath, prepared.entryContent, "utf8");
     await writeFile(lockPath, `${JSON.stringify(prepared.lock, null, 2)}\n`, "utf8");
     if (configContent !== undefined) await writeFile(configPath, configContent, "utf8");
     completed = true;
@@ -407,7 +409,8 @@ export async function listInterruptedTransactions(root: string): Promise<string[
   return pending;
 }
 
-export async function recoverInterruptedProject(root: string): Promise<string | undefined> {
+export async function recoverInterruptedProject(root: string, adapter: TargetAdapter): Promise<string | undefined> {
+  assertTargetAdapter(adapter);
   const resolvedRoot = path.resolve(root);
   const pending = await listInterruptedTransactions(resolvedRoot);
   if (!pending.length) return undefined;
@@ -420,7 +423,7 @@ export async function recoverInterruptedProject(root: string): Promise<string | 
   };
   if (journal.schemaVersion !== 1 || typeof journal.hadRules !== "boolean" || !journal.snapshots || typeof journal.snapshots !== "object") throw new Error("恢复记录格式不合法");
   for (const basename of Object.keys(journal.snapshots)) {
-    if (!["AGENTS.md", ".agent-rules.lock.json", "agent-rules.yaml"].includes(basename)) {
+    if (![adapter.entryFile, ".agent-rules.lock.json", "agent-rules.yaml"].includes(basename)) {
       throw new Error(`恢复记录包含未知控制文件：${basename}`);
     }
     if (await hasSymlinkAncestor(resolvedRoot, basename)) throw new Error(`恢复目标包含符号链接：${basename}`);
@@ -451,6 +454,7 @@ export async function recoverInterruptedProject(root: string): Promise<string | 
 
 export async function initializeProject(
   root: string,
+  adapter: TargetAdapter,
   sourceRoot: string = root,
 ): Promise<ProjectConfig> {
   const resolvedRoot = path.resolve(root);
@@ -459,13 +463,14 @@ export async function initializeProject(
     throw new Error("agent-rules.yaml 已存在；请运行 generate，不要再次运行 init");
   }
 
-  const config = await createDefaultConfig(resolvedRoot, sourceRoot);
-  await applyCodexProject(resolvedRoot, config, stringify(config));
+  const config = await createDefaultConfig(resolvedRoot, adapter, sourceRoot);
+  await applyProject(resolvedRoot, config, adapter, stringify(config));
   return config;
 }
 
 export async function initializeGithubProject(
   root: string,
+  adapter: TargetAdapter,
   sourceRoot: string,
   repository: string,
   releaseVersion: string,
@@ -475,19 +480,20 @@ export async function initializeGithubProject(
   if (await exists(path.join(resolvedRoot, "agent-rules.yaml"))) {
     throw new Error("agent-rules.yaml 已存在；请使用 diff/update，不要再次运行 init");
   }
-  const config = await createDefaultConfig(resolvedRoot, sourceRoot);
+  const config = await createDefaultConfig(resolvedRoot, adapter, sourceRoot);
   config.source = { type: "github", repository };
-  await applyCodexProject(resolvedRoot, config, stringify(config), sourceRoot, releaseVersion, releaseDigest);
+  await applyProject(resolvedRoot, config, adapter, stringify(config), sourceRoot, releaseVersion, releaseDigest);
   return config;
 }
 
-export async function validateProject(root: string): Promise<ValidationResult> {
+export async function validateProject(root: string, adapter: TargetAdapter): Promise<ValidationResult> {
+  assertTargetAdapter(adapter);
   const resolvedRoot = path.resolve(root);
   const issues: ValidationIssue[] = [];
   const requiredFiles = [
     "agent-rules.yaml",
     ".agent-rules.lock.json",
-    "AGENTS.md",
+    adapter.entryFile,
   ];
 
   for (const relativePath of requiredFiles) {
@@ -501,15 +507,15 @@ export async function validateProject(root: string): Promise<ValidationResult> {
     if (!(await exists(resolveInside(resolvedRoot, config.project.overrides)))) {
       issues.push({ code: "missing-overrides", message: `缺少项目覆盖规则 ${config.project.overrides}` });
     }
-    if (!config.targets.includes("codex")) {
-      issues.push({ code: "missing-target", message: "尚未将 Codex 配置为目标工具" });
+    if (!config.targets.includes(adapter.id)) {
+      issues.push({ code: "missing-target", message: `尚未将 ${adapter.id} 配置为目标工具` });
     }
 
-    const agents = await readFile(path.join(resolvedRoot, "AGENTS.md"), "utf8");
-    if (!agents.includes(CODEX_BLOCK_START) || !agents.includes(CODEX_BLOCK_END)) {
+    const entry = await readFile(path.join(resolvedRoot, adapter.entryFile), "utf8");
+    if (!entry.includes(adapter.blockStart) || !entry.includes(adapter.blockEnd)) {
       issues.push({
         code: "missing-managed-block",
-        message: "AGENTS.md 中没有完整的 AgentRuleKit 受控区块",
+        message: `${adapter.entryFile} 中没有完整的 AgentRuleKit 受控区块`,
       });
     }
 
@@ -517,11 +523,9 @@ export async function validateProject(root: string): Promise<ValidationResult> {
       await readFile(path.join(resolvedRoot, ".agent-rules.lock.json"), "utf8"),
     ) as ProjectLock;
     if (lock.managedBlockDigest) {
-      const start = agents.indexOf(CODEX_BLOCK_START);
-      const end = agents.indexOf(CODEX_BLOCK_END);
-      const block = start >= 0 && end >= start ? agents.slice(start, end + CODEX_BLOCK_END.length) : "";
+      const block = extractManagedBlock(entry, adapter) ?? "";
       if (digest(block) !== lock.managedBlockDigest) {
-        issues.push({ code: "managed-block-drift", message: "AGENTS.md 受控区块已发生漂移" });
+        issues.push({ code: "managed-block-drift", message: `${adapter.entryFile} 受控区块已发生漂移` });
       }
     }
     const configuredSource = config.source.type === "workspace" ? config.source.path ?? "." : config.source.repository ?? "";
@@ -531,6 +535,10 @@ export async function validateProject(root: string): Promise<ValidationResult> {
       if (!lock.rulepacks[id]) issues.push({ code: "missing-locked-pack", message: `锁文件缺少规则包 ${id}` });
     }
     for (const [relativePath, expectedDigest] of Object.entries(lock.managedFiles)) {
+      if (!isManagedPath(relativePath)) {
+        issues.push({ code: "unsafe-lock-path", message: `锁文件路径不在受管目录：${relativePath}` });
+        continue;
+      }
       const absolutePath = resolveInside(resolvedRoot, relativePath);
       if (!(await exists(absolutePath))) {
         issues.push({ code: "missing-managed-file", message: `缺少受管文件 ${relativePath}` });

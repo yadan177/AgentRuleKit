@@ -4,13 +4,14 @@ import process from "node:process";
 import path from "node:path";
 import { readFile } from "node:fs/promises";
 
+import { codexAdapter } from "@agentrulekit/adapter-codex";
 import {
   detectProject,
-  applyCodexProject,
+  applyProject,
   initializeProject,
   initializeGithubProject,
   loadProjectConfig,
-  planCodexProject,
+  planProject,
   validateProject,
   findLatestRelease,
   downloadRulepacks,
@@ -81,12 +82,12 @@ async function run(): Promise<void> {
       if (sourceArg >= 0) {
         const sourceRoot = process.argv[sourceArg + 1];
         if (!sourceRoot) throw new Error("--source-workspace 需要规则源目录");
-        config = await initializeProject(root, sourceRoot);
+        config = await initializeProject(root, codexAdapter, sourceRoot);
       } else {
         const release = await findLatestRelease(DEFAULT_REPOSITORY);
         const downloaded = await downloadRulepacks(release);
         try {
-          config = await initializeGithubProject(root, downloaded.sourceRoot, DEFAULT_REPOSITORY, downloaded.version, release.digest);
+          config = await initializeGithubProject(root, codexAdapter, downloaded.sourceRoot, DEFAULT_REPOSITORY, downloaded.version, release.digest);
         } finally {
           await downloaded.cleanup();
         }
@@ -108,7 +109,7 @@ async function run(): Promise<void> {
       }
       const downloaded = release ? await downloadRulepacks(release) : undefined;
       try {
-      const plan = await planCodexProject(root, config, downloaded?.sourceRoot, downloaded?.version, release?.digest);
+      const plan = await planProject(root, config, codexAdapter, downloaded?.sourceRoot, downloaded?.version, release?.digest);
       printPlan(plan);
       if (plan.conflicts.length) {
         process.exitCode = 2;
@@ -119,7 +120,7 @@ async function run(): Promise<void> {
         return;
       }
       if (plan.changes.length) {
-        await applyCodexProject(root, config, undefined, downloaded?.sourceRoot, downloaded?.version, release?.digest);
+        await applyProject(root, config, codexAdapter, undefined, downloaded?.sourceRoot, downloaded?.version, release?.digest);
         console.log(`已在 ${root} 应用 ${plan.changes.length} 项变更`);
       }
       return;
@@ -138,12 +139,12 @@ async function run(): Promise<void> {
         console.log("审查事务目录后，运行 recover <project-directory> --apply 恢复更新前的文件；未完成的新文件会保留在恢复副本中。");
         return;
       }
-      const recovered = await recoverInterruptedProject(root);
+      const recovered = await recoverInterruptedProject(root, codexAdapter);
       console.log(`已恢复更新前的项目文件；中断期间的文件保留在 ${recovered}`);
       return;
     }
     case "validate": {
-      const result = await validateProject(root);
+      const result = await validateProject(root, codexAdapter);
       if (!result.valid) {
         for (const issue of result.issues) {
           console.error(`[${issue.code}] ${issue.message}`);
@@ -155,7 +156,7 @@ async function run(): Promise<void> {
       return;
     }
     case "check": {
-      const validation = await validateProject(root);
+      const validation = await validateProject(root, codexAdapter);
       if (!validation.valid) {
         for (const issue of validation.issues) console.error(`[${issue.code}] ${issue.message}`);
         process.exitCode = 2;
@@ -172,7 +173,7 @@ async function run(): Promise<void> {
         if (!upToDate) process.exitCode = 3;
         return;
       }
-      const plan = await planCodexProject(root, config);
+      const plan = await planProject(root, config, codexAdapter);
       for (const conflict of plan.conflicts) console.error(`[${conflict.code}] ${conflict.message}`);
       if (plan.conflicts.length) {
         process.exitCode = 2;
