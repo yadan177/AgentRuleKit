@@ -372,6 +372,13 @@ async function prepareProject(root: string, config: ProjectConfig, adapter: Targ
   }
   const sourceRoot = snapshot?.root ?? resolveSourceRoot(resolvedRoot, config);
   const packs = await resolveRulePacks(sourceRoot, config.rulepacks);
+  if (snapshot) {
+    for (const { manifest } of packs) {
+      if (manifest.version !== snapshot.version) {
+        throw new Error(`Release ${snapshot.version} 中的规则包 ${manifest.id} 版本是 ${manifest.version}；拒绝安装版本不一致的规则源`);
+      }
+    }
+  }
   const rulesDirectory = path.join(resolvedRoot, ".agent-rules");
   const entryPath = path.join(resolvedRoot, adapter.entryFile);
   const lockPath = path.join(resolvedRoot, ".agent-rules.lock.json");
@@ -695,6 +702,13 @@ export async function validateProject(root: string, adapter: TargetAdapter): Pro
     if (!Object.hasOwn(lock.targets, adapter.id)) issues.push({ code: "target-mismatch", message: `锁文件缺少目标工具 ${adapter.id}` });
     if (config.source.type === "github" && (!lock.sourceVersion || !/^sha256:[a-f0-9]{64}$/.test(lock.sourceDigest ?? "") || !/^[a-f0-9]{40}(?:[a-f0-9]{24})?$/.test(lock.sourceCommit ?? ""))) {
       issues.push({ code: "source-provenance-missing", message: "GitHub 规则源缺少版本、资产摘要或来源提交；请运行 diff/update 核查并迁移" });
+    }
+    if (config.source.type === "github" && lock.sourceVersion) {
+      for (const [id, version] of Object.entries(lock.rulepacks)) {
+        if (version !== lock.sourceVersion) {
+          issues.push({ code: "source-pack-version-mismatch", message: `已安装规则包 ${id} 的版本 ${version} 与 Release ${lock.sourceVersion} 不一致` });
+        }
+      }
     }
     for (const id of config.rulepacks) {
       if (!lock.rulepacks[id]) issues.push({ code: "missing-locked-pack", message: `锁文件缺少规则包 ${id}` });

@@ -52,6 +52,10 @@ test("GitHub Release 资产经 SHA-256 验证后才解包", async () => {
       assert.throws(() => assertReleaseAssetUnchanged(lock, { ...release, digest: `sha256:${"0".repeat(64)}` }), /可能已被替换/);
       assert.deepEqual(await validateProject(target, testAdapter), { valid: true, issues: [] });
       assert.equal(await readFile(path.join(target, ".agent-rules", "common", "entry.md"), "utf8"), "# 远程规则\n");
+      lock.rulepacks.common = "0.1.0";
+      await writeFile(path.join(target, ".agent-rules.lock.json"), JSON.stringify(lock));
+      assert.ok((await validateProject(target, testAdapter)).issues.some((issue) => issue.code === "source-pack-version-mismatch"));
+      lock.rulepacks.common = "0.2.0";
       delete lock.sourceCommit;
       await writeFile(path.join(target, ".agent-rules.lock.json"), JSON.stringify(lock));
       assert.ok((await validateProject(target, testAdapter)).issues.some((issue) => issue.code === "source-provenance-missing"));
@@ -88,6 +92,28 @@ test("stable Release 版本按数值比较并拒绝倒退", async () => {
   assert.throws(() => assertReleaseNotOlder({ sourceVersion: "0.1.0-beta" }, { version: "0.1.0" }), /非 stable/);
   const prerelease = (async () => new Response(JSON.stringify({ tag_name: "v0.2.0-beta.1", assets: [] }), { status: 200 })) as typeof fetch;
   await assert.rejects(findLatestRelease("yadan177/AgentRuleKit", prerelease), /不符合 stable/);
+});
+
+test("Release 与所选规则包版本不一致时不修改业务工程", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "agentrulekit-release-pack-version-"));
+  try {
+    const pack = path.join(root, "source", "rulepacks", "common");
+    const target = path.join(root, "target");
+    await mkdir(pack, { recursive: true });
+    await mkdir(target);
+    await writeFile(path.join(pack, "pack.json"), JSON.stringify({ id: "common", version: "0.1.0", status: "ready", kind: "common", entry: "entry.md", dependencies: [], rules: ["entry.md"] }));
+    await writeFile(path.join(pack, "entry.md"), "# 错误版本的规则\n");
+    const userFile = path.join(target, "keep.md");
+    await writeFile(userFile, "业务文件\n");
+    await assert.rejects(initializeGithubProject(target, testAdapter, {
+      root: path.join(root, "source"), version: "0.2.0", digest: `sha256:${"a".repeat(64)}`, commit: "b".repeat(40),
+    }, "yadan177/AgentRuleKit"), /拒绝安装版本不一致/);
+    assert.equal(await readFile(userFile, "utf8"), "业务文件\n");
+    await assert.rejects(readFile(path.join(target, "agent-rules.yaml"), "utf8"), /ENOENT/);
+    await assert.rejects(readFile(path.join(target, ".agent-rules.lock.json"), "utf8"), /ENOENT/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });
 
 test("Release 归档缺少来源提交或与版本不符时拒绝安装", async () => {
