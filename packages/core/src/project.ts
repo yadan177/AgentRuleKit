@@ -44,6 +44,11 @@ function isStringMap(value: unknown): value is Record<string, string> {
   return isRecord(value) && Object.values(value).every((item) => typeof item === "string");
 }
 
+function assertKnownFields(value: Record<string, unknown>, allowed: readonly string[], section: string): void {
+  const unknown = Object.keys(value).filter((key) => !allowed.includes(key));
+  if (unknown.length) throw new Error(`${section} 包含当前版本不支持的字段：${unknown.join(", ")}`);
+}
+
 export function parseProjectLock(content: string): ProjectLock {
   let value: unknown;
   try {
@@ -229,7 +234,14 @@ export async function loadProjectConfig(root: string): Promise<ProjectConfig> {
 }
 
 function assertSupportedConfig(config: ProjectConfig, adapter?: TargetAdapter): void {
-  if (!isRecord(config) || !isRecord(config.updates) || config.updates.channel !== "stable" || config.updates.strategy !== "manual") {
+  if (!isRecord(config)) throw new Error("项目配置必须是对象");
+  assertKnownFields(config, ["$schema", "schemaVersion", "source", "rulepacks", "targets", "project", "updates"], "项目配置");
+  if (config.schemaVersion !== 1 || (config.$schema !== undefined && typeof config.$schema !== "string")) {
+    throw new Error("项目配置的 schema 版本或声明不合法");
+  }
+  if (!isRecord(config.updates)) throw new Error("项目配置缺少更新策略");
+  assertKnownFields(config.updates, ["channel", "strategy"], "updates");
+  if (config.updates.channel !== "stable" || config.updates.strategy !== "manual") {
     throw new Error("当前版本仅支持 stable 通道与人工批准更新；不会静默忽略其他策略");
   }
   if (!Array.isArray(config.targets) || config.targets.length !== 1 || typeof config.targets[0] !== "string" || !config.targets[0]) {
@@ -242,10 +254,18 @@ function assertSupportedConfig(config: ProjectConfig, adapter?: TargetAdapter): 
     new Set(config.rulepacks).size !== config.rulepacks.length || !isRecord(config.project) || typeof config.project.overrides !== "string" || !isManagedPath(config.project.overrides) || !config.project.overrides.endsWith(".md")) {
     throw new Error("项目配置缺少规则包或项目覆盖规则路径");
   }
-  if (!isRecord(config.source) || !["workspace", "github"].includes(String(config.source.type)) ||
-    (config.source.type === "workspace" && (typeof config.source.path !== "string" || !config.source.path)) ||
-    (config.source.type === "github" && (typeof config.source.repository !== "string" || !config.source.repository))) {
+  assertKnownFields(config.project, ["overrides"], "project");
+  if (!isRecord(config.source) || !["workspace", "github"].includes(String(config.source.type))) {
     throw new Error("项目配置缺少有效的规则源");
+  }
+  if (config.source.type === "workspace") {
+    assertKnownFields(config.source, ["type", "path"], "source");
+    if (typeof config.source.path !== "string" || !config.source.path) throw new Error("workspace 规则源缺少 path");
+  } else {
+    assertKnownFields(config.source, ["type", "repository"], "source");
+    if (typeof config.source.repository !== "string" || !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(config.source.repository)) {
+      throw new Error("GitHub 规则源缺少有效的 owner/repository");
+    }
   }
 }
 

@@ -7,11 +7,45 @@
   "properties": {
     "$schema": { "type": "string" },
     "schemaVersion": { "const": 1 },
-    "source": { "type": "object" },
-    "rulepacks": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
-    "targets": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
-    "project": { "type": "object" },
-    "updates": { "type": "object" }
+    "source": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["type", "path"],
+          "properties": {
+            "type": { "const": "workspace" },
+            "path": { "type": "string", "minLength": 1 }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["type", "repository"],
+          "properties": {
+            "type": { "const": "github" },
+            "repository": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$" }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "rulepacks": { "type": "array", "minItems": 1, "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9/-]*$" }, "uniqueItems": true },
+    "targets": { "type": "array", "minItems": 1, "maxItems": 1, "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+    "project": {
+      "type": "object",
+      "required": ["overrides"],
+      "properties": { "overrides": { "type": "string", "pattern": "^\\.agent-rules/.+\\.md$" } },
+      "additionalProperties": false
+    },
+    "updates": {
+      "type": "object",
+      "required": ["channel", "strategy"],
+      "properties": {
+        "channel": { "const": "stable" },
+        "strategy": { "const": "manual" }
+      },
+      "additionalProperties": false
+    }
   },
   "additionalProperties": false
 }

@@ -203,10 +203,9 @@ AgentRuleKit/
 ```text
 TargetProject/
 ├── .agent-rules/
-│   ├── manifest.json
-│   ├── common/
-│   ├── <language>/
-│   ├── project-docs/
+│   ├── common/pack.json
+│   ├── <language>/pack.json
+│   ├── project-docs/<stack>/pack.json
 │   └── overrides.md
 ├── .agent-rules.lock.json
 ├── agent-rules.yaml
@@ -234,8 +233,8 @@ TargetProject/
 schemaVersion: 1
 
 source:
-  registry: github
-  repository: your-org/agent-rule-kit
+  type: github
+  repository: yadan177/AgentRuleKit
 
 rulepacks:
   - common
@@ -250,10 +249,12 @@ project:
 
 updates:
   channel: stable
-  strategy: pull-request
+  strategy: manual
 ```
 
-`.agent-rules.lock.json` 表达实际安装状态：
+当前 `0.1.0` 只支持 `stable` 和人工批准的 `manual` 更新；`pull-request` 是后续可选能力，当前配置不能使用。未公开发布时应使用 `source.type: workspace` 和本地 `source.path` 试用。
+
+`.agent-rules.lock.json` 表达实际安装状态。下面仅示意字段，省略了其他受管文件；实际文件由 CLI 生成，不应手工复制占位摘要：
 
 ```json
 {
@@ -265,12 +266,12 @@ updates:
   "sourceDigest": "sha256:<release-asset-digest>",
   "sourceCommit": "<release-source-commit>",
   "rulepacks": {
-    "common": "1.0.0",
-    "typescript": "1.0.0",
-    "project-docs/js-ts": "1.0.0"
+    "common": "0.1.0",
+    "typescript": "0.1.0",
+    "project-docs/js-ts": "0.1.0"
   },
   "targets": {
-    "codex": "1.0.0"
+    "codex": "0.1.0"
   },
   "managedFiles": {
     ".agent-rules/common/entry.md": "sha256:<digest>"

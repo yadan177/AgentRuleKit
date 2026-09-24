@@ -231,9 +231,38 @@ test("损坏的项目配置会被清楚拒绝，不会覆盖已安装规则", as
     const installed = path.join(target, ".agent-rules", "common", "entry.md");
     const before = await readFile(installed, "utf8");
     await writeFile(path.join(target, "agent-rules.yaml"), "schemaVersion: 1\nupdates: null\n");
-    await assert.rejects(loadProjectConfig(target), /当前版本仅支持/);
+    await assert.rejects(loadProjectConfig(target), /更新策略/);
     assert.ok((await validateProject(target, testAdapter)).issues.some((issue) => issue.code === "invalid-config"));
     assert.equal(await readFile(installed, "utf8"), before);
+  });
+});
+
+test("首版明确拒绝旧字段、自动更新策略和未知配置项", async () => {
+  await withTempProject(async (root) => {
+    const source = path.join(root, "source");
+    const target = path.join(root, "target");
+    await mkdir(target);
+    await writePack(source, "common", "entry.md");
+    await initializeProject(target, testAdapter, source);
+    const valid = await loadProjectConfig(target);
+    const configPath = path.join(target, "agent-rules.yaml");
+    const installedPath = path.join(target, ".agent-rules", "common", "entry.md");
+    const originalRule = await readFile(installedPath, "utf8");
+    const cases: Array<[object, RegExp]> = [
+      [{ ...valid, source: { registry: "github", repository: "owner/repo" } }, /规则源/],
+      [{ ...valid, updates: { channel: "stable", strategy: "pull-request" } }, /人工批准更新/],
+      [{ ...valid, updates: { channel: "stable", strategy: "manual", automatic: true } }, /不支持的字段.*automatic/],
+      [{ ...valid, source: { type: "workspace", path: ".", repository: "owner/repo" } }, /不支持的字段.*repository/],
+      [{ ...valid, telemetry: true }, /不支持的字段.*telemetry/],
+      [{ ...valid, $schema: { unexpected: true } }, /schema 版本或声明不合法/],
+    ];
+    for (const [config, error] of cases) {
+      await writeFile(configPath, stringify(config));
+      await assert.rejects(loadProjectConfig(target), error);
+      assert.ok((await validateProject(target, testAdapter)).issues.some((issue) => issue.code === "invalid-config"));
+      assert.equal(await readFile(installedPath, "utf8"), originalRule);
+    }
+    await assert.rejects(planProject(target, { ...valid, schemaVersion: 2 as 1 }, testAdapter), /schema 版本/);
   });
 });
 
