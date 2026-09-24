@@ -57,6 +57,8 @@ node packages/cli/dist/index.js init /absolute/path/to/project --source-workspac
 node packages/cli/dist/index.js validate /absolute/path/to/project
 ```
 
+也可以运行 `npm run demo:local`，让脚本在独立临时工程中完整演示检测、安装、检查、差异预览和显式更新；默认自动清理，`npm run demo:local -- --keep` 可保留工程供检查。详见[本地试用示例](examples/README.md)。
+
 首版阶段和验收标准见 [开发与跑通计划](docs/development-plan.md)；发布流程和仍需完成的外部前提见 [发布说明](docs/releasing.md)。在没有审查受管文件范围前，不要对已有业务工程直接运行 `init`。
 
 ## 仓库结构

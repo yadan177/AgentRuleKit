@@ -56,6 +56,8 @@ agent-rule validate /absolute/path/to/project
 
 ## 尚未公开发布时的本地试用
 
+若只想安全体验完整流程，在本仓库运行 `npm run demo:local`；它只操作临时 TypeScript 工程和临时规则源，不访问 GitHub，也不安装个人插件。需要查看生成文件时运行 `npm run demo:local -- --keep`，完成后自行清理输出的临时目录。该演示不能替代真实 GitHub Release 的外部验收。
+
 在 AgentRuleKit 仓库运行 `npm ci && npm run build`，然后使用本地规则源初始化临时工程：
 
 ```bash
