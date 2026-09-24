@@ -48,7 +48,7 @@ agent-rule validate /absolute/path/to/project
 
 `validate` 只检查本地安装完整性。`check` 对比规则源版本，不写文件；发现新版本时退出码为 3。`diff` 展示将增删改的文件内容，不写文件。`update` 默认也只是预览，只有带 `--apply` 才应用。应用失败会尝试恢复原文件；若回滚失败，命令会报告保留的恢复副本位置。规则文件被手工修改、`AGENTS.md` 受控区块漂移或新版本碰到未知文件时，更新会停止，不会静默覆盖。
 
-如果机器在更新中突然停止，下一次 `diff/update` 会检测到中断事务并拒绝继续。先运行 `agent-rule recover <project-root>` 查看恢复目录，审查后执行 `agent-rule recover <project-root> --apply`；原版本会恢复，中断时留下的新文件另存于恢复副本中。
+如果机器在更新中突然停止，下一次 `validate` 会报告中断事务，`diff/update` 会拒绝继续。先运行 `agent-rule recover <project-root>` 查看恢复目录，审查后执行 `agent-rule recover <project-root> --apply`；原版本会恢复，中断时留下的新文件另存于恢复副本中。
 
 插件启用并被信任后，会在 Codex 会话开始时后台检查；同一项目安装状态下至多每天检查一次。发现新版本只在后续适合的对话里提醒用户，不会自动更新，也不会主动开启新对话。
 

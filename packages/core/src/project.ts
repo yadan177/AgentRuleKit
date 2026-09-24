@@ -556,7 +556,13 @@ export async function applyProject(root: string, config: ProjectConfig, adapter:
 
 export async function listInterruptedTransactions(root: string): Promise<string[]> {
   const resolvedRoot = path.resolve(root);
-  const entries = await readdir(resolvedRoot, { withFileTypes: true });
+  let entries;
+  try {
+    entries = await readdir(resolvedRoot, { withFileTypes: true });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
+    throw error;
+  }
   const pending: string[] = [];
   for (const entry of entries) {
     if (entry.isDirectory() && entry.name.startsWith(TRANSACTION_PREFIX)) {
@@ -646,6 +652,10 @@ export async function validateProject(root: string, adapter: TargetAdapter): Pro
   assertTargetAdapter(adapter);
   const resolvedRoot = path.resolve(root);
   const issues: ValidationIssue[] = [];
+  const interrupted = await listInterruptedTransactions(resolvedRoot);
+  if (interrupted.length) {
+    issues.push({ code: "interrupted-transaction", message: `检测到 ${interrupted.length} 个未完成的规则更新事务；请先运行 agent-rule recover 查看并恢复` });
+  }
   const requiredFiles = [
     "agent-rules.yaml",
     ".agent-rules.lock.json",

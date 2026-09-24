@@ -384,6 +384,13 @@ test("校验能发现目标入口受控区块漂移", async () => {
   });
 });
 
+test("校验不存在的工程仍报告缺失文件", async () => {
+  await withTempProject(async (root) => {
+    const validation = await validateProject(path.join(root, "missing-project"), testAdapter);
+    assert.ok(validation.issues.some((issue) => issue.code === "missing-file"));
+  });
+});
+
 test("中断事务保留原目录并可显式恢复", async () => {
   await withTempProject(async (root) => {
     const source = path.join(root, "source");
@@ -400,6 +407,7 @@ test("中断事务保留原目录并可显式恢复", async () => {
     await writeFile(path.join(transaction, "journal.json"), JSON.stringify({ schemaVersion: 1, hadRules: true, snapshots }));
     await rename(path.join(target, ".agent-rules"), path.join(transaction, "backup"));
     assert.equal((await listInterruptedTransactions(target)).length, 1);
+    assert.ok((await validateProject(target, testAdapter)).issues.some((issue) => issue.code === "interrupted-transaction"));
     await assert.rejects(planProject(target, await loadProjectConfig(target), testAdapter), /未完成的规则更新事务/);
     const recoveryCopy = await recoverInterruptedProject(target, testAdapter);
     assert.ok(recoveryCopy?.includes(".agent-rules.recovered-"));
