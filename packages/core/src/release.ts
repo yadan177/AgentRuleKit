@@ -29,6 +29,26 @@ export function assertReleaseAssetUnchanged(
   }
 }
 
+function stableVersionParts(version: string): bigint[] {
+  if (!/^\d+\.\d+\.\d+$/.test(version)) throw new Error(`无法比较非 stable 规则版本：${version}`);
+  return version.split(".").map(BigInt);
+}
+
+export function assertReleaseNotOlder(
+  installed: { sourceVersion?: string },
+  latest: { version: string },
+): void {
+  if (!installed.sourceVersion) return;
+  const current = stableVersionParts(installed.sourceVersion);
+  const candidate = stableVersionParts(latest.version);
+  for (let index = 0; index < current.length; index++) {
+    if (candidate[index]! < current[index]!) {
+      throw new Error(`GitHub 最新 Release ${latest.version} 低于项目锁定版本 ${installed.sourceVersion}；拒绝自动降级，请核查发布源`);
+    }
+    if (candidate[index]! > current[index]!) return;
+  }
+}
+
 export interface DownloadedRulepacks {
   sourceRoot: string;
   version: string;
@@ -49,8 +69,8 @@ export async function findLatestRelease(repository: string, fetcher: typeof fetc
   });
   if (!response.ok) throw new Error(`无法检查 GitHub Release：HTTP ${response.status}`);
   const release = await response.json() as GitHubRelease;
-  if (!/^v?\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?$/.test(release.tag_name)) {
-    throw new Error(`Release 标签格式不合法：${release.tag_name}`);
+  if (!/^v?\d+\.\d+\.\d+$/.test(release.tag_name)) {
+    throw new Error(`Release 标签不符合 stable 版本格式：${release.tag_name}`);
   }
   const asset = Array.isArray(release.assets) ? release.assets.find((item) => item.name === ASSET_NAME) : undefined;
   if (!asset) throw new Error(`Release ${release.tag_name} 缺少 ${ASSET_NAME}`);

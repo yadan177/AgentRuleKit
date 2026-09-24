@@ -72,3 +72,23 @@ test("同版本 Release 资产摘要变化时发出安全警告", async () => {
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("远端 Release 低于项目锁定版本时只发安全警告", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "agentrulekit-hook-"));
+  try {
+    const dataDir = path.join(root, "plugin-data");
+    await mkdir(dataDir);
+    await writeFile(path.join(root, "agent-rules.yaml"), "schemaVersion: 1\n");
+    const lock = JSON.stringify({ sourceType: "github", source: "yadan177/AgentRuleKit", sourceVersion: "0.3.0", sourceDigest: `sha256:${"a".repeat(64)}` });
+    await writeFile(path.join(root, ".agent-rules.lock.json"), lock);
+    await writeFile(path.join(dataDir, `update-check-${hash(root)}.json`), JSON.stringify({
+      lockDigest: hash(lock), checkedAt: Date.now(), version: "0.2.0", digest: `sha256:${"b".repeat(64)}`,
+    }));
+    const output = JSON.parse(await runHook(root, dataDir));
+    assert.match(output.hookSpecificOutput.additionalContext, /安全警告/);
+    assert.match(output.hookSpecificOutput.additionalContext, /低于项目锁定版本/);
+    assert.doesNotMatch(output.hookSpecificOutput.additionalContext, /有新版本/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});

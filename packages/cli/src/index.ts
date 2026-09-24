@@ -18,6 +18,7 @@ import {
   findLatestRelease,
   downloadRulepacks,
   assertReleaseAssetUnchanged,
+  assertReleaseNotOlder,
   listInterruptedTransactions,
   recoverInterruptedProject,
 } from "@agentrulekit/core";
@@ -136,6 +137,7 @@ async function run(): Promise<void> {
       if (release) {
         const installed = await loadProjectLock(root);
         assertReleaseAssetUnchanged(installed, release);
+        assertReleaseNotOlder(installed, release);
       }
       const downloaded = release ? await downloadRulepacks(release) : undefined;
       try {
@@ -204,6 +206,7 @@ async function run(): Promise<void> {
         const release = await findLatestRelease(config.source.repository);
         const lock = await loadProjectLock(root);
         assertReleaseAssetUnchanged(lock, release);
+        assertReleaseNotOlder(lock, release);
         const upToDate = lock.sourceVersion === release.version && lock.sourceDigest === release.digest;
         console.log(upToDate ? `远程规则已是最新版本：${release.version}` : `发现远程规则新版本或未固定资产摘要：${lock.sourceVersion ?? "未知"} → ${release.version}；运行 diff 查看。`);
         if (!upToDate) process.exitCode = 3;

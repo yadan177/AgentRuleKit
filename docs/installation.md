@@ -25,6 +25,8 @@ agent-rule validate /absolute/path/to/project
 
 锁文件会固定 Release 版本、资产摘要和压缩包声明的 Git 来源提交。下载的压缩包必须带有与 Release 版本一致的来源记录；缺失或不一致时拒绝安装。资产摘要保证下载内容一致；来源提交仍须信任仓库发布者，必要时可与 Git 标签人工核对。同一版本的资产摘要若发生变化，CLI 会拒绝更新并提示核查发布源，而不是把被替换的文件当作普通更新。
 
+首版只接受正式 stable 版本。如果 GitHub 返回的“最新 Release”低于项目锁定版本，`check`、`diff` 和 `update` 会停止并提示核查发布源，不会自动降级；Codex Hook 只发安全警告，不会把旧版本称为新版本。
+
 Codex 插件可通过仓库市场安装：
 
 ```bash

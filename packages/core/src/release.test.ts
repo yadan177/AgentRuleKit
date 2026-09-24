@@ -7,7 +7,7 @@ import test from "node:test";
 
 import { c } from "tar";
 
-import { assertReleaseAssetUnchanged, downloadRulepacks, findLatestRelease } from "./release.js";
+import { assertReleaseAssetUnchanged, assertReleaseNotOlder, downloadRulepacks, findLatestRelease } from "./release.js";
 import { applyProject, initializeGithubProject, planProject, validateProject } from "./project.js";
 import { testAdapter } from "./test-adapter.js";
 
@@ -78,6 +78,16 @@ test("网络错误和损坏的 Release 归档会在写入项目之前失败", as
   await assert.rejects(downloadRulepacks(release, unavailable), /HTTP 503/);
   const corrupt = (async () => new Response(new Uint8Array(bytes), { status: 200 })) as typeof fetch;
   await assert.rejects(downloadRulepacks(release, corrupt));
+});
+
+test("stable Release 版本按数值比较并拒绝倒退", async () => {
+  assert.doesNotThrow(() => assertReleaseNotOlder({ sourceVersion: "0.9.0" }, { version: "0.10.0" }));
+  assert.doesNotThrow(() => assertReleaseNotOlder({ sourceVersion: "0.10.0" }, { version: "0.10.0" }));
+  assert.throws(() => assertReleaseNotOlder({ sourceVersion: "0.10.0" }, { version: "0.9.9" }), /拒绝自动降级/);
+  assert.throws(() => assertReleaseNotOlder({ sourceVersion: "1.0.0" }, { version: "0.99.99" }), /拒绝自动降级/);
+  assert.throws(() => assertReleaseNotOlder({ sourceVersion: "0.1.0-beta" }, { version: "0.1.0" }), /非 stable/);
+  const prerelease = (async () => new Response(JSON.stringify({ tag_name: "v0.2.0-beta.1", assets: [] }), { status: 200 })) as typeof fetch;
+  await assert.rejects(findLatestRelease("yadan177/AgentRuleKit", prerelease), /不符合 stable/);
 });
 
 test("Release 归档缺少来源提交或与版本不符时拒绝安装", async () => {
@@ -156,6 +166,15 @@ test("模拟两个 Release 的远程安装、差异预览与显式更新", async
       assert.equal(lock.sourceDigest, second.release.digest);
       assert.equal(await readFile(override, "utf8"), "# 用户项目规则\n");
       assert.deepEqual(await validateProject(target, testAdapter), { valid: true, issues: [] });
+      const older = await downloadRulepacks(first.release, first.fetcher);
+      try {
+        const stale = { root: older.sourceRoot, version: older.version, digest: first.release.digest, commit: older.sourceCommit };
+        await assert.rejects(planProject(target, config, testAdapter, stale), /拒绝自动降级/);
+        await assert.rejects(applyProject(target, config, testAdapter, undefined, stale), /拒绝自动降级/);
+        assert.equal(await readFile(path.join(target, ".agent-rules", "common", "entry.md"), "utf8"), "# 新规则\n");
+      } finally {
+        await older.cleanup();
+      }
     } finally {
       await updated.cleanup();
     }

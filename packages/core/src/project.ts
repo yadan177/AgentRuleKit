@@ -18,6 +18,7 @@ import { parse, stringify } from "yaml";
 import { assertTargetAdapter, extractManagedBlock, mergeManagedBlock } from "./adapter.js";
 import type { TargetAdapter } from "./adapter.js";
 import { detectProject } from "./detect.js";
+import { assertReleaseNotOlder } from "./release.js";
 import type {
   ProjectConfig,
   ProjectChange,
@@ -385,6 +386,7 @@ async function prepareProject(root: string, config: ProjectConfig, adapter: Targ
   const oldEntry = !linkedControls.has(adapter.entryFile) && (await exists(entryPath)) ? await readFile(entryPath, "utf8") : "";
   const oldLockContent = !linkedControls.has(".agent-rules.lock.json") && (await exists(lockPath)) ? await readFile(lockPath, "utf8") : undefined;
   const oldLock = oldLockContent ? parseProjectLock(oldLockContent) : undefined;
+  if (oldLock && snapshot) assertReleaseNotOlder(oldLock, snapshot);
   const entries = Object.fromEntries(packs.map(({ manifest }) => [manifest.id, manifest.entry as string]));
   const block = adapter.renderManagedBlock(config, entries);
   if (!block.startsWith(adapter.blockStart) || !block.endsWith(adapter.blockEnd)) {
