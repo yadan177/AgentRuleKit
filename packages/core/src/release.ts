@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { createReadStream } from "node:fs";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -7,9 +8,11 @@ import { t, x } from "tar";
 
 const REPOSITORY_PATTERN = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
 const ASSET_NAME = "agentrulekit-rulepacks.tar.gz";
+const RELEASE_MANIFEST = "agentrulekit-release.json";
 const MAX_ARCHIVE_BYTES = 50 * 1024 * 1024;
 const MAX_EXTRACTED_BYTES = 200 * 1024 * 1024;
 const MAX_ENTRIES = 5_000;
+const MAX_DECOMPRESSION_RATIO = 20;
 
 export interface ReleaseInfo {
   version: string;
@@ -29,6 +32,7 @@ export function assertReleaseAssetUnchanged(
 export interface DownloadedRulepacks {
   sourceRoot: string;
   version: string;
+  sourceCommit: string;
   cleanup: () => Promise<void>;
 }
 
@@ -48,12 +52,12 @@ export async function findLatestRelease(repository: string, fetcher: typeof fetc
   if (!/^v?\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?$/.test(release.tag_name)) {
     throw new Error(`Release 标签格式不合法：${release.tag_name}`);
   }
-  const asset = release.assets.find((item) => item.name === ASSET_NAME);
+  const asset = Array.isArray(release.assets) ? release.assets.find((item) => item.name === ASSET_NAME) : undefined;
   if (!asset) throw new Error(`Release ${release.tag_name} 缺少 ${ASSET_NAME}`);
   if (!asset.digest || !/^sha256:[a-f0-9]{64}$/.test(asset.digest)) {
     throw new Error(`Release ${release.tag_name} 缺少可信的 SHA-256 摘要`);
   }
-  if (asset.size < 1 || asset.size > MAX_ARCHIVE_BYTES) throw new Error("规则包压缩包体积超限");
+  if (!Number.isInteger(asset.size) || asset.size < 1 || asset.size > MAX_ARCHIVE_BYTES) throw new Error("规则包压缩包体积超限");
   const expectedPrefix = `https://github.com/${repository}/releases/download/`;
   if (!asset.browser_download_url.startsWith(expectedPrefix)) throw new Error("Release 下载地址不可信");
   return { version: release.tag_name.replace(/^v/, ""), assetUrl: asset.browser_download_url, digest: asset.digest };
@@ -88,20 +92,52 @@ export async function downloadRulepacks(release: ReleaseInfo, fetcher: typeof fe
     await writeFile(archive, bytes);
     let entries = 0;
     let extractedBytes = 0;
-    await t({ file: archive, onReadEntry: (entry) => {
-      entries++;
-      extractedBytes += entry.size;
-      if (entries > MAX_ENTRIES || extractedBytes > MAX_EXTRACTED_BYTES) throw new Error("规则包归档解压规模超限");
-      const name = entry.path.replace(/\/$/, "");
-      const parts = name.split("/");
-      if (parts[0] !== "rulepacks" || parts.some((part) => part === ".." || part === "." || part === "") || name.includes("\\") || path.posix.isAbsolute(name) || !["File", "Directory"].includes(entry.type)) {
-        throw new Error(`规则包归档包含不安全条目：${entry.path}`);
-      }
-    } });
-    await x({ file: archive, cwd: sourceRoot, preservePaths: false, noMtime: true });
+    const seen = new Set<string>();
+    await new Promise<void>((resolve, reject) => {
+      const parser = t({ strict: true, maxDecompressionRatio: MAX_DECOMPRESSION_RATIO, onReadEntry: (entry) => {
+        entries++;
+        extractedBytes += entry.size;
+        if (entries > MAX_ENTRIES || extractedBytes > MAX_EXTRACTED_BYTES) {
+          parser.abort(new Error("规则包归档解压规模超限"));
+          return;
+        }
+        const name = entry.path.replace(/\/$/, "");
+        const parts = name.split("/");
+        if (seen.has(name)) {
+          parser.abort(new Error(`规则包归档包含重复条目：${name}`));
+          return;
+        }
+        seen.add(name);
+        const manifestEntry = name === RELEASE_MANIFEST && entry.type === "File" && entry.size <= 1024;
+        const ruleEntry = parts[0] === "rulepacks" && !parts.some((part) => part === ".." || part === "." || part === "") && !name.includes("\\") && !path.posix.isAbsolute(name) && ["File", "Directory"].includes(entry.type);
+        if (!manifestEntry && !ruleEntry) parser.abort(new Error(`规则包归档包含不安全条目：${entry.path}`));
+      } });
+      const input = createReadStream(archive);
+      let settled = false;
+      const fail = (error: Error) => {
+        if (settled) return;
+        settled = true;
+        input.destroy();
+        reject(error);
+      };
+      parser.on("error", fail);
+      parser.on("end", () => {
+        if (settled) return;
+        settled = true;
+        resolve();
+      });
+      input.on("error", fail);
+      input.pipe(parser);
+    });
+    if (!seen.has(RELEASE_MANIFEST)) throw new Error("规则包归档缺少来源提交记录");
+    await x({ file: archive, cwd: sourceRoot, preservePaths: false, noMtime: true, strict: true, maxDecompressionRatio: MAX_DECOMPRESSION_RATIO });
     await rm(archive);
+    const metadata = JSON.parse(await readFile(path.join(sourceRoot, RELEASE_MANIFEST), "utf8")) as { schemaVersion?: unknown; version?: unknown; sourceCommit?: unknown };
+    if (metadata.schemaVersion !== 1 || metadata.version !== release.version || typeof metadata.sourceCommit !== "string" || !/^[a-f0-9]{40}(?:[a-f0-9]{24})?$/.test(metadata.sourceCommit)) {
+      throw new Error("规则包来源提交记录与 Release 版本不匹配或格式不合法");
+    }
     await readFile(path.join(sourceRoot, "rulepacks", "common", "pack.json"), "utf8");
-    return { sourceRoot, version: release.version, cleanup: () => rm(sourceRoot, { recursive: true, force: true }) };
+    return { sourceRoot, version: release.version, sourceCommit: metadata.sourceCommit, cleanup: () => rm(sourceRoot, { recursive: true, force: true }) };
   } catch (error) {
     await rm(sourceRoot, { recursive: true, force: true });
     throw error;

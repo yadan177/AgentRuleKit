@@ -263,6 +263,7 @@ updates:
   "source": "yadan177/AgentRuleKit",
   "sourceVersion": "0.1.0",
   "sourceDigest": "sha256:<release-asset-digest>",
+  "sourceCommit": "<release-source-commit>",
   "rulepacks": {
     "common": "1.0.0",
     "typescript": "1.0.0",

@@ -203,6 +203,13 @@ interface PreparedProject {
   lock: ProjectLock;
 }
 
+export interface SourceSnapshot {
+  root: string;
+  version: string;
+  digest: string;
+  commit: string;
+}
+
 async function hasSymlinkAncestor(base: string, relativePath: string): Promise<boolean> {
   let current = path.resolve(base);
   for (const segment of relativePath.split(/[\\/]/)) {
@@ -216,14 +223,17 @@ async function hasSymlinkAncestor(base: string, relativePath: string): Promise<b
   return false;
 }
 
-async function prepareProject(root: string, config: ProjectConfig, adapter: TargetAdapter, sourceRootOverride?: string, sourceVersion?: string, sourceDigest?: string): Promise<PreparedProject> {
+async function prepareProject(root: string, config: ProjectConfig, adapter: TargetAdapter, snapshot?: SourceSnapshot): Promise<PreparedProject> {
   assertTargetAdapter(adapter);
   assertSupportedConfig(config, adapter);
   const resolvedRoot = path.resolve(root);
   if ((await listInterruptedTransactions(resolvedRoot)).length) {
     throw new Error("检测到未完成的规则更新事务；请先运行 agent-rule recover <project-directory> 查看并恢复");
   }
-  const sourceRoot = sourceRootOverride ?? resolveSourceRoot(resolvedRoot, config);
+  if (config.source.type === "github" && (!snapshot || !path.isAbsolute(snapshot.root) || !/^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?$/.test(snapshot.version) || !/^[a-f0-9]{40}(?:[a-f0-9]{24})?$/.test(snapshot.commit) || !/^sha256:[a-f0-9]{64}$/.test(snapshot.digest))) {
+    throw new Error("GitHub 规则源缺少经过校验的版本、摘要或来源提交");
+  }
+  const sourceRoot = snapshot?.root ?? resolveSourceRoot(resolvedRoot, config);
   const packs = await resolveRulePacks(sourceRoot, config.rulepacks);
   const rulesDirectory = path.join(resolvedRoot, ".agent-rules");
   const entryPath = path.join(resolvedRoot, adapter.entryFile);
@@ -267,8 +277,7 @@ async function prepareProject(root: string, config: ProjectConfig, adapter: Targ
     toolkitVersion: TOOLKIT_VERSION,
     sourceType: config.source.type,
     source: config.source.type === "workspace" ? config.source.path ?? "." : config.source.repository ?? "",
-    ...(sourceVersion ? { sourceVersion } : {}),
-    ...(sourceDigest ? { sourceDigest } : {}),
+    ...(snapshot ? { sourceVersion: snapshot.version, sourceDigest: snapshot.digest, sourceCommit: snapshot.commit } : {}),
     rulepacks: Object.fromEntries(packs.map(({ manifest }) => [manifest.id, manifest.version])),
     targets: Object.fromEntries(config.targets.map((target) => [target, TOOLKIT_VERSION])),
     managedFiles,
@@ -321,13 +330,13 @@ async function prepareProject(root: string, config: ProjectConfig, adapter: Targ
   return { plan: { changes, conflicts, from: oldLock?.rulepacks ?? {}, to: lock.rulepacks }, files, entryContent, lock };
 }
 
-export async function planProject(root: string, config: ProjectConfig, adapter: TargetAdapter, sourceRootOverride?: string, sourceVersion?: string, sourceDigest?: string): Promise<ProjectPlan> {
-  return (await prepareProject(root, config, adapter, sourceRootOverride, sourceVersion, sourceDigest)).plan;
+export async function planProject(root: string, config: ProjectConfig, adapter: TargetAdapter, snapshot?: SourceSnapshot): Promise<ProjectPlan> {
+  return (await prepareProject(root, config, adapter, snapshot)).plan;
 }
 
-export async function applyProject(root: string, config: ProjectConfig, adapter: TargetAdapter, configContent?: string, sourceRootOverride?: string, sourceVersion?: string, sourceDigest?: string): Promise<ProjectLock> {
+export async function applyProject(root: string, config: ProjectConfig, adapter: TargetAdapter, configContent?: string, snapshot?: SourceSnapshot): Promise<ProjectLock> {
   const resolvedRoot = path.resolve(root);
-  const prepared = await prepareProject(resolvedRoot, config, adapter, sourceRootOverride, sourceVersion, sourceDigest);
+  const prepared = await prepareProject(resolvedRoot, config, adapter, snapshot);
   if (prepared.plan.conflicts.length) {
     throw new Error(prepared.plan.conflicts.map((issue) => `[${issue.code}] ${issue.message}`).join("\n"));
   }
@@ -471,18 +480,16 @@ export async function initializeProject(
 export async function initializeGithubProject(
   root: string,
   adapter: TargetAdapter,
-  sourceRoot: string,
+  snapshot: SourceSnapshot,
   repository: string,
-  releaseVersion: string,
-  releaseDigest?: string,
 ): Promise<ProjectConfig> {
   const resolvedRoot = path.resolve(root);
   if (await exists(path.join(resolvedRoot, "agent-rules.yaml"))) {
     throw new Error("agent-rules.yaml 已存在；请使用 diff/update，不要再次运行 init");
   }
-  const config = await createDefaultConfig(resolvedRoot, adapter, sourceRoot);
+  const config = await createDefaultConfig(resolvedRoot, adapter, snapshot.root);
   config.source = { type: "github", repository };
-  await applyProject(resolvedRoot, config, adapter, stringify(config), sourceRoot, releaseVersion, releaseDigest);
+  await applyProject(resolvedRoot, config, adapter, stringify(config), snapshot);
   return config;
 }
 
@@ -531,6 +538,9 @@ export async function validateProject(root: string, adapter: TargetAdapter): Pro
     const configuredSource = config.source.type === "workspace" ? config.source.path ?? "." : config.source.repository ?? "";
     if (lock.sourceType && lock.sourceType !== config.source.type) issues.push({ code: "source-type-mismatch", message: "配置与锁文件的规则源类型不一致" });
     if (lock.source !== configuredSource) issues.push({ code: "source-mismatch", message: "配置与锁文件的规则源不一致" });
+    if (config.source.type === "github" && (!lock.sourceVersion || !/^sha256:[a-f0-9]{64}$/.test(lock.sourceDigest ?? "") || !/^[a-f0-9]{40}(?:[a-f0-9]{24})?$/.test(lock.sourceCommit ?? ""))) {
+      issues.push({ code: "source-provenance-missing", message: "GitHub 规则源缺少版本、资产摘要或来源提交；请运行 diff/update 核查并迁移" });
+    }
     for (const id of config.rulepacks) {
       if (!lock.rulepacks[id]) issues.push({ code: "missing-locked-pack", message: `锁文件缺少规则包 ${id}` });
     }

@@ -9,7 +9,7 @@ async function json(file) {
   return JSON.parse(await readFile(file, "utf8"));
 }
 
-for (const file of ["package.json", "packages/cli/package.json", "plugins/agent-rule-kit/.codex-plugin/plugin.json"]) {
+for (const file of ["package.json", "packages/core/package.json", "adapters/codex/package.json", "packages/cli/package.json", "plugins/agent-rule-kit/.codex-plugin/plugin.json"]) {
   const manifest = await json(file);
   if (manifest.version !== version) throw new Error(`${file} 版本 ${manifest.version} 与 ${tag} 不一致`);
 }
@@ -29,4 +29,4 @@ async function inspectPacks(directory) {
 }
 
 await inspectPacks("rulepacks");
-console.log(`发布版本 ${tag}：CLI、插件与全部规则包一致`);
+console.log(`发布版本 ${tag}：核心、适配器、CLI、插件与全部规则包一致`);

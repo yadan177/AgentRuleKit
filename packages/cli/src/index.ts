@@ -87,7 +87,12 @@ async function run(): Promise<void> {
         const release = await findLatestRelease(DEFAULT_REPOSITORY);
         const downloaded = await downloadRulepacks(release);
         try {
-          config = await initializeGithubProject(root, codexAdapter, downloaded.sourceRoot, DEFAULT_REPOSITORY, downloaded.version, release.digest);
+          config = await initializeGithubProject(root, codexAdapter, {
+            root: downloaded.sourceRoot,
+            version: downloaded.version,
+            digest: release.digest,
+            commit: downloaded.sourceCommit,
+          }, DEFAULT_REPOSITORY);
         } finally {
           await downloaded.cleanup();
         }
@@ -109,7 +114,13 @@ async function run(): Promise<void> {
       }
       const downloaded = release ? await downloadRulepacks(release) : undefined;
       try {
-      const plan = await planProject(root, config, codexAdapter, downloaded?.sourceRoot, downloaded?.version, release?.digest);
+      const snapshot = downloaded && release ? {
+        root: downloaded.sourceRoot,
+        version: downloaded.version,
+        digest: release.digest,
+        commit: downloaded.sourceCommit,
+      } : undefined;
+      const plan = await planProject(root, config, codexAdapter, snapshot);
       printPlan(plan);
       if (plan.conflicts.length) {
         process.exitCode = 2;
@@ -120,7 +131,7 @@ async function run(): Promise<void> {
         return;
       }
       if (plan.changes.length) {
-        await applyProject(root, config, codexAdapter, undefined, downloaded?.sourceRoot, downloaded?.version, release?.digest);
+        await applyProject(root, config, codexAdapter, undefined, snapshot);
         console.log(`已在 ${root} 应用 ${plan.changes.length} 项变更`);
       }
       return;
