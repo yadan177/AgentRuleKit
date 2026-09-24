@@ -18,6 +18,8 @@
 
 ## 发布决策与验收
 
+- [x] 四个 Codex Skills 已用 Codex 内置 `skill-creator/scripts/quick_validate.py` 完成一次本地格式校验（2026-09-24）；`npm run check` 持续检查仓库内插件入口、Skill 基本结构、Hook 声明及行为。静态检查不等同于实际安装验收。
+- [ ] 在隔离的 Codex 环境中按官方流程实际添加本地 Marketplace、安装插件，并确认四个 Skills 可发现、SessionStart Hook 可运行。完成后记录所用 Codex 版本与结果。
 - [ ] 仓库所有者明确确认公开范围与许可证，再决定是否把仓库设为 Public。
 - [ ] 公开后按 [发布说明](releasing.md) 依次验证 Release 资产、npm 包名所有权、独立环境安装与远程更新闭环。
 - [ ] 在完成上述确认前，README 保持“本地已实现、尚未公开发布”的状态说明。

@@ -28,12 +28,7 @@ jobs:
       - run: npm ci
       - run: npm run check
       - run: npm pack --dry-run --workspace agentrulekit
-      - name: 校验 Codex 插件和 Skills
-        if: runner.os == 'Linux' && matrix.node == 24
-        shell: bash
-        run: |
-          node --check plugins/agent-rule-kit/hooks/session_start.mjs
-          node -e 'JSON.parse(require("fs").readFileSync("plugins/agent-rule-kit/hooks/hooks.json", "utf8"))'
+      # npm run check 已包含插件静态结构、Hook 语法与行为测试。
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
