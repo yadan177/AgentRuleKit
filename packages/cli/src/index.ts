@@ -1,10 +1,13 @@
 #!/usr/bin/env node
 
 import process from "node:process";
+import { lstat } from "node:fs/promises";
+import path from "node:path";
 
 import { codexAdapter } from "@agentrulekit/adapter-codex";
 import {
   detectProject,
+  createDefaultConfig,
   applyProject,
   initializeProject,
   initializeGithubProject,
@@ -18,7 +21,7 @@ import {
   listInterruptedTransactions,
   recoverInterruptedProject,
 } from "@agentrulekit/core";
-import type { ProjectChange, ProjectPlan } from "@agentrulekit/core";
+import type { DetectionResult, ProjectChange, ProjectPlan } from "@agentrulekit/core";
 
 const VERSION = "0.1.0";
 const DEFAULT_REPOSITORY = "yadan177/AgentRuleKit";
@@ -31,7 +34,7 @@ function printHelp(): void {
 
 命令：
   detect      检测支持的技术栈并展示证据
-  init        从公开 GitHub Release 为 Codex 工程安装规则
+  init        展示技术栈依据与建议规则包，再为 Codex 工程安装规则
   check       检查本地完整性及规则源是否有更新
   diff        展示待更新文件的可审查差异
   update      预览更新；加 --apply 才会应用
@@ -65,6 +68,25 @@ function printPlan(plan: ProjectPlan): void {
   for (const conflict of plan.conflicts) console.error(`[${conflict.code}] ${conflict.message}`);
 }
 
+function printInitRecommendation(detection: DetectionResult, rulepacks: string[]): void {
+  console.log("技术栈检测依据：");
+  if (!detection.stacks.length) console.log("- 未发现可识别的语言标记；建议仅安装通用规则。");
+  for (const stack of detection.stacks) {
+    for (const evidence of stack.evidence) console.log(`- ${stack.id}（${stack.confidence}）：${evidence.path}，${evidence.reason}`);
+  }
+  console.log(`建议规则包：${rulepacks.join(", ")}`);
+}
+
+async function projectConfigExists(root: string): Promise<boolean> {
+  try {
+    await lstat(path.join(root, "agent-rules.yaml"));
+    return true;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
+    throw error;
+  }
+}
+
 async function run(): Promise<void> {
   const command = process.argv[2] ?? "help";
   const root = process.argv[3] && !process.argv[3].startsWith("--") ? process.argv[3] : process.cwd();
@@ -76,12 +98,16 @@ async function run(): Promise<void> {
       return;
     }
     case "init": {
+      if (await projectConfigExists(root)) throw new Error("agent-rules.yaml 已存在；请使用 diff/update，不要再次运行 init");
       const sourceArg = process.argv.indexOf("--source-workspace");
+      const sourceRoot = sourceArg >= 0 ? process.argv[sourceArg + 1] : undefined;
+      if (sourceArg >= 0 && !sourceRoot) throw new Error("--source-workspace 需要规则源目录");
+      const detection = await detectProject(root);
+      const recommendation = await createDefaultConfig(root, codexAdapter);
+      printInitRecommendation(detection, recommendation.rulepacks);
       let config;
       if (sourceArg >= 0) {
-        const sourceRoot = process.argv[sourceArg + 1];
-        if (!sourceRoot) throw new Error("--source-workspace 需要规则源目录");
-        config = await initializeProject(root, codexAdapter, sourceRoot);
+        config = await initializeProject(root, codexAdapter, sourceRoot!);
       } else {
         const release = await findLatestRelease(DEFAULT_REPOSITORY);
         const downloaded = await downloadRulepacks(release);

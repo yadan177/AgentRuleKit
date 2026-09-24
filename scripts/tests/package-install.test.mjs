@@ -43,7 +43,9 @@ test("独立 npm 包可在六类工程初始化，并完成 Go 工程的显式�
       if (fixture.extraMarker) await writeFile(path.join(project, fixture.extraMarker[0]), fixture.extraMarker[1]);
       const detection = JSON.parse(run(process.execPath, [cli, "detect", project]));
       assert.ok(detection.stacks.some((stack) => stack.id === fixture.name), `${fixture.name} 未正确检测`);
-      run(process.execPath, [cli, "init", project, "--source-workspace", source]);
+      const initialized = run(process.execPath, [cli, "init", project, "--source-workspace", source]);
+      assert.ok(initialized.includes(fixture.marker), `${fixture.name} 未展示检测依据`);
+      assert.match(initialized, /建议规则包：common/);
       assert.match(run(process.execPath, [cli, "validate", project]), /验证通过/);
       assert.match(run(process.execPath, [cli, "check", project]), /最新版本/);
       const lock = JSON.parse(await readFile(path.join(project, ".agent-rules.lock.json"), "utf8"));

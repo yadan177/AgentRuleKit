@@ -32,13 +32,23 @@ test("Python、TypeScript、Unity 工程完成安装与安全更新闭环", asyn
       const target = path.join(root, fixture.name);
       await mkdir(path.dirname(path.join(target, fixture.file)), { recursive: true });
       await writeFile(path.join(target, fixture.file), fixture.text);
-      expectExit(command("init", target, "--source-workspace", source), 0, `${fixture.name} init`);
+      const initialized = command("init", target, "--source-workspace", source);
+      expectExit(initialized, 0, `${fixture.name} init`);
+      assert.match(initialized.stdout, /技术栈检测依据/);
+      assert.ok(initialized.stdout.includes(fixture.file), `${fixture.name} 未展示检测依据`);
+      assert.match(initialized.stdout, /建议规则包：common/);
       expectExit(command("validate", target), 0, `${fixture.name} validate`);
       expectExit(command("check", target), 0, `${fixture.name} check`);
       const lock = JSON.parse(await readFile(path.join(target, ".agent-rules.lock.json"), "utf8"));
       for (const pack of fixture.packs) assert.ok(lock.rulepacks[pack], `${fixture.name} 未安装 ${pack}`);
       assert.match(await readFile(path.join(target, "AGENTS.md"), "utf8"), /agent-rule:start/);
     }
+
+    const repeatedInit = command("init", path.join(root, "python"));
+    expectExit(repeatedInit, 1, "已有项目应在联网前拒绝重复初始化");
+    assert.match(repeatedInit.stderr, /agent-rules\.yaml 已存在/);
+    assert.doesNotMatch(repeatedInit.stderr, /GitHub Release|HTTP \d{3}/);
+    assert.equal(repeatedInit.stdout, "");
 
     const onlyTypeScript = path.join(root, "typescript-only");
     await mkdir(onlyTypeScript);
@@ -82,6 +92,7 @@ test("Python、TypeScript、Unity 工程完成安装与安全更新闭环", asyn
     await writeFile(unknown, "# 已有未知文件\n");
     const rejected = command("init", collision, "--source-workspace", source);
     assert.notEqual(rejected.status, 0);
+    assert.match(rejected.stdout, /技术栈检测依据：[\s\S]*pyproject\.toml[\s\S]*建议规则包/);
     assert.match(rejected.stderr, /unknown-file-collision/);
     assert.equal(await readFile(unknown, "utf8"), "# 已有未知文件\n");
   } finally {
