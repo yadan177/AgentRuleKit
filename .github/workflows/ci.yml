@@ -30,9 +30,25 @@ jobs:
       - run: npm pack --dry-run --workspace agentrulekit
       # npm run check 已包含插件静态结构、Hook 语法与行为测试。
 
+  plugin-install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: 在临时 Codex 环境安装仓库插件
+        shell: bash
+        run: |
+          npm install --global @openai/codex@0.142.0
+          codex plugin marketplace add .
+          codex plugin add agent-rule-kit@agentrulekit
+          codex plugin list --marketplace agentrulekit --json | node -e 'const data = JSON.parse(require("node:fs").readFileSync(0, "utf8")); if (!data.installed?.some((plugin) => plugin.pluginId === "agent-rule-kit@agentrulekit" && plugin.enabled)) process.exit(1)'
+
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: check
+    needs: [check, plugin-install]
     runs-on: ubuntu-latest
     permissions:
       contents: write
