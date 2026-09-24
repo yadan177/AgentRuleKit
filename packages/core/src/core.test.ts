@@ -66,6 +66,41 @@ test("detectProject reports TypeScript evidence", async () => {
   });
 });
 
+test("没有 package.json 的 TypeScript 工程仍安装匹配规则及其依赖", async () => {
+  await withTempProject(async (root) => {
+    const source = path.join(root, "source");
+    const target = path.join(root, "target");
+    await mkdir(target);
+    await writePack(source, "common", "entry.md");
+    await writePack(source, "javascript", "entry.md", ["common"]);
+    await writePack(source, "typescript", "entry.md", ["common", "javascript"]);
+    await writePack(source, "project-docs/js-ts", "entry.md", ["common"]);
+    await writeFile(path.join(target, "tsconfig.json"), "{}\n");
+
+    const detection = await detectProject(target);
+    assert.deepEqual(detection.stacks.map((stack) => stack.id), ["typescript"]);
+    assert.deepEqual(detection.stacks[0]?.evidence, [{ path: "tsconfig.json", reason: "存在 TypeScript 配置文件" }]);
+
+    const config = await initializeProject(target, testAdapter, source);
+    assert.deepEqual(config.rulepacks, ["common", "typescript", "project-docs/js-ts"]);
+    const lock = JSON.parse(await readFile(path.join(target, ".agent-rules.lock.json"), "utf8"));
+    assert.deepEqual(Object.keys(lock.rulepacks), ["common", "javascript", "typescript", "project-docs/js-ts"]);
+    assert.deepEqual(await validateProject(target, testAdapter), { valid: true, issues: [] });
+  });
+});
+
+test("损坏的 package.json 不会遮蔽独立的 tsconfig.json 证据", async () => {
+  await withTempProject(async (root) => {
+    await writeFile(path.join(root, "package.json"), "{invalid");
+    await writeFile(path.join(root, "tsconfig.json"), "{}\n");
+    const detection = await detectProject(root);
+    assert.deepEqual(detection.stacks.map((stack) => stack.id), ["javascript", "typescript"]);
+    assert.deepEqual(detection.stacks.find((stack) => stack.id === "typescript")?.evidence, [
+      { path: "tsconfig.json", reason: "存在 TypeScript 配置文件" },
+    ]);
+  });
+});
+
 test("mergeManagedBlock preserves unmanaged content", () => {
   const merged = mergeManagedBlock("# Existing\n", `${testAdapter.blockStart}\nnew\n${testAdapter.blockEnd}`, testAdapter);
   assert.match(merged, /# Existing/);

@@ -32,7 +32,7 @@ test("独立 npm 包可在六类工程初始化，并完成 Go 工程的显式�
       { name: "go", marker: "go.mod", content: "module example.com/demo\n\ngo 1.22\n", packs: ["go", "project-docs/go"] },
       { name: "java", marker: "pom.xml", content: "<project/>\n", packs: ["java", "project-docs/java"] },
       { name: "javascript", marker: "package.json", content: '{"name":"packaged-demo"}\n', packs: ["javascript", "project-docs/js-ts"] },
-      { name: "typescript", marker: "tsconfig.json", content: "{}\n", extraMarker: ["package.json", '{"name":"packaged-demo"}\n'], packs: ["javascript", "typescript", "project-docs/js-ts"] },
+      { name: "typescript", marker: "tsconfig.json", content: "{}\n", packs: ["javascript", "typescript", "project-docs/js-ts"] },
       { name: "unity", marker: path.join("ProjectSettings", "ProjectVersion.txt"), content: "m_EditorVersion: 2022.3.0f1\n", packs: ["unity", "project-docs/unity"] },
     ];
     for (const fixture of fixtures) {
@@ -40,7 +40,6 @@ test("独立 npm 包可在六类工程初始化，并完成 Go 工程的显式�
       const marker = path.join(project, fixture.marker);
       await mkdir(path.dirname(marker), { recursive: true });
       await writeFile(marker, fixture.content);
-      if (fixture.extraMarker) await writeFile(path.join(project, fixture.extraMarker[0]), fixture.extraMarker[1]);
       const detection = JSON.parse(run(process.execPath, [cli, "detect", project]));
       assert.ok(detection.stacks.some((stack) => stack.id === fixture.name), `${fixture.name} 未正确检测`);
       const initialized = run(process.execPath, [cli, "init", project, "--source-workspace", source]);

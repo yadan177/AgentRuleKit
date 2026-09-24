@@ -22,19 +22,15 @@ async function packageJsonEvidence(root: string): Promise<{
   typescript?: DetectionEvidence;
 }> {
   const packagePath = path.join(root, "package.json");
-  if (!(await exists(packagePath))) {
-    return {};
-  }
-
   const result: {
     javascript?: DetectionEvidence;
     typescript?: DetectionEvidence;
-  } = {
-    javascript: {
-      path: "package.json",
-      reason: "存在 Node.js package manifest",
-    },
-  };
+  } = {};
+  if (await exists(path.join(root, "tsconfig.json"))) {
+    result.typescript = { path: "tsconfig.json", reason: "存在 TypeScript 配置文件" };
+  }
+  if (!(await exists(packagePath))) return result;
+  result.javascript = { path: "package.json", reason: "存在 Node.js package manifest" };
 
   try {
     const parsed = JSON.parse(await readFile(packagePath, "utf8")) as {
@@ -45,12 +41,10 @@ async function packageJsonEvidence(root: string): Promise<{
       ...parsed.dependencies,
       ...parsed.devDependencies,
     };
-    if (dependencies.typescript || (await exists(path.join(root, "tsconfig.json")))) {
+    if (dependencies.typescript) {
       result.typescript = {
-        path: dependencies.typescript ? "package.json" : "tsconfig.json",
-        reason: dependencies.typescript
-          ? "项目依赖中声明了 TypeScript"
-          : "存在 TypeScript 配置文件",
+        path: "package.json",
+        reason: "项目依赖中声明了 TypeScript",
       };
     }
   } catch {
