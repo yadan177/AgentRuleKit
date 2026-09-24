@@ -93,6 +93,40 @@ test("initializeProject creates a valid generic adapter scaffold", async () => {
   });
 });
 
+test("同一工程并发初始化只允许一个写入", async () => {
+  await withTempProject(async (root) => {
+    const source = path.join(root, "source");
+    const target = path.join(root, "target");
+    await mkdir(target);
+    await writePack(source, "common", "entry.md");
+    const results = await Promise.allSettled([
+      initializeProject(target, testAdapter, source),
+      initializeProject(target, testAdapter, source),
+    ]);
+    assert.equal(results.filter((result) => result.status === "fulfilled").length, 1);
+    assert.equal(results.filter((result) => result.status === "rejected").length, 1);
+    assert.deepEqual(await validateProject(target, testAdapter), { valid: true, issues: [] });
+    await assert.rejects(readFile(path.join(target, ".agent-rules.operation.lock"), "utf8"), /ENOENT/);
+  });
+});
+
+test("已有写入锁阻止预览和更新，且不会覆盖未知锁文件", async () => {
+  await withTempProject(async (root) => {
+    const source = path.join(root, "source");
+    const target = path.join(root, "target");
+    await mkdir(target);
+    await writePack(source, "common", "entry.md");
+    await initializeProject(target, testAdapter, source);
+    const config = await loadProjectConfig(target);
+    const lockPath = path.join(target, ".agent-rules.operation.lock");
+    await writeFile(lockPath, "外部写入操作");
+    await assert.rejects(planProject(target, config, testAdapter), /写入操作锁/);
+    await assert.rejects(applyProject(target, config, testAdapter), /已有规则写入操作锁/);
+    assert.ok((await validateProject(target, testAdapter)).issues.some((issue) => issue.code === "operation-in-progress"));
+    assert.equal(await readFile(lockPath, "utf8"), "外部写入操作");
+  });
+});
+
 test("更新先预览差异，应用后保留项目覆盖与非受管内容", async () => {
   await withTempProject(async (root) => {
     const source = path.join(root, "source");
@@ -140,6 +174,27 @@ test("预览后规则源变化时拒绝应用未审查的差异", async () => {
     const current = await planProject(target, config, testAdapter);
     await applyProject(target, config, testAdapter, undefined, undefined, current);
     assert.equal(await readFile(installedRule, "utf8"), "# 未审查的规则\n");
+  });
+});
+
+test("并发应用同一份已审查差异不会重复写入", async () => {
+  await withTempProject(async (root) => {
+    const source = path.join(root, "source");
+    const target = path.join(root, "target");
+    await mkdir(target);
+    await writePack(source, "common", "entry.md");
+    await initializeProject(target, testAdapter, source);
+    await writeFile(path.join(source, "rulepacks", "common", "entry.md"), "# 新规则\n");
+    const config = await loadProjectConfig(target);
+    const reviewed = await planProject(target, config, testAdapter);
+    const results = await Promise.allSettled([
+      applyProject(target, config, testAdapter, undefined, undefined, reviewed),
+      applyProject(target, config, testAdapter, undefined, undefined, reviewed),
+    ]);
+    assert.equal(results.filter((result) => result.status === "fulfilled").length, 1);
+    assert.equal(results.filter((result) => result.status === "rejected").length, 1);
+    assert.equal(await readFile(path.join(target, ".agent-rules", "common", "entry.md"), "utf8"), "# 新规则\n");
+    assert.deepEqual(await validateProject(target, testAdapter), { valid: true, issues: [] });
   });
 });
 
@@ -475,6 +530,11 @@ test("中断事务保留原目录并可显式恢复", async () => {
     assert.equal((await listInterruptedTransactions(target)).length, 1);
     assert.ok((await validateProject(target, testAdapter)).issues.some((issue) => issue.code === "interrupted-transaction"));
     await assert.rejects(planProject(target, await loadProjectConfig(target), testAdapter), /未完成的规则更新事务/);
+    const operationLock = path.join(target, ".agent-rules.operation.lock");
+    await writeFile(operationLock, "另一个操作");
+    await assert.rejects(recoverInterruptedProject(target, testAdapter), /已有规则写入操作锁/);
+    assert.equal((await listInterruptedTransactions(target)).length, 1);
+    await rm(operationLock);
     const recoveryCopy = await recoverInterruptedProject(target, testAdapter);
     assert.ok(recoveryCopy?.includes(".agent-rules.recovered-"));
     assert.equal(await readFile(path.join(target, ".agent-rules", "common", "entry.md"), "utf8"), "# common\n");

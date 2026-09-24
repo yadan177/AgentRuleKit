@@ -50,6 +50,8 @@ agent-rule validate /absolute/path/to/project
 
 如果机器在更新中突然停止，下一次 `validate` 会报告中断事务，`diff/update` 会拒绝继续。先运行 `agent-rule recover <project-root>` 查看恢复目录，审查后执行 `agent-rule recover <project-root> --apply`；原版本会恢复，中断时留下的新文件另存于恢复副本中。
 
+初始化、应用更新和执行恢复时，CLI 会在项目根目录临时创建 `.agent-rules.operation.lock`，阻止同一工程的并发写入；预览与校验遇到锁也会提示等待。正常结束会移除它。若进程异常退出而留下锁，**不要直接重试或覆盖**：先确认没有仍在运行的 `agent-rule` 进程，审查项目与可能存在的事务目录，再将锁文件移走留存，按需执行 `recover` 和 `validate`。该临时锁不应提交到业务项目 Git。
+
 插件启用并被信任后，会在 Codex 会话开始时后台检查；同一项目安装状态下至多每天检查一次。发现新版本只在后续适合的对话里提醒用户，不会自动更新，也不会主动开启新对话。
 
 ## 尚未公开发布时的本地试用

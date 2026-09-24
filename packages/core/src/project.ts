@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import {
   access,
   cp,
@@ -38,6 +38,7 @@ const VERSION_PATTERN = /^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?$/;
 const DIGEST_PATTERN = /^sha256:[a-f0-9]{64}$/;
 const COMMIT_PATTERN = /^[a-f0-9]{40}(?:[a-f0-9]{24})?$/;
 const TRANSACTION_PREFIX = ".agent-rules.transaction-";
+const OPERATION_LOCK = ".agent-rules.operation.lock";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -405,10 +406,13 @@ async function inspectInstalledPackClosure(root: string, requested: string[], lo
   return issues;
 }
 
-async function prepareProject(root: string, config: ProjectConfig, adapter: TargetAdapter, snapshot?: SourceSnapshot): Promise<PreparedProject> {
+async function prepareProject(root: string, config: ProjectConfig, adapter: TargetAdapter, snapshot?: SourceSnapshot, ownsWriteLock = false): Promise<PreparedProject> {
   assertTargetAdapter(adapter);
   assertSupportedConfig(config, adapter);
   const resolvedRoot = path.resolve(root);
+  if (!ownsWriteLock && await exists(path.join(resolvedRoot, OPERATION_LOCK))) {
+    throw new Error(`检测到规则写入操作锁 ${OPERATION_LOCK}；请等待当前操作结束，或确认进程已停止后人工检查`);
+  }
   if ((await listInterruptedTransactions(resolvedRoot)).length) {
     throw new Error("检测到未完成的规则更新事务；请先运行 agent-rule recover <project-directory> 查看并恢复");
   }
@@ -529,9 +533,9 @@ export async function planProject(root: string, config: ProjectConfig, adapter: 
   return (await prepareProject(root, config, adapter, snapshot)).plan;
 }
 
-export async function applyProject(root: string, config: ProjectConfig, adapter: TargetAdapter, configContent?: string, snapshot?: SourceSnapshot, expectedPlan?: ProjectPlan): Promise<ProjectLock> {
+async function applyProjectUnlocked(root: string, config: ProjectConfig, adapter: TargetAdapter, configContent?: string, snapshot?: SourceSnapshot, expectedPlan?: ProjectPlan): Promise<ProjectLock> {
   const resolvedRoot = path.resolve(root);
-  const prepared = await prepareProject(resolvedRoot, config, adapter, snapshot);
+  const prepared = await prepareProject(resolvedRoot, config, adapter, snapshot, true);
   if (prepared.plan.conflicts.length) {
     throw new Error(prepared.plan.conflicts.map((issue) => `[${issue.code}] ${issue.message}`).join("\n"));
   }
@@ -602,6 +606,38 @@ export async function applyProject(root: string, config: ProjectConfig, adapter:
   }
 }
 
+async function withProjectWriteLock<T>(root: string, operation: () => Promise<T>): Promise<T> {
+  const resolvedRoot = path.resolve(root);
+  const lockPath = path.join(resolvedRoot, OPERATION_LOCK);
+  const token = randomUUID();
+  try {
+    await writeFile(lockPath, token, { flag: "wx", mode: 0o600 });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "EEXIST") {
+      throw new Error(`已有规则写入操作锁 ${OPERATION_LOCK}；不会并发修改项目。若之前的进程已停止，请人工确认后处理该文件`);
+    }
+    throw error;
+  }
+  try {
+    return await operation();
+  } finally {
+    let current: string;
+    try {
+      current = await readFile(lockPath, "utf8");
+    } catch {
+      throw new Error(`规则写入操作锁 ${OPERATION_LOCK} 已消失；请检查项目状态`);
+    }
+    if (current !== token) {
+      throw new Error(`规则写入操作锁 ${OPERATION_LOCK} 已变化；保留现场，请人工检查项目状态`);
+    }
+    await rm(lockPath);
+  }
+}
+
+export async function applyProject(root: string, config: ProjectConfig, adapter: TargetAdapter, configContent?: string, snapshot?: SourceSnapshot, expectedPlan?: ProjectPlan): Promise<ProjectLock> {
+  return withProjectWriteLock(root, () => applyProjectUnlocked(root, config, adapter, configContent, snapshot, expectedPlan));
+}
+
 export async function listInterruptedTransactions(root: string): Promise<string[]> {
   const resolvedRoot = path.resolve(root);
   let entries;
@@ -621,7 +657,7 @@ export async function listInterruptedTransactions(root: string): Promise<string[
   return pending;
 }
 
-export async function recoverInterruptedProject(root: string, adapter: TargetAdapter): Promise<string | undefined> {
+async function recoverInterruptedProjectUnlocked(root: string, adapter: TargetAdapter): Promise<string | undefined> {
   assertTargetAdapter(adapter);
   const resolvedRoot = path.resolve(root);
   const pending = await listInterruptedTransactions(resolvedRoot);
@@ -664,20 +700,24 @@ export async function recoverInterruptedProject(root: string, adapter: TargetAda
   return recovered;
 }
 
+export async function recoverInterruptedProject(root: string, adapter: TargetAdapter): Promise<string | undefined> {
+  return withProjectWriteLock(root, () => recoverInterruptedProjectUnlocked(root, adapter));
+}
+
 export async function initializeProject(
   root: string,
   adapter: TargetAdapter,
   sourceRoot: string = root,
 ): Promise<ProjectConfig> {
   const resolvedRoot = path.resolve(root);
-  const configPath = path.join(resolvedRoot, "agent-rules.yaml");
-  if (await exists(configPath)) {
-    throw new Error("agent-rules.yaml 已存在；请运行 generate，不要再次运行 init");
-  }
-
-  const config = await createDefaultConfig(resolvedRoot, adapter, sourceRoot);
-  await applyProject(resolvedRoot, config, adapter, stringify(config));
-  return config;
+  return withProjectWriteLock(resolvedRoot, async () => {
+    if (await exists(path.join(resolvedRoot, "agent-rules.yaml"))) {
+      throw new Error("agent-rules.yaml 已存在；请运行 generate，不要再次运行 init");
+    }
+    const config = await createDefaultConfig(resolvedRoot, adapter, sourceRoot);
+    await applyProjectUnlocked(resolvedRoot, config, adapter, stringify(config));
+    return config;
+  });
 }
 
 export async function initializeGithubProject(
@@ -687,19 +727,24 @@ export async function initializeGithubProject(
   repository: string,
 ): Promise<ProjectConfig> {
   const resolvedRoot = path.resolve(root);
-  if (await exists(path.join(resolvedRoot, "agent-rules.yaml"))) {
-    throw new Error("agent-rules.yaml 已存在；请使用 diff/update，不要再次运行 init");
-  }
-  const config = await createDefaultConfig(resolvedRoot, adapter, snapshot.root);
-  config.source = { type: "github", repository };
-  await applyProject(resolvedRoot, config, adapter, stringify(config), snapshot);
-  return config;
+  return withProjectWriteLock(resolvedRoot, async () => {
+    if (await exists(path.join(resolvedRoot, "agent-rules.yaml"))) {
+      throw new Error("agent-rules.yaml 已存在；请使用 diff/update，不要再次运行 init");
+    }
+    const config = await createDefaultConfig(resolvedRoot, adapter, snapshot.root);
+    config.source = { type: "github", repository };
+    await applyProjectUnlocked(resolvedRoot, config, adapter, stringify(config), snapshot);
+    return config;
+  });
 }
 
 export async function validateProject(root: string, adapter: TargetAdapter): Promise<ValidationResult> {
   assertTargetAdapter(adapter);
   const resolvedRoot = path.resolve(root);
   const issues: ValidationIssue[] = [];
+  if (await exists(path.join(resolvedRoot, OPERATION_LOCK))) {
+    issues.push({ code: "operation-in-progress", message: `检测到规则写入操作锁 ${OPERATION_LOCK}；请等待当前操作结束，或确认进程已停止后人工检查` });
+  }
   const interrupted = await listInterruptedTransactions(resolvedRoot);
   if (interrupted.length) {
     issues.push({ code: "interrupted-transaction", message: `检测到 ${interrupted.length} 个未完成的规则更新事务；请先运行 agent-rule recover 查看并恢复` });
