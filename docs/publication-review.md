@@ -2,7 +2,7 @@
 
 当前决定：仓库保持 **Private**，继续审查。草稿 PR 与 CI 仅用于内部验证；不得据此将仓库改为 Public、推送发布标签或发布 npm 包。
 
-已完成的机器筛查范围、结果和限制见 [2026-09-24 自动筛查记录](publication-audit-2026-09-24.md)。机器筛查不代替下面的人工授权确认。
+已完成的机器筛查范围、结果和限制见 [2026-09-24 自动筛查记录](publication-audit-2026-09-24.md)。[逐文件来源索引](rulepack-provenance-inventory.md)与[内容权利复核表](content-rights-review.md)用于人工审查；机器筛查不代替下面的人工授权确认。
 
 ## 内容与授权
 

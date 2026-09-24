@@ -15,7 +15,7 @@
   "scripts": {
     "build": "npm run build --workspace @agentrulekit/core && npm run build --workspace @agentrulekit/adapter-codex && npm run build --workspace agentrulekit",
     "check": "npm run check:rulepacks && npm run check:plugin && npm run build && npm run test",
-    "check:rulepacks": "node scripts/validate-rulepacks.mjs",
+    "check:rulepacks": "node scripts/validate-rulepacks.mjs && node scripts/generate-provenance-inventory.mjs --check",
     "check:plugin": "node scripts/validate-codex-plugin.mjs && node --check plugins/agent-rule-kit/hooks/session_start.mjs",
     "clean": "npm run clean --workspaces --if-present",
     "dev": "npm run dev --workspace agentrulekit --",
