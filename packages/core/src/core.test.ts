@@ -186,6 +186,44 @@ test("本地规则源的内部符号链接不会被安装到业务工程", async
   });
 });
 
+test("校验不会把指向相同内容的符号链接当作完整安装", async (context) => {
+  if (process.platform === "win32") context.skip("Windows 测试环境可能不允许创建符号链接");
+  await withTempProject(async (root) => {
+    const source = path.join(root, "source");
+    const target = path.join(root, "target");
+    await mkdir(target);
+    await writePack(source, "common", "entry.md");
+    await initializeProject(target, testAdapter, source);
+
+    const installed = path.join(target, ".agent-rules", "common", "entry.md");
+    const outside = path.join(root, "outside.md");
+    await writeFile(outside, await readFile(installed, "utf8"));
+    await rm(installed);
+    await symlink(outside, installed);
+    const validation = await validateProject(target, testAdapter);
+    assert.ok(validation.issues.some((issue) => issue.code === "symlink-path" && issue.message.includes("common/entry.md")));
+    await rm(installed);
+    await writeFile(installed, await readFile(outside, "utf8"));
+
+    const override = path.join(target, ".agent-rules", "overrides.md");
+    await rm(override);
+    await symlink(outside, override);
+    assert.ok((await validateProject(target, testAdapter)).issues.some((issue) => issue.code === "symlink-path" && issue.message.includes("overrides.md")));
+    assert.ok((await planProject(target, await loadProjectConfig(target), testAdapter)).conflicts.some((issue) => issue.code === "symlink-path" && issue.message.includes("overrides.md")));
+    await rm(override);
+    await writeFile(override, "# 项目覆盖规则\n");
+
+    const entry = path.join(target, testAdapter.entryFile);
+    await writeFile(outside, "SECRET_OUTSIDE_CONTENT\n");
+    await rm(entry);
+    await symlink(outside, entry);
+    assert.ok((await validateProject(target, testAdapter)).issues.some((issue) => issue.code === "symlink-path" && issue.message.includes(testAdapter.entryFile)));
+    const preview = await planProject(target, await loadProjectConfig(target), testAdapter);
+    assert.ok(preview.conflicts.some((issue) => issue.code === "symlink-path" && issue.message.includes(testAdapter.entryFile)));
+    assert.ok(preview.changes.every((change) => !change.before?.includes("SECRET_OUTSIDE_CONTENT")));
+  });
+});
+
 test("受管文件漂移阻止更新", async () => {
   await withTempProject(async (root) => {
     const source = path.join(root, "source");

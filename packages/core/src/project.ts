@@ -374,8 +374,16 @@ async function prepareProject(root: string, config: ProjectConfig, adapter: Targ
   const rulesDirectory = path.join(resolvedRoot, ".agent-rules");
   const entryPath = path.join(resolvedRoot, adapter.entryFile);
   const lockPath = path.join(resolvedRoot, ".agent-rules.lock.json");
-  const oldEntry = (await exists(entryPath)) ? await readFile(entryPath, "utf8") : "";
-  const oldLockContent = (await exists(lockPath)) ? await readFile(lockPath, "utf8") : undefined;
+  const conflicts: ValidationIssue[] = [];
+  const linkedControls = new Set<string>();
+  for (const controlPath of [adapter.entryFile, ".agent-rules.lock.json", "agent-rules.yaml"]) {
+    if (await hasSymlinkAncestor(resolvedRoot, controlPath)) {
+      linkedControls.add(controlPath);
+      conflicts.push({ code: "symlink-path", message: `控制文件是符号链接：${controlPath}` });
+    }
+  }
+  const oldEntry = !linkedControls.has(adapter.entryFile) && (await exists(entryPath)) ? await readFile(entryPath, "utf8") : "";
+  const oldLockContent = !linkedControls.has(".agent-rules.lock.json") && (await exists(lockPath)) ? await readFile(lockPath, "utf8") : undefined;
   const oldLock = oldLockContent ? parseProjectLock(oldLockContent) : undefined;
   const entries = Object.fromEntries(packs.map(({ manifest }) => [manifest.id, manifest.entry as string]));
   const block = adapter.renderManagedBlock(config, entries);
@@ -385,13 +393,7 @@ async function prepareProject(root: string, config: ProjectConfig, adapter: Targ
   const entryContent = mergeManagedBlock(oldEntry, block, adapter);
   const files = new Map<string, string>();
   const managedFiles: Record<string, string> = {};
-  const conflicts: ValidationIssue[] = [];
   if (oldLock) conflicts.push(...await inspectLockedManagedFiles(resolvedRoot, oldLock));
-  for (const controlPath of [adapter.entryFile, ".agent-rules.lock.json", "agent-rules.yaml"]) {
-    if (await hasSymlinkAncestor(resolvedRoot, controlPath)) {
-      conflicts.push({ code: "symlink-path", message: `控制文件是符号链接：${controlPath}` });
-    }
-  }
   if (!oldLock && oldEntry.includes(adapter.blockStart)) {
     conflicts.push({ code: "unknown-managed-block", message: `${adapter.entryFile} 已含受控区块，但缺少可验证的锁文件` });
   }
@@ -463,6 +465,8 @@ async function prepareProject(root: string, config: ProjectConfig, adapter: Targ
     managedPath === overrideRelative || managedPath.startsWith(`${overrideRelative}/`) || overrideRelative.startsWith(`${managedPath}/`));
   if (!overrideRelative.startsWith(".agent-rules/") || !overrideTarget.startsWith(`${rulesDirectory}${path.sep}`) || overlapsManagedFile) {
     conflicts.push({ code: "unsafe-overrides", message: `项目覆盖规则路径不安全：${overrideRelative}` });
+  } else if (await hasSymlinkAncestor(resolvedRoot, overrideRelative)) {
+    conflicts.push({ code: "symlink-path", message: `项目覆盖规则路径包含符号链接：${overrideRelative}` });
   }
   return { plan: { changes, conflicts, from: oldLock?.rulepacks ?? {}, to: lock.rulepacks }, files, entryContent, lock, oldLock };
 }
@@ -640,6 +644,10 @@ export async function validateProject(root: string, adapter: TargetAdapter): Pro
   ];
 
   for (const relativePath of requiredFiles) {
+    if (await hasSymlinkAncestor(resolvedRoot, relativePath)) {
+      issues.push({ code: "symlink-path", message: `控制文件路径包含符号链接：${relativePath}` });
+      continue;
+    }
     if (!(await exists(path.join(resolvedRoot, relativePath)))) {
       issues.push({ code: "missing-file", message: `缺少 ${relativePath}` });
     }
@@ -658,7 +666,9 @@ export async function validateProject(root: string, adapter: TargetAdapter): Pro
     } catch (error) {
       return { valid: false, issues: [{ code: "invalid-lock", message: `项目锁文件无效：${error instanceof Error ? error.message : String(error)}` }] };
     }
-    if (!(await exists(resolveInside(resolvedRoot, config.project.overrides)))) {
+    if (await hasSymlinkAncestor(resolvedRoot, config.project.overrides)) {
+      issues.push({ code: "symlink-path", message: `项目覆盖规则路径包含符号链接：${config.project.overrides}` });
+    } else if (!(await exists(resolveInside(resolvedRoot, config.project.overrides)))) {
       issues.push({ code: "missing-overrides", message: `缺少项目覆盖规则 ${config.project.overrides}` });
     }
     if (!config.targets.includes(adapter.id)) {
@@ -691,6 +701,10 @@ export async function validateProject(root: string, adapter: TargetAdapter): Pro
     for (const [relativePath, expectedDigest] of Object.entries(lock.managedFiles)) {
       if (!isManagedPath(relativePath)) {
         issues.push({ code: "unsafe-lock-path", message: `锁文件路径不在受管目录：${relativePath}` });
+        continue;
+      }
+      if (await hasSymlinkAncestor(resolvedRoot, relativePath)) {
+        issues.push({ code: "symlink-path", message: `受管文件路径包含符号链接：${relativePath}` });
         continue;
       }
       const absolutePath = resolveInside(resolvedRoot, relativePath);
