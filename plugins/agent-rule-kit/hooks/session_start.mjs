@@ -3,6 +3,21 @@ import { readFile, mkdir, writeFile, rename } from "node:fs/promises";
 import path from "node:path";
 
 const sha256 = (value) => createHash("sha256").update(value).digest("hex");
+const stableVersion = /^\d+\.\d+\.\d+$/;
+const assetDigest = /^sha256:[a-f0-9]{64}$/;
+const assetName = "agentrulekit-rulepacks.tar.gz";
+const maxArchiveBytes = 50 * 1024 * 1024;
+
+function releaseMetadata(release, repository) {
+  if (!release || typeof release !== "object" || release.draft || release.prerelease ||
+    typeof release.tag_name !== "string" || !/^v\d+\.\d+\.\d+$/.test(release.tag_name) ||
+    !Array.isArray(release.assets)) return undefined;
+  const asset = release.assets.find((item) => item?.name === assetName);
+  const expectedUrl = `https://github.com/${repository}/releases/download/${release.tag_name}/${assetName}`;
+  if (!asset || !assetDigest.test(asset.digest ?? "") || asset.browser_download_url !== expectedUrl ||
+    !Number.isInteger(asset.size) || asset.size < 1 || asset.size > maxArchiveBytes) return undefined;
+  return { version: release.tag_name.slice(1), digest: asset.digest };
+}
 
 function compareStableVersions(candidate, installed) {
   if (!/^\d+\.\d+\.\d+$/.test(candidate) || !/^\d+\.\d+\.\d+$/.test(installed)) return undefined;
@@ -36,6 +51,8 @@ async function main() {
     for await (const chunk of process.stdin) input += chunk;
     event = JSON.parse(input);
   } catch { return; }
+  if (!event || typeof event !== "object" || Array.isArray(event) ||
+    (event.cwd !== undefined && (typeof event.cwd !== "string" || !event.cwd))) return;
   const project = await findProject(event.cwd ?? process.cwd());
   const dataDir = process.env.PLUGIN_DATA;
   if (!project || !dataDir) return;
@@ -56,25 +73,23 @@ async function main() {
   let version = cache.version;
   let digest = cache.digest;
   const cacheAge = typeof cache.checkedAt === "number" ? Date.now() - cache.checkedAt : NaN;
-  if (cache.lockDigest !== lockDigest || !Number.isFinite(cacheAge) || cacheAge < 0 || cacheAge >= 86_400_000) {
+  if (cache.lockDigest !== lockDigest || !Number.isFinite(cacheAge) || cacheAge < 0 || cacheAge >= 86_400_000 ||
+    !stableVersion.test(version ?? "") || !assetDigest.test(digest ?? "")) {
     try {
       const response = await fetch(`https://api.github.com/repos/${lock.source}/releases/latest`, {
         headers: { Accept: "application/vnd.github+json", "User-Agent": "AgentRuleKit" },
         signal: AbortSignal.timeout(15_000),
       });
       if (!response.ok) return;
-      const release = await response.json();
-      const asset = release.assets?.find((item) => item.name === "agentrulekit-rulepacks.tar.gz");
-      if (!asset || !/^sha256:[a-f0-9]{64}$/.test(asset.digest ?? "")) return;
-      version = typeof release.tag_name === "string" ? release.tag_name.replace(/^v/, "") : undefined;
-      if (!/^\d+\.\d+\.\d+$/.test(version ?? "")) return;
-      digest = asset.digest;
+      const metadata = releaseMetadata(await response.json(), lock.source);
+      if (!metadata) return;
+      ({ version, digest } = metadata);
       const temporary = `${cachePath}.${process.pid}.tmp`;
       await writeFile(temporary, JSON.stringify({ lockDigest, checkedAt: Date.now(), version, digest }));
       await rename(temporary, cachePath);
     } catch { return; }
   }
-  if (!/^\d+\.\d+\.\d+$/.test(version ?? "")) return;
+  if (!stableVersion.test(version ?? "")) return;
   const versionOrder = lock.sourceVersion ? compareStableVersions(version, lock.sourceVersion) : undefined;
   if (version === lock.sourceVersion && lock.sourceDigest && digest && digest !== lock.sourceDigest) {
     const message = `AgentRuleKit 安全警告：GitHub Release ${version} 的资产摘要与项目锁文件不一致，同版本资产可能被替换。提醒用户核查发布源，不要应用更新。`;

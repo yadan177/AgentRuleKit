@@ -57,7 +57,12 @@ try {
       PLUGIN_ROOT: installedRoot,
       PLUGIN_DATA: path.join(temporary, "plugin-data"),
       AGENTRULEKIT_TEST_RELEASE: JSON.stringify({
-        tag_name: "v0.2.0", assets: [{ name: "agentrulekit-rulepacks.tar.gz", digest: `sha256:${"b".repeat(64)}` }],
+        tag_name: "v0.2.0", assets: [{
+          name: "agentrulekit-rulepacks.tar.gz",
+          browser_download_url: "https://github.com/yadan177/AgentRuleKit/releases/download/v0.2.0/agentrulekit-rulepacks.tar.gz",
+          digest: `sha256:${"b".repeat(64)}`,
+          size: 100,
+        }],
       }),
       AGENTRULEKIT_TEST_REQUEST_LOG: requestLog,
     },
