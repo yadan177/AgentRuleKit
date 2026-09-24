@@ -42,9 +42,7 @@ jobs:
         shell: bash
         run: |
           npm install --global @openai/codex@0.142.0
-          codex plugin marketplace add .
-          codex plugin add agent-rule-kit@agentrulekit
-          codex plugin list --marketplace agentrulekit --json | node -e 'const data = JSON.parse(require("node:fs").readFileSync(0, "utf8")); if (!data.installed?.some((plugin) => plugin.pluginId === "agent-rule-kit@agentrulekit" && plugin.enabled)) process.exit(1)'
+          node scripts/verify-codex-plugin-install.mjs
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
