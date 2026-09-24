@@ -664,12 +664,19 @@ async function recoverInterruptedProjectUnlocked(root: string, adapter: TargetAd
   if (!pending.length) return undefined;
   if (pending.length > 1) throw new Error("发现多个未完成事务；请人工检查，不自动选择恢复对象");
   const transaction = pending[0]!;
-  const journal = JSON.parse(await readFile(path.join(transaction, "journal.json"), "utf8")) as {
+  const parsedJournal: unknown = JSON.parse(await readFile(path.join(transaction, "journal.json"), "utf8"));
+  if (!isRecord(parsedJournal) || parsedJournal.schemaVersion !== 1 || typeof parsedJournal.hadRules !== "boolean" || !isRecord(parsedJournal.snapshots)) {
+    throw new Error("恢复记录格式不合法");
+  }
+  const journal = parsedJournal as {
     schemaVersion: number;
     hadRules: boolean;
     snapshots: Record<string, string | null>;
   };
-  if (journal.schemaVersion !== 1 || typeof journal.hadRules !== "boolean" || !journal.snapshots || typeof journal.snapshots !== "object") throw new Error("恢复记录格式不合法");
+  if (!Object.hasOwn(journal.snapshots, adapter.entryFile) || !Object.hasOwn(journal.snapshots, ".agent-rules.lock.json") ||
+    Object.values(journal.snapshots).some((value) => value !== null && typeof value !== "string")) {
+    throw new Error("恢复记录缺少控制文件快照或内容类型不合法");
+  }
   for (const basename of Object.keys(journal.snapshots)) {
     if (![adapter.entryFile, ".agent-rules.lock.json", "agent-rules.yaml"].includes(basename)) {
       throw new Error(`恢复记录包含未知控制文件：${basename}`);
@@ -688,10 +695,28 @@ async function recoverInterruptedProjectUnlocked(root: string, adapter: TargetAd
     if (journal.hadRules) await rename(backup, rulesDirectory);
   }
   const savedControls = path.join(transaction, "incomplete-controls");
-  await mkdir(savedControls);
+  try {
+    await mkdir(savedControls);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "EEXIST" || !(await lstat(savedControls)).isDirectory()) {
+      throw error;
+    }
+  }
   for (const [basename, previous] of Object.entries(journal.snapshots)) {
     const destination = path.join(resolvedRoot, basename);
-    if (await exists(destination)) await cp(destination, path.join(savedControls, basename));
+    const saved = path.join(savedControls, basename);
+    let savedStat;
+    try {
+      savedStat = await lstat(saved);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    }
+    if (savedStat && !savedStat.isFile()) throw new Error(`恢复副本包含非普通控制文件：${saved}`);
+    if (!savedStat && await exists(destination)) {
+      const temporary = path.join(savedControls, `.copying-${randomUUID()}`);
+      await cp(destination, temporary, { force: false, errorOnExist: true });
+      await rename(temporary, saved);
+    }
     if (previous === null) await rm(destination, { force: true });
     else await writeFile(destination, previous, "utf8");
   }

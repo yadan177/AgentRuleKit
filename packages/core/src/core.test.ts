@@ -542,3 +542,55 @@ test("中断事务保留原目录并可显式恢复", async () => {
     assert.deepEqual(await validateProject(target, testAdapter), { valid: true, issues: [] });
   });
 });
+
+test("恢复再次中断后重试不会覆盖已保留的控制文件副本", async () => {
+  await withTempProject(async (root) => {
+    const source = path.join(root, "source");
+    const target = path.join(root, "target");
+    await mkdir(target);
+    await writePack(source, "common", "entry.md");
+    await initializeProject(target, testAdapter, source);
+
+    const entry = path.join(target, testAdapter.entryFile);
+    const lock = path.join(target, ".agent-rules.lock.json");
+    const oldEntry = await readFile(entry, "utf8");
+    const oldLock = await readFile(lock, "utf8");
+    const transaction = path.join(target, ".agent-rules.transaction-retry");
+    const savedControls = path.join(transaction, "incomplete-controls");
+    await mkdir(savedControls, { recursive: true });
+    await writeFile(path.join(transaction, "journal.json"), JSON.stringify({
+      schemaVersion: 1,
+      hadRules: true,
+      snapshots: { [testAdapter.entryFile]: oldEntry, ".agent-rules.lock.json": oldLock },
+    }));
+    await writeFile(path.join(savedControls, testAdapter.entryFile), "第一次恢复保存的未完成入口\n");
+    await writeFile(lock, "未完成的新锁文件\n");
+
+    const recovered = await recoverInterruptedProject(target, testAdapter);
+    assert.ok(recovered);
+    assert.equal(await readFile(path.join(recovered, "incomplete-controls", testAdapter.entryFile), "utf8"), "第一次恢复保存的未完成入口\n");
+    assert.equal(await readFile(path.join(recovered, "incomplete-controls", ".agent-rules.lock.json"), "utf8"), "未完成的新锁文件\n");
+    assert.equal(await readFile(entry, "utf8"), oldEntry);
+    assert.equal(await readFile(lock, "utf8"), oldLock);
+    assert.deepEqual(await validateProject(target, testAdapter), { valid: true, issues: [] });
+  });
+});
+
+test("损坏的恢复记录在移动规则目录前被拒绝", async () => {
+  await withTempProject(async (root) => {
+    const source = path.join(root, "source");
+    const target = path.join(root, "target");
+    await mkdir(target);
+    await writePack(source, "common", "entry.md");
+    await initializeProject(target, testAdapter, source);
+    const transaction = path.join(target, ".agent-rules.transaction-invalid");
+    await mkdir(transaction);
+    const originalRule = await readFile(path.join(target, ".agent-rules", "common", "entry.md"), "utf8");
+    for (const snapshots of [[], { [testAdapter.entryFile]: "入口" }, { [testAdapter.entryFile]: 123, ".agent-rules.lock.json": null }]) {
+      await writeFile(path.join(transaction, "journal.json"), JSON.stringify({ schemaVersion: 1, hadRules: true, snapshots }));
+      await assert.rejects(recoverInterruptedProject(target, testAdapter), /恢复记录/);
+      assert.equal(await readFile(path.join(target, ".agent-rules", "common", "entry.md"), "utf8"), originalRule);
+      await assert.rejects(readFile(path.join(target, ".agent-rules.operation.lock"), "utf8"), /ENOENT/);
+    }
+  });
+});
