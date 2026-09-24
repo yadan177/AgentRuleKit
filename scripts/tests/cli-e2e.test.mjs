@@ -99,3 +99,41 @@ test("Python、TypeScript、Unity 工程完成安装与安全更新闭环", asyn
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("差异预览明确显示文件末尾换行的增删", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "agentrulekit-newline-diff-"));
+  try {
+    const source = path.join(root, "source");
+    const target = path.join(root, "target");
+    const pack = path.join(source, "rulepacks", "common");
+    await mkdir(pack, { recursive: true });
+    await mkdir(target);
+    await writeFile(path.join(pack, "pack.json"), JSON.stringify({ id: "common", version: "0.1.0", status: "ready", kind: "common", entry: "entry.md", dependencies: [], rules: ["entry.md"] }));
+    const rule = path.join(pack, "entry.md");
+    await writeFile(rule, "# Rule\n");
+    expectExit(command("init", target, "--source-workspace", source), 0, "初始化换行测试工程");
+
+    await writeFile(rule, "# Rule");
+    const removed = command("diff", target);
+    expectExit(removed, 0, "预览删除末尾换行");
+    const removedRule = removed.stdout.split("diff --agent-rule .agent-rules/common/entry.md")[1]?.split("diff --agent-rule")[0];
+    assert.match(removedRule, /-# Rule\n\+# Rule\n\\ No newline at end of file/);
+    expectExit(command("update", target, "--apply"), 0, "应用删除末尾换行");
+    assert.equal(await readFile(path.join(target, ".agent-rules", "common", "entry.md"), "utf8"), "# Rule");
+
+    await writeFile(rule, "# Rule\n");
+    const added = command("diff", target);
+    expectExit(added, 0, "预览增加末尾换行");
+    const addedRule = added.stdout.split("diff --agent-rule .agent-rules/common/entry.md")[1]?.split("diff --agent-rule")[0];
+    assert.match(addedRule, /-# Rule\n\\ No newline at end of file\n\+# Rule/);
+    expectExit(command("update", target, "--apply"), 0, "应用增加末尾换行");
+
+    await writeFile(rule, "# Rule\r\n");
+    const changedLineEnding = command("diff", target);
+    expectExit(changedLineEnding, 0, "预览 CRLF 与 LF 的区别");
+    const endingRule = changedLineEnding.stdout.split("diff --agent-rule .agent-rules/common/entry.md")[1]?.split("diff --agent-rule")[0];
+    assert.match(endingRule, /-# Rule\n\+# Rule\\r/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});

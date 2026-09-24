@@ -51,15 +51,33 @@ function printHelp(): void {
 }
 
 function renderChange(change: ProjectChange): string {
-  const before = change.before?.replace(/\n$/, "").split("\n") ?? [];
-  const after = change.after?.replace(/\n$/, "").split("\n") ?? [];
+  const lines = (content: string | undefined): string[] => {
+    if (!content) return [];
+    const result = content.split("\n");
+    if (content.endsWith("\n")) result.pop();
+    return result;
+  };
+  const before = lines(change.before);
+  const after = lines(change.after);
+  const newlineChanged = change.before !== undefined && change.after !== undefined &&
+    change.before.endsWith("\n") !== change.after.endsWith("\n");
   let prefix = 0;
   while (prefix < before.length && prefix < after.length && before[prefix] === after[prefix]) prefix++;
+  if (newlineChanged && prefix === before.length && prefix === after.length && prefix > 0) prefix--;
   let suffix = 0;
-  while (suffix < before.length - prefix && suffix < after.length - prefix && before[before.length - suffix - 1] === after[after.length - suffix - 1]) suffix++;
+  if (!newlineChanged) {
+    while (suffix < before.length - prefix && suffix < after.length - prefix && before[before.length - suffix - 1] === after[after.length - suffix - 1]) suffix++;
+  }
   const oldChanged = before.slice(prefix, before.length - suffix);
   const newChanged = after.slice(prefix, after.length - suffix);
-  return [`diff --agent-rule ${change.path}`, `--- ${change.action === "add" ? "/dev/null" : change.path}`, `+++ ${change.action === "remove" ? "/dev/null" : change.path}`, `@@ -${prefix + 1},${oldChanged.length} +${prefix + 1},${newChanged.length} @@`, ...oldChanged.map((line) => `-${line}`), ...newChanged.map((line) => `+${line}`)].join("\n");
+  const showLine = (line: string): string => line.replace(/\r/g, "\\r");
+  const oldLines = oldChanged.map((line) => `-${showLine(line)}`);
+  const newLines = newChanged.map((line) => `+${showLine(line)}`);
+  if (suffix === 0 && oldChanged.length && change.before && !change.before.endsWith("\n")) oldLines.push("\\ No newline at end of file");
+  if (suffix === 0 && newChanged.length && change.after && !change.after.endsWith("\n")) newLines.push("\\ No newline at end of file");
+  const oldStart = oldChanged.length ? prefix + 1 : prefix;
+  const newStart = newChanged.length ? prefix + 1 : prefix;
+  return [`diff --agent-rule ${change.path}`, `--- ${change.action === "add" ? "/dev/null" : change.path}`, `+++ ${change.action === "remove" ? "/dev/null" : change.path}`, `@@ -${oldStart},${oldChanged.length} +${newStart},${newChanged.length} @@`, ...oldLines, ...newLines].join("\n");
 }
 
 function printPlan(plan: ProjectPlan): void {
