@@ -121,6 +121,28 @@ test("更新先预览差异，应用后保留项目覆盖与非受管内容", as
   });
 });
 
+test("预览后规则源变化时拒绝应用未审查的差异", async () => {
+  await withTempProject(async (root) => {
+    const source = path.join(root, "source");
+    const target = path.join(root, "target");
+    await mkdir(target);
+    await writePack(source, "common", "entry.md");
+    await initializeProject(target, testAdapter, source);
+    const config = await loadProjectConfig(target);
+    const sourceRule = path.join(source, "rulepacks", "common", "entry.md");
+    const installedRule = path.join(target, ".agent-rules", "common", "entry.md");
+    await writeFile(sourceRule, "# 已审查的规则\n");
+    const reviewed = await planProject(target, config, testAdapter);
+    assert.ok(reviewed.changes.some((change) => change.path === ".agent-rules/common/entry.md" && change.after === "# 已审查的规则\n"));
+    await writeFile(sourceRule, "# 未审查的规则\n");
+    await assert.rejects(applyProject(target, config, testAdapter, undefined, undefined, reviewed), /拒绝应用未经审查的差异/);
+    assert.equal(await readFile(installedRule, "utf8"), "# common\n");
+    const current = await planProject(target, config, testAdapter);
+    await applyProject(target, config, testAdapter, undefined, undefined, current);
+    assert.equal(await readFile(installedRule, "utf8"), "# 未审查的规则\n");
+  });
+});
+
 test("未知文件冲突阻止初始化，且不留下半成品", async () => {
   await withTempProject(async (root) => {
     const source = path.join(root, "source");

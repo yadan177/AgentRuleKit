@@ -176,7 +176,7 @@ async function run(): Promise<void> {
         return;
       }
       if (plan.changes.length) {
-        await applyProject(root, config, codexAdapter, undefined, snapshot);
+        await applyProject(root, config, codexAdapter, undefined, snapshot, plan);
         console.log(`已在 ${root} 应用 ${plan.changes.length} 项变更`);
       }
       return;

@@ -12,6 +12,7 @@ import {
   writeFile,
 } from "node:fs/promises";
 import path from "node:path";
+import { isDeepStrictEqual } from "node:util";
 
 import { parse, stringify } from "yaml";
 
@@ -484,11 +485,14 @@ export async function planProject(root: string, config: ProjectConfig, adapter: 
   return (await prepareProject(root, config, adapter, snapshot)).plan;
 }
 
-export async function applyProject(root: string, config: ProjectConfig, adapter: TargetAdapter, configContent?: string, snapshot?: SourceSnapshot): Promise<ProjectLock> {
+export async function applyProject(root: string, config: ProjectConfig, adapter: TargetAdapter, configContent?: string, snapshot?: SourceSnapshot, expectedPlan?: ProjectPlan): Promise<ProjectLock> {
   const resolvedRoot = path.resolve(root);
   const prepared = await prepareProject(resolvedRoot, config, adapter, snapshot);
   if (prepared.plan.conflicts.length) {
     throw new Error(prepared.plan.conflicts.map((issue) => `[${issue.code}] ${issue.message}`).join("\n"));
+  }
+  if (expectedPlan && !isDeepStrictEqual(prepared.plan, expectedPlan)) {
+    throw new Error("预览后规则源或项目文件发生变化；拒绝应用未经审查的差异，请重新运行 diff");
   }
   const rulesDirectory = path.join(resolvedRoot, ".agent-rules");
   const transaction = await mkdtemp(path.join(resolvedRoot, TRANSACTION_PREFIX));
