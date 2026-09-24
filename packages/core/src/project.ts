@@ -111,6 +111,10 @@ function isPackRulePath(relativePath: unknown): relativePath is string {
     !path.posix.isAbsolute(relativePath) && relativePath.split("/").every((segment) => segment !== "" && segment !== "." && segment !== "..");
 }
 
+function isPackId(id: unknown): id is string {
+  return typeof id === "string" && PACK_ID_PATTERN.test(id) && !id.includes("//") && !id.endsWith("/");
+}
+
 function resolveInside(base: string, relativePath: string): string {
   if (path.isAbsolute(relativePath)) {
     throw new Error(`规则包路径不能是绝对路径：${relativePath}`);
@@ -140,7 +144,7 @@ async function loadRulePack(
   sourceRoot: string,
   id: string,
 ): Promise<{ directory: string; manifest: RulePackManifest }> {
-  if (!PACK_ID_PATTERN.test(id) || id.includes("//") || id.endsWith("/")) {
+  if (!isPackId(id)) {
     throw new Error(`非法规则包 ID：${id}`);
   }
   const directory = resolveInside(path.join(sourceRoot, "rulepacks"), id);
@@ -160,7 +164,7 @@ async function loadRulePack(
   if ((parsed.$schema !== undefined && typeof parsed.$schema !== "string") ||
     typeof parsed.version !== "string" || !PACK_VERSION_PATTERN.test(parsed.version) ||
     !["common", "development", "documentation"].includes(String(parsed.kind)) ||
-    !Array.isArray(parsed.dependencies) || parsed.dependencies.some((dependency) => typeof dependency !== "string" || !PACK_ID_PATTERN.test(dependency) || dependency.includes("//") || dependency.endsWith("/")) ||
+    !Array.isArray(parsed.dependencies) || parsed.dependencies.some((dependency) => !isPackId(dependency)) ||
     new Set(parsed.dependencies).size !== parsed.dependencies.length ||
     !Array.isArray(parsed.rules) || parsed.rules.length === 0 || parsed.rules.some((rule) => !isPackRulePath(rule)) ||
     new Set(parsed.rules).size !== parsed.rules.length || !isPackRulePath(parsed.entry) || !parsed.rules.includes(parsed.entry)) {
@@ -323,7 +327,7 @@ async function inspectLockedManagedFiles(root: string, lock: ProjectLock): Promi
   const issues: ValidationIssue[] = [];
   const expected = new Set<string>();
   for (const [id, version] of Object.entries(lock.rulepacks ?? {})) {
-    if (!PACK_ID_PATTERN.test(id) || id.includes("//") || id.endsWith("/")) {
+    if (!isPackId(id)) {
       issues.push({ code: "invalid-locked-pack", message: `锁文件包含非法规则包 ID：${id}` });
       continue;
     }
@@ -340,7 +344,9 @@ async function inspectLockedManagedFiles(root: string, lock: ProjectLock): Promi
       issues.push({ code: "invalid-installed-pack", message: `已安装规则清单缺失或无法解析：${manifestPath}` });
       continue;
     }
-    if (manifest.id !== id || manifest.version !== version || !Array.isArray(manifest.rules) || typeof manifest.entry !== "string" || !manifest.rules.includes(manifest.entry)) {
+    if (manifest.id !== id || manifest.version !== version || !Array.isArray(manifest.rules) || typeof manifest.entry !== "string" || !manifest.rules.includes(manifest.entry) ||
+      !Array.isArray(manifest.dependencies) || manifest.dependencies.some((dependency) => !isPackId(dependency)) ||
+      new Set(manifest.dependencies).size !== manifest.dependencies.length) {
       issues.push({ code: "invalid-installed-pack", message: `已安装规则清单与锁文件不一致：${manifestPath}` });
       continue;
     }
@@ -357,6 +363,44 @@ async function inspectLockedManagedFiles(root: string, lock: ProjectLock): Promi
   }
   for (const relativePath of expected) {
     if (!Object.hasOwn(lock.managedFiles ?? {}, relativePath)) issues.push({ code: "missing-managed-lock", message: `锁文件缺少已安装规则文件：${relativePath}` });
+  }
+  return issues;
+}
+
+async function inspectInstalledPackClosure(root: string, requested: string[], lock: ProjectLock): Promise<ValidationIssue[]> {
+  const issues: ValidationIssue[] = [];
+  const visited = new Set<string>();
+  const visiting = new Set<string>();
+  const visit = async (id: string): Promise<void> => {
+    if (visited.has(id)) return;
+    if (visiting.has(id)) {
+      issues.push({ code: "installed-dependency-cycle", message: `已安装规则包依赖存在循环：${id}` });
+      return;
+    }
+    if (!Object.hasOwn(lock.rulepacks, id)) {
+      issues.push({ code: "missing-locked-pack", message: `锁文件缺少已配置或依赖的规则包 ${id}` });
+      return;
+    }
+    visiting.add(id);
+    const manifestPath = path.join(root, ".agent-rules", id, "pack.json");
+    let manifest: RulePackManifest;
+    try {
+      manifest = JSON.parse(await readFile(manifestPath, "utf8")) as RulePackManifest;
+      if (!Array.isArray(manifest.dependencies) || manifest.dependencies.some((dependency) => !isPackId(dependency))) {
+        throw new Error("依赖字段不合法");
+      }
+    } catch {
+      issues.push({ code: "invalid-installed-pack", message: `已安装规则清单在校验期间发生变化或无法解析：${manifestPath}` });
+      visiting.delete(id);
+      return;
+    }
+    for (const dependency of manifest.dependencies) await visit(dependency);
+    visiting.delete(id);
+    visited.add(id);
+  };
+  for (const id of requested) await visit(id);
+  for (const id of Object.keys(lock.rulepacks)) {
+    if (!visited.has(id)) issues.push({ code: "unexpected-locked-pack", message: `锁文件含有不再由项目配置选中或依赖的规则包 ${id}；请运行 diff 审查移除` });
   }
   return issues;
 }
@@ -724,10 +768,9 @@ export async function validateProject(root: string, adapter: TargetAdapter): Pro
         }
       }
     }
-    for (const id of config.rulepacks) {
-      if (!lock.rulepacks[id]) issues.push({ code: "missing-locked-pack", message: `锁文件缺少规则包 ${id}` });
-    }
-    issues.push(...await inspectLockedManagedFiles(resolvedRoot, lock));
+    const installedIssues = await inspectLockedManagedFiles(resolvedRoot, lock);
+    issues.push(...installedIssues);
+    if (!installedIssues.length) issues.push(...await inspectInstalledPackClosure(resolvedRoot, config.rulepacks, lock));
     for (const [relativePath, expectedDigest] of Object.entries(lock.managedFiles)) {
       if (!isManagedPath(relativePath)) {
         issues.push({ code: "unsafe-lock-path", message: `锁文件路径不在受管目录：${relativePath}` });

@@ -330,6 +330,50 @@ test("损坏的锁文件不会进入更新，校验会返回明确问题", async
   });
 });
 
+test("配置移除规则包后校验会提示旧包仍安装，更新仍可安全移除", async () => {
+  await withTempProject(async (root) => {
+    const source = path.join(root, "source");
+    const target = path.join(root, "target");
+    await mkdir(target);
+    await writePack(source, "common", "entry.md");
+    await writePack(source, "go", "entry.md", ["common"]);
+    await writePack(source, "project-docs/go", "entry.md", ["common"]);
+    await writeFile(path.join(target, "go.mod"), "module demo\n");
+    await initializeProject(target, testAdapter, source);
+    const config = await loadProjectConfig(target);
+    config.rulepacks = config.rulepacks.filter((id) => id !== "go");
+    await writeFile(path.join(target, "agent-rules.yaml"), stringify(config));
+    assert.ok((await validateProject(target, testAdapter)).issues.some((issue) => issue.code === "unexpected-locked-pack" && issue.message.includes("go")));
+    const preview = await planProject(target, config, testAdapter);
+    assert.deepEqual(preview.conflicts, []);
+    assert.ok(preview.changes.some((change) => change.path === ".agent-rules/go/entry.md" && change.action === "remove"));
+    await applyProject(target, config, testAdapter);
+    assert.deepEqual(await validateProject(target, testAdapter), { valid: true, issues: [] });
+  });
+});
+
+test("锁文件漏掉传递依赖时校验不会误报完整", async () => {
+  await withTempProject(async (root) => {
+    const source = path.join(root, "source");
+    const target = path.join(root, "target");
+    await mkdir(target);
+    await writePack(source, "common", "entry.md");
+    await writePack(source, "javascript", "entry.md", ["common"]);
+    await writePack(source, "typescript", "entry.md", ["common", "javascript"]);
+    await writePack(source, "project-docs/js-ts", "entry.md", ["common"]);
+    await writeFile(path.join(target, "package.json"), JSON.stringify({ devDependencies: { typescript: "^5.0.0" } }));
+    await initializeProject(target, testAdapter, source);
+    const lockPath = path.join(target, ".agent-rules.lock.json");
+    const lock = JSON.parse(await readFile(lockPath, "utf8"));
+    delete lock.rulepacks.javascript;
+    for (const relativePath of Object.keys(lock.managedFiles)) {
+      if (relativePath.startsWith(".agent-rules/javascript/")) delete lock.managedFiles[relativePath];
+    }
+    await writeFile(lockPath, JSON.stringify(lock));
+    assert.ok((await validateProject(target, testAdapter)).issues.some((issue) => issue.code === "missing-locked-pack" && issue.message.includes("javascript")));
+  });
+});
+
 test("损坏的项目配置会被清楚拒绝，不会覆盖已安装规则", async () => {
   await withTempProject(async (root) => {
     const source = path.join(root, "source");
