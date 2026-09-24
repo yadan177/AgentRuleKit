@@ -50,6 +50,16 @@ test("独立 npm 包可在六类工程初始化，并完成 Go 工程的显式�
       assert.match(run(process.execPath, [cli, "check", project]), /最新版本/);
       const lock = JSON.parse(await readFile(path.join(project, ".agent-rules.lock.json"), "utf8"));
       for (const pack of ["common", ...fixture.packs]) assert.ok(lock.rulepacks[pack], `${fixture.name} 未安装 ${pack}`);
+      const codexEntry = await readFile(path.join(project, "AGENTS.md"), "utf8");
+      assert.ok(codexEntry.indexOf(".agent-rules/overrides.md") < codexEntry.indexOf("已配置规则包"), `${fixture.name} 未优先提示项目覆盖规则`);
+      const listed = new Map([...codexEntry.matchAll(/^- `([^`]+)`：`([^`]+)`$/gm)].map((match) => [match[1], match[2]]));
+      assert.equal(listed.size, Object.keys(lock.rulepacks).length, `${fixture.name} 的 Codex 入口未列出全部已安装规则包`);
+      for (const id of Object.keys(lock.rulepacks)) {
+        const manifest = JSON.parse(await readFile(path.join(project, ".agent-rules", id, "pack.json"), "utf8"));
+        const expectedEntry = `.agent-rules/${id}/${manifest.entry}`;
+        assert.equal(listed.get(id), expectedEntry, `${fixture.name} 的 ${id} 入口路径不一致`);
+        assert.ok((await readFile(path.join(project, expectedEntry), "utf8")).length > 0, `${fixture.name} 的 ${id} 入口文件为空`);
+      }
     }
 
     const goProject = path.join(root, "go");

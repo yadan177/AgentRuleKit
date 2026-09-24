@@ -19,6 +19,8 @@
 | C. 公开分发 | 仓库公开、安全审计、GitHub Release 规则包、npm 首次发布、外部干净环境复测 | 仓库保持私有；待内容与授权审查 | 远程 `init/diff/update` 和插件安装端到端通过 |
 | D. 后续扩展 | Cursor、TRAE、Qoder 适配器；可选的更新 PR 自动化 | 不在首版范围 | 每个适配器独立能力矩阵与跨平台测试 |
 
+独立 npm 包的六类临时工程测试还会核对生成的 `AGENTS.md`：项目覆盖规则位于读取提示的前面，每个已安装规则包都列出与 `pack.json` 一致且实际存在的入口文件。这验证入口文件路径，不等同于 Codex 模型实际执行了规则。
+
 ## 发布前必须过的门槛
 
 - CI 在 Linux、macOS、Windows 的 Node.js 22/24 上通过，并检查 npm 包内容与版本一致性；`npm run check:rulepacks` 检查 manifest、依赖、版本与本地 Markdown 链接。旧文档脚本报告的排版告警仍须单独整理，不视为已清零。
