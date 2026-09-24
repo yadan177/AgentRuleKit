@@ -40,16 +40,23 @@ async function main() {
   const dataDir = process.env.PLUGIN_DATA;
   if (!project || !dataDir) return;
   let lock;
-  try { lock = JSON.parse(project.lockBytes.toString("utf8")); } catch { return; }
+  try {
+    lock = JSON.parse(project.lockBytes.toString("utf8"));
+    if (!lock || typeof lock !== "object" || Array.isArray(lock)) return;
+  } catch { return; }
   if (lock.sourceType !== "github" || !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(lock.source ?? "")) return;
   await mkdir(dataDir, { recursive: true });
   const cachePath = path.join(dataDir, `update-check-${sha256(project.root)}.json`);
   const lockDigest = sha256(project.lockBytes);
   let cache = {};
-  try { cache = JSON.parse(await readFile(cachePath, "utf8")); } catch { /* 首次检查 */ }
+  try {
+    const parsed = JSON.parse(await readFile(cachePath, "utf8"));
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) cache = parsed;
+  } catch { /* 首次检查 */ }
   let version = cache.version;
   let digest = cache.digest;
-  if (cache.lockDigest !== lockDigest || Date.now() - (cache.checkedAt ?? 0) >= 86_400_000) {
+  const cacheAge = typeof cache.checkedAt === "number" ? Date.now() - cache.checkedAt : NaN;
+  if (cache.lockDigest !== lockDigest || !Number.isFinite(cacheAge) || cacheAge < 0 || cacheAge >= 86_400_000) {
     try {
       const response = await fetch(`https://api.github.com/repos/${lock.source}/releases/latest`, {
         headers: { Accept: "application/vnd.github+json", "User-Agent": "AgentRuleKit" },
@@ -76,7 +83,7 @@ async function main() {
     const message = `AgentRuleKit 安全警告：远端最新 Release ${version} 低于项目锁定版本 ${lock.sourceVersion}。提醒用户核查发布源，不要降级或应用更新。`;
     process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: "SessionStart", additionalContext: message } }));
   } else if (lock.sourceVersion && versionOrder === undefined) {
-    const message = `AgentRuleKit 安全警告：项目锁定版本 ${lock.sourceVersion} 无法按 stable 版本比较。提醒用户核查规则源，不要应用更新。`;
+    const message = "AgentRuleKit 安全警告：项目锁定版本格式不合法，无法按 stable 版本比较。提醒用户核查规则源，不要应用更新。";
     process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: "SessionStart", additionalContext: message } }));
   } else if (version !== lock.sourceVersion || !lock.sourceDigest) {
     const message = `AgentRuleKit 规则源有新版本或尚未固定资产摘要 ${lock.sourceVersion ?? "未知"} → ${version}。在合适的下一次对话中提醒用户运行 agent-rule diff 审查；未经用户明确同意不要运行 update --apply。`;
