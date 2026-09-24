@@ -58,12 +58,14 @@ export interface DownloadedRulepacks {
 
 interface GitHubRelease {
   tag_name: string;
+  draft?: boolean;
+  prerelease?: boolean;
   assets: Array<{ name: string; browser_download_url: string; digest?: string; size: number }>;
 }
 
-export async function findLatestRelease(repository: string, fetcher: typeof fetch = fetch): Promise<ReleaseInfo> {
+async function findRelease(repository: string, endpoint: string, fetcher: typeof fetch, expectedTag?: string): Promise<ReleaseInfo> {
   if (!REPOSITORY_PATTERN.test(repository)) throw new Error(`非法 GitHub 仓库标识：${repository}`);
-  const response = await fetcher(`https://api.github.com/repos/${repository}/releases/latest`, {
+  const response = await fetcher(`https://api.github.com/repos/${repository}/releases/${endpoint}`, {
     headers: { Accept: "application/vnd.github+json", "User-Agent": "AgentRuleKit" },
     signal: AbortSignal.timeout(15_000),
   });
@@ -72,15 +74,26 @@ export async function findLatestRelease(repository: string, fetcher: typeof fetc
   if (!/^v?\d+\.\d+\.\d+$/.test(release.tag_name)) {
     throw new Error(`Release 标签不符合 stable 版本格式：${release.tag_name}`);
   }
+  if (expectedTag && release.tag_name !== expectedTag) throw new Error(`GitHub Release 标签与请求的 ${expectedTag} 不一致`);
+  if (release.draft || release.prerelease) throw new Error(`Release ${release.tag_name} 尚未正式发布`);
   const asset = Array.isArray(release.assets) ? release.assets.find((item) => item.name === ASSET_NAME) : undefined;
   if (!asset) throw new Error(`Release ${release.tag_name} 缺少 ${ASSET_NAME}`);
   if (!asset.digest || !/^sha256:[a-f0-9]{64}$/.test(asset.digest)) {
     throw new Error(`Release ${release.tag_name} 缺少可信的 SHA-256 摘要`);
   }
   if (!Number.isInteger(asset.size) || asset.size < 1 || asset.size > MAX_ARCHIVE_BYTES) throw new Error("规则包压缩包体积超限");
-  const expectedPrefix = `https://github.com/${repository}/releases/download/`;
-  if (!asset.browser_download_url.startsWith(expectedPrefix)) throw new Error("Release 下载地址不可信");
+  const expectedUrl = `https://github.com/${repository}/releases/download/${release.tag_name}/${ASSET_NAME}`;
+  if (asset.browser_download_url !== expectedUrl) throw new Error("Release 下载地址不可信");
   return { version: release.tag_name.replace(/^v/, ""), assetUrl: asset.browser_download_url, digest: asset.digest };
+}
+
+export async function findLatestRelease(repository: string, fetcher: typeof fetch = fetch): Promise<ReleaseInfo> {
+  return findRelease(repository, "latest", fetcher);
+}
+
+export async function findReleaseByTag(repository: string, tag: string, fetcher: typeof fetch = fetch): Promise<ReleaseInfo> {
+  if (!/^v\d+\.\d+\.\d+$/.test(tag)) throw new Error(`非法 stable Release 标签：${tag}`);
+  return findRelease(repository, `tags/${tag}`, fetcher, tag);
 }
 
 export async function downloadRulepacks(release: ReleaseInfo, fetcher: typeof fetch = fetch): Promise<DownloadedRulepacks> {

@@ -25,5 +25,7 @@ jobs:
           npm ci
           npm run check
           node scripts/verify-release-version.mjs "$GITHUB_REF_NAME"
+      - name: 核对同版本 GitHub Release
+        run: node scripts/verify-published-release.mjs "$GITHUB_REPOSITORY" "$GITHUB_REF_NAME" "$(git rev-parse HEAD)"
       - name: 发布 agentrulekit
         run: npm publish --workspace agentrulekit --access public
