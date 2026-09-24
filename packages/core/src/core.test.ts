@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -163,12 +164,76 @@ test("被篡改的锁文件不能把工程根文件当作受管文件删除", as
     await writeFile(userFile, "用户文件\n");
     const lockPath = path.join(target, ".agent-rules.lock.json");
     const lock = JSON.parse(await readFile(lockPath, "utf8"));
-    lock.managedFiles[".agent-rules/../important.md"] = "sha256:invalid";
+    lock.managedFiles[".agent-rules/../important.md"] = `sha256:${"0".repeat(64)}`;
     await writeFile(lockPath, JSON.stringify(lock));
     const config = await loadProjectConfig(target);
     assert.ok((await planProject(target, config, testAdapter)).conflicts.some((issue) => issue.code === "unsafe-lock-path"));
     await assert.rejects(applyProject(target, config, testAdapter), /unsafe-lock-path/);
     assert.equal(await readFile(userFile, "utf8"), "用户文件\n");
+  });
+});
+
+test("锁文件不能把项目覆盖规则或个人笔记冒充受管规则删除", async () => {
+  await withTempProject(async (root) => {
+    const source = path.join(root, "source");
+    const target = path.join(root, "target");
+    await mkdir(target);
+    await writePack(source, "common", "entry.md");
+    await initializeProject(target, testAdapter, source);
+    const overrides = path.join(target, ".agent-rules", "overrides.md");
+    const notes = path.join(target, ".agent-rules", "common", "notes.md");
+    await writeFile(overrides, "# 项目自己的规则\n");
+    await writeFile(notes, "个人笔记\n");
+    const lockPath = path.join(target, ".agent-rules.lock.json");
+    const lock = JSON.parse(await readFile(lockPath, "utf8"));
+    for (const [relative, content] of [
+      [".agent-rules/overrides.md", "# 项目自己的规则\n"],
+      [".agent-rules/common/notes.md", "个人笔记\n"],
+    ] as const) {
+      lock.managedFiles[relative] = `sha256:${createHash("sha256").update(content).digest("hex")}`;
+    }
+    await writeFile(lockPath, JSON.stringify(lock));
+    const config = await loadProjectConfig(target);
+    const preview = await planProject(target, config, testAdapter);
+    assert.ok(preview.conflicts.some((issue) => issue.code === "unexpected-managed-file"));
+    assert.ok((await validateProject(target, testAdapter)).issues.some((issue) => issue.code === "unexpected-managed-file"));
+    await assert.rejects(applyProject(target, config, testAdapter), /unexpected-managed-file/);
+    assert.equal(await readFile(overrides, "utf8"), "# 项目自己的规则\n");
+    assert.equal(await readFile(notes, "utf8"), "个人笔记\n");
+  });
+});
+
+test("损坏的锁文件不会进入更新，校验会返回明确问题", async () => {
+  await withTempProject(async (root) => {
+    const source = path.join(root, "source");
+    const target = path.join(root, "target");
+    await mkdir(target);
+    await writePack(source, "common", "entry.md");
+    await initializeProject(target, testAdapter, source);
+    const lockPath = path.join(target, ".agent-rules.lock.json");
+    const lock = JSON.parse(await readFile(lockPath, "utf8"));
+    lock.managedFiles = null;
+    await writeFile(lockPath, JSON.stringify(lock));
+    const config = await loadProjectConfig(target);
+    await assert.rejects(planProject(target, config, testAdapter), /锁文件/);
+    await assert.rejects(applyProject(target, config, testAdapter), /锁文件/);
+    assert.ok((await validateProject(target, testAdapter)).issues.some((issue) => issue.code === "invalid-lock"));
+  });
+});
+
+test("损坏的项目配置会被清楚拒绝，不会覆盖已安装规则", async () => {
+  await withTempProject(async (root) => {
+    const source = path.join(root, "source");
+    const target = path.join(root, "target");
+    await mkdir(target);
+    await writePack(source, "common", "entry.md");
+    await initializeProject(target, testAdapter, source);
+    const installed = path.join(target, ".agent-rules", "common", "entry.md");
+    const before = await readFile(installed, "utf8");
+    await writeFile(path.join(target, "agent-rules.yaml"), "schemaVersion: 1\nupdates: null\n");
+    await assert.rejects(loadProjectConfig(target), /当前版本仅支持/);
+    assert.ok((await validateProject(target, testAdapter)).issues.some((issue) => issue.code === "invalid-config"));
+    assert.equal(await readFile(installed, "utf8"), before);
   });
 });
 

@@ -46,7 +46,7 @@ export interface ProjectConfig {
 export interface ProjectLock {
   schemaVersion: 1;
   toolkitVersion: string;
-  sourceType?: "workspace" | "github";
+  sourceType: "workspace" | "github";
   source: string;
   sourceVersion?: string;
   sourceDigest?: string;
@@ -54,7 +54,7 @@ export interface ProjectLock {
   rulepacks: Record<string, string>;
   targets: Record<string, string>;
   managedFiles: Record<string, string>;
-  managedBlockDigest?: string;
+  managedBlockDigest: string;
 }
 
 export interface ProjectChange {

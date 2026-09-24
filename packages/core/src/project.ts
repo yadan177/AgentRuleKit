@@ -31,7 +31,49 @@ import type {
 
 const TOOLKIT_VERSION = "0.1.0";
 const PACK_ID_PATTERN = /^[a-z0-9][a-z0-9/-]*$/;
+const VERSION_PATTERN = /^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?$/;
+const DIGEST_PATTERN = /^sha256:[a-f0-9]{64}$/;
+const COMMIT_PATTERN = /^[a-f0-9]{40}(?:[a-f0-9]{24})?$/;
 const TRANSACTION_PREFIX = ".agent-rules.transaction-";
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isStringMap(value: unknown): value is Record<string, string> {
+  return isRecord(value) && Object.values(value).every((item) => typeof item === "string");
+}
+
+export function parseProjectLock(content: string): ProjectLock {
+  let value: unknown;
+  try {
+    value = JSON.parse(content);
+  } catch {
+    throw new Error("锁文件不是合法 JSON");
+  }
+  if (!isRecord(value) || value.schemaVersion !== 1 || typeof value.toolkitVersion !== "string" || !VERSION_PATTERN.test(value.toolkitVersion) ||
+    !["workspace", "github"].includes(String(value.sourceType)) || typeof value.source !== "string" || !value.source ||
+    !isStringMap(value.rulepacks) || !isStringMap(value.targets) || !isStringMap(value.managedFiles) ||
+    Object.keys(value.rulepacks).length === 0 || Object.keys(value.targets).length !== 1 || Object.keys(value.managedFiles).length > 5000 ||
+    typeof value.managedBlockDigest !== "string" || !DIGEST_PATTERN.test(value.managedBlockDigest)) {
+    throw new Error("锁文件缺少必需字段或字段类型不合法");
+  }
+  const allowed = new Set(["$schema", "schemaVersion", "toolkitVersion", "sourceType", "source", "sourceVersion", "sourceDigest", "sourceCommit", "rulepacks", "targets", "managedFiles", "managedBlockDigest"]);
+  if (Object.keys(value).some((key) => !allowed.has(key)) ||
+    Object.values(value.rulepacks).some((version) => !VERSION_PATTERN.test(version)) ||
+    Object.values(value.targets).some((version) => !VERSION_PATTERN.test(version)) ||
+    Object.values(value.managedFiles).some((hash) => !DIGEST_PATTERN.test(hash)) ||
+    (value.sourceVersion !== undefined && (typeof value.sourceVersion !== "string" || !VERSION_PATTERN.test(value.sourceVersion))) ||
+    (value.sourceDigest !== undefined && (typeof value.sourceDigest !== "string" || !DIGEST_PATTERN.test(value.sourceDigest))) ||
+    (value.sourceCommit !== undefined && (typeof value.sourceCommit !== "string" || !COMMIT_PATTERN.test(value.sourceCommit)))) {
+    throw new Error("锁文件包含未知字段、非法版本或无效摘要");
+  }
+  return value as unknown as ProjectLock;
+}
+
+export async function loadProjectLock(root: string): Promise<ProjectLock> {
+  return parseProjectLock(await readFile(path.join(root, ".agent-rules.lock.json"), "utf8"));
+}
 
 async function exists(filePath: string): Promise<boolean> {
   try {
@@ -54,6 +96,11 @@ function isManagedPath(relativePath: string): boolean {
   if (!relativePath.startsWith(".agent-rules/") || relativePath.includes("\\")) return false;
   const segments = relativePath.split("/");
   return segments.length > 1 && segments.every((segment) => segment !== "" && segment !== "." && segment !== "..");
+}
+
+function isPackRulePath(relativePath: string): boolean {
+  return typeof relativePath === "string" && relativePath.endsWith(".md") && !relativePath.includes("\\") &&
+    !path.posix.isAbsolute(relativePath) && relativePath.split("/").every((segment) => segment !== "" && segment !== "." && segment !== "..");
 }
 
 function resolveInside(base: string, relativePath: string): string {
@@ -173,26 +220,32 @@ export async function createDefaultConfig(
 
 export async function loadProjectConfig(root: string): Promise<ProjectConfig> {
   const configPath = path.join(root, "agent-rules.yaml");
-  const config = parse(await readFile(configPath, "utf8")) as ProjectConfig;
-  if (!config || config.schemaVersion !== 1) {
-    throw new Error(`不支持的 AgentRuleKit schema 版本：${String(config?.schemaVersion)}`);
+  const config: unknown = parse(await readFile(configPath, "utf8"));
+  if (!isRecord(config) || config.schemaVersion !== 1) {
+    throw new Error(`不支持的 AgentRuleKit schema 版本：${isRecord(config) ? String(config.schemaVersion) : "缺失"}`);
   }
-  assertSupportedConfig(config);
-  return config;
+  assertSupportedConfig(config as unknown as ProjectConfig);
+  return config as unknown as ProjectConfig;
 }
 
 function assertSupportedConfig(config: ProjectConfig, adapter?: TargetAdapter): void {
-  if (config.updates?.channel !== "stable" || config.updates.strategy !== "manual") {
+  if (!isRecord(config) || !isRecord(config.updates) || config.updates.channel !== "stable" || config.updates.strategy !== "manual") {
     throw new Error("当前版本仅支持 stable 通道与人工批准更新；不会静默忽略其他策略");
   }
-  if (!Array.isArray(config.targets) || config.targets.length !== 1 || typeof config.targets[0] !== "string") {
+  if (!Array.isArray(config.targets) || config.targets.length !== 1 || typeof config.targets[0] !== "string" || !config.targets[0]) {
     throw new Error("当前版本仅支持一个目标工具");
   }
   if (adapter && config.targets[0] !== adapter.id) {
     throw new Error(`项目配置的目标工具不是 ${adapter.id}`);
   }
-  if (!Array.isArray(config.rulepacks) || !config.project?.overrides) {
+  if (!Array.isArray(config.rulepacks) || config.rulepacks.length === 0 || config.rulepacks.some((id) => typeof id !== "string" || !PACK_ID_PATTERN.test(id) || id.includes("//") || id.endsWith("/")) ||
+    new Set(config.rulepacks).size !== config.rulepacks.length || !isRecord(config.project) || typeof config.project.overrides !== "string" || !isManagedPath(config.project.overrides) || !config.project.overrides.endsWith(".md")) {
     throw new Error("项目配置缺少规则包或项目覆盖规则路径");
+  }
+  if (!isRecord(config.source) || !["workspace", "github"].includes(String(config.source.type)) ||
+    (config.source.type === "workspace" && (typeof config.source.path !== "string" || !config.source.path)) ||
+    (config.source.type === "github" && (typeof config.source.repository !== "string" || !config.source.repository))) {
+    throw new Error("项目配置缺少有效的规则源");
   }
 }
 
@@ -201,6 +254,7 @@ interface PreparedProject {
   files: Map<string, string>;
   entryContent: string;
   lock: ProjectLock;
+  oldLock?: ProjectLock;
 }
 
 export interface SourceSnapshot {
@@ -223,6 +277,48 @@ async function hasSymlinkAncestor(base: string, relativePath: string): Promise<b
   return false;
 }
 
+async function inspectLockedManagedFiles(root: string, lock: ProjectLock): Promise<ValidationIssue[]> {
+  const issues: ValidationIssue[] = [];
+  const expected = new Set<string>();
+  for (const [id, version] of Object.entries(lock.rulepacks ?? {})) {
+    if (!PACK_ID_PATTERN.test(id) || id.includes("//") || id.endsWith("/")) {
+      issues.push({ code: "invalid-locked-pack", message: `锁文件包含非法规则包 ID：${id}` });
+      continue;
+    }
+    const manifestPath = path.posix.join(".agent-rules", id, "pack.json");
+    expected.add(manifestPath);
+    if (await hasSymlinkAncestor(root, manifestPath)) {
+      issues.push({ code: "symlink-path", message: `已安装规则清单包含符号链接：${manifestPath}` });
+      continue;
+    }
+    let manifest: RulePackManifest;
+    try {
+      manifest = JSON.parse(await readFile(path.join(root, manifestPath), "utf8")) as RulePackManifest;
+    } catch {
+      issues.push({ code: "invalid-installed-pack", message: `已安装规则清单缺失或无法解析：${manifestPath}` });
+      continue;
+    }
+    if (manifest.id !== id || manifest.version !== version || !Array.isArray(manifest.rules) || typeof manifest.entry !== "string" || !manifest.rules.includes(manifest.entry)) {
+      issues.push({ code: "invalid-installed-pack", message: `已安装规则清单与锁文件不一致：${manifestPath}` });
+      continue;
+    }
+    for (const rule of manifest.rules) {
+      if (!isPackRulePath(rule)) {
+        issues.push({ code: "invalid-installed-pack", message: `已安装规则清单包含不安全路径：${id}/${String(rule)}` });
+        continue;
+      }
+      expected.add(path.posix.join(".agent-rules", id, rule));
+    }
+  }
+  for (const relativePath of Object.keys(lock.managedFiles ?? {})) {
+    if (!expected.has(relativePath)) issues.push({ code: "unexpected-managed-file", message: `锁文件试图接管非规则包文件：${relativePath}` });
+  }
+  for (const relativePath of expected) {
+    if (!Object.hasOwn(lock.managedFiles ?? {}, relativePath)) issues.push({ code: "missing-managed-lock", message: `锁文件缺少已安装规则文件：${relativePath}` });
+  }
+  return issues;
+}
+
 async function prepareProject(root: string, config: ProjectConfig, adapter: TargetAdapter, snapshot?: SourceSnapshot): Promise<PreparedProject> {
   assertTargetAdapter(adapter);
   assertSupportedConfig(config, adapter);
@@ -240,7 +336,7 @@ async function prepareProject(root: string, config: ProjectConfig, adapter: Targ
   const lockPath = path.join(resolvedRoot, ".agent-rules.lock.json");
   const oldEntry = (await exists(entryPath)) ? await readFile(entryPath, "utf8") : "";
   const oldLockContent = (await exists(lockPath)) ? await readFile(lockPath, "utf8") : undefined;
-  const oldLock = oldLockContent ? JSON.parse(oldLockContent) as ProjectLock : undefined;
+  const oldLock = oldLockContent ? parseProjectLock(oldLockContent) : undefined;
   const entries = Object.fromEntries(packs.map(({ manifest }) => [manifest.id, manifest.entry as string]));
   const block = adapter.renderManagedBlock(config, entries);
   if (!block.startsWith(adapter.blockStart) || !block.endsWith(adapter.blockEnd)) {
@@ -250,6 +346,7 @@ async function prepareProject(root: string, config: ProjectConfig, adapter: Targ
   const files = new Map<string, string>();
   const managedFiles: Record<string, string> = {};
   const conflicts: ValidationIssue[] = [];
+  if (oldLock) conflicts.push(...await inspectLockedManagedFiles(resolvedRoot, oldLock));
   for (const controlPath of [adapter.entryFile, ".agent-rules.lock.json", "agent-rules.yaml"]) {
     if (await hasSymlinkAncestor(resolvedRoot, controlPath)) {
       conflicts.push({ code: "symlink-path", message: `控制文件是符号链接：${controlPath}` });
@@ -327,7 +424,7 @@ async function prepareProject(root: string, config: ProjectConfig, adapter: Targ
   if (!overrideRelative.startsWith(".agent-rules/") || !overrideTarget.startsWith(`${rulesDirectory}${path.sep}`) || overlapsManagedFile) {
     conflicts.push({ code: "unsafe-overrides", message: `项目覆盖规则路径不安全：${overrideRelative}` });
   }
-  return { plan: { changes, conflicts, from: oldLock?.rulepacks ?? {}, to: lock.rulepacks }, files, entryContent, lock };
+  return { plan: { changes, conflicts, from: oldLock?.rulepacks ?? {}, to: lock.rulepacks }, files, entryContent, lock, oldLock };
 }
 
 export async function planProject(root: string, config: ProjectConfig, adapter: TargetAdapter, snapshot?: SourceSnapshot): Promise<ProjectPlan> {
@@ -354,8 +451,7 @@ export async function applyProject(root: string, config: ProjectConfig, adapter:
   try {
     if (await exists(rulesDirectory)) await cp(rulesDirectory, staging, { recursive: true });
     else await mkdir(staging);
-    const oldLock = (await exists(lockPath)) ? JSON.parse(await readFile(lockPath, "utf8")) as ProjectLock : undefined;
-    for (const relativePath of Object.keys(oldLock?.managedFiles ?? {})) {
+    for (const relativePath of Object.keys(prepared.oldLock?.managedFiles ?? {})) {
       await rm(resolveInside(staging, relativePath.slice(".agent-rules/".length)), { force: true });
     }
     const overrides = resolveInside(staging, config.project.overrides.slice(".agent-rules/".length));
@@ -510,7 +606,18 @@ export async function validateProject(root: string, adapter: TargetAdapter): Pro
   }
 
   if (issues.length === 0) {
-    const config = await loadProjectConfig(resolvedRoot);
+    let config: ProjectConfig;
+    let lock: ProjectLock;
+    try {
+      config = await loadProjectConfig(resolvedRoot);
+    } catch (error) {
+      return { valid: false, issues: [{ code: "invalid-config", message: `项目配置无效：${error instanceof Error ? error.message : String(error)}` }] };
+    }
+    try {
+      lock = await loadProjectLock(resolvedRoot);
+    } catch (error) {
+      return { valid: false, issues: [{ code: "invalid-lock", message: `项目锁文件无效：${error instanceof Error ? error.message : String(error)}` }] };
+    }
     if (!(await exists(resolveInside(resolvedRoot, config.project.overrides)))) {
       issues.push({ code: "missing-overrides", message: `缺少项目覆盖规则 ${config.project.overrides}` });
     }
@@ -526,24 +633,21 @@ export async function validateProject(root: string, adapter: TargetAdapter): Pro
       });
     }
 
-    const lock = JSON.parse(
-      await readFile(path.join(resolvedRoot, ".agent-rules.lock.json"), "utf8"),
-    ) as ProjectLock;
-    if (lock.managedBlockDigest) {
-      const block = extractManagedBlock(entry, adapter) ?? "";
-      if (digest(block) !== lock.managedBlockDigest) {
-        issues.push({ code: "managed-block-drift", message: `${adapter.entryFile} 受控区块已发生漂移` });
-      }
+    const block = extractManagedBlock(entry, adapter) ?? "";
+    if (digest(block) !== lock.managedBlockDigest) {
+      issues.push({ code: "managed-block-drift", message: `${adapter.entryFile} 受控区块已发生漂移` });
     }
     const configuredSource = config.source.type === "workspace" ? config.source.path ?? "." : config.source.repository ?? "";
-    if (lock.sourceType && lock.sourceType !== config.source.type) issues.push({ code: "source-type-mismatch", message: "配置与锁文件的规则源类型不一致" });
+    if (lock.sourceType !== config.source.type) issues.push({ code: "source-type-mismatch", message: "配置与锁文件的规则源类型不一致" });
     if (lock.source !== configuredSource) issues.push({ code: "source-mismatch", message: "配置与锁文件的规则源不一致" });
+    if (!Object.hasOwn(lock.targets, adapter.id)) issues.push({ code: "target-mismatch", message: `锁文件缺少目标工具 ${adapter.id}` });
     if (config.source.type === "github" && (!lock.sourceVersion || !/^sha256:[a-f0-9]{64}$/.test(lock.sourceDigest ?? "") || !/^[a-f0-9]{40}(?:[a-f0-9]{24})?$/.test(lock.sourceCommit ?? ""))) {
       issues.push({ code: "source-provenance-missing", message: "GitHub 规则源缺少版本、资产摘要或来源提交；请运行 diff/update 核查并迁移" });
     }
     for (const id of config.rulepacks) {
       if (!lock.rulepacks[id]) issues.push({ code: "missing-locked-pack", message: `锁文件缺少规则包 ${id}` });
     }
+    issues.push(...await inspectLockedManagedFiles(resolvedRoot, lock));
     for (const [relativePath, expectedDigest] of Object.entries(lock.managedFiles)) {
       if (!isManagedPath(relativePath)) {
         issues.push({ code: "unsafe-lock-path", message: `锁文件路径不在受管目录：${relativePath}` });

@@ -1,8 +1,6 @@
 #!/usr/bin/env node
 
 import process from "node:process";
-import path from "node:path";
-import { readFile } from "node:fs/promises";
 
 import { codexAdapter } from "@agentrulekit/adapter-codex";
 import {
@@ -11,6 +9,7 @@ import {
   initializeProject,
   initializeGithubProject,
   loadProjectConfig,
+  loadProjectLock,
   planProject,
   validateProject,
   findLatestRelease,
@@ -19,7 +18,7 @@ import {
   listInterruptedTransactions,
   recoverInterruptedProject,
 } from "@agentrulekit/core";
-import type { ProjectChange, ProjectLock, ProjectPlan } from "@agentrulekit/core";
+import type { ProjectChange, ProjectPlan } from "@agentrulekit/core";
 
 const VERSION = "0.1.0";
 const DEFAULT_REPOSITORY = "yadan177/AgentRuleKit";
@@ -109,7 +108,7 @@ async function run(): Promise<void> {
       if (config.source.type === "github" && !repository) throw new Error("GitHub 规则源缺少 repository");
       const release = repository ? await findLatestRelease(repository) : undefined;
       if (release) {
-        const installed = JSON.parse(await readFile(path.join(root, ".agent-rules.lock.json"), "utf8")) as ProjectLock;
+        const installed = await loadProjectLock(root);
         assertReleaseAssetUnchanged(installed, release);
       }
       const downloaded = release ? await downloadRulepacks(release) : undefined;
@@ -177,7 +176,7 @@ async function run(): Promise<void> {
       if (config.source.type === "github") {
         if (!config.source.repository) throw new Error("GitHub 规则源缺少 repository");
         const release = await findLatestRelease(config.source.repository);
-        const lock = JSON.parse(await readFile(path.join(root, ".agent-rules.lock.json"), "utf8")) as ProjectLock;
+        const lock = await loadProjectLock(root);
         assertReleaseAssetUnchanged(lock, release);
         const upToDate = lock.sourceVersion === release.version && lock.sourceDigest === release.digest;
         console.log(upToDate ? `远程规则已是最新版本：${release.version}` : `发现远程规则新版本或未固定资产摘要：${lock.sourceVersion ?? "未知"} → ${release.version}；运行 diff 查看。`);
