@@ -4,6 +4,8 @@
 
 当前仓库应保持私有，先完成 [公开发布前审查清单](publication-review.md)。通过 CI 或建立草稿 PR 不等于获得公开发布授权。
 
+Release 和 npm 发布作业都要求仓库已经是 Public；Private 状态下即使有人误推版本标签或手动触发 npm 工作流，发布作业也会跳过。这是防误操作保护，不代替内容授权审查和仓库所有者的发布决定。
+
 1. 完成代码、文档、历史提交和归档目录的公开安全审计，并确认 Apache-2.0 `LICENSE` 适用于本仓库内容。
 2. 在 Linux、macOS、Windows 的 Node.js 22/24 CI 上通过构建、测试和 npm 打包检查；用独立临时项目验证 Go、TypeScript、Unity 的安装、差异、更新、冲突与幂等性。
 3. 将 GitHub 仓库改为 Public。用户可在此后添加仓库插件市场。
