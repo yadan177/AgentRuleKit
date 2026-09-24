@@ -55,7 +55,7 @@
 | [`rulepacks/java/其他规则/07-数据访问规则.md`](<../rulepacks/java/其他规则/07-数据访问规则.md>) | `7c81021b1eec4767e236b7b8b6415be9bfd4e79836b68631a243663c78a88cb5` | — | — |
 | [`rulepacks/java/其他规则/08-测试规则.md`](<../rulepacks/java/其他规则/08-测试规则.md>) | `ea17a1dbd911252e68229fddd12f816e50d2544a4da73a0b9f8880045a8ac4fd` | — | — |
 | [`rulepacks/java/其他规则/09-日志调试规则.md`](<../rulepacks/java/其他规则/09-日志调试规则.md>) | `42a853079e07beaa2fb420aa58027e9a3439bef095689bdea0ba698626781d1f` | — | — |
-| [`rulepacks/java/其他规则/10-版本控制规则.md`](<../rulepacks/java/其他规则/10-版本控制规则.md>) | `1b1ce6df079acf19941a0f7e163f0b7416347a93e0fcdd3065b0d3b91489f2ce` | — | — |
+| [`rulepacks/java/其他规则/10-版本控制规则.md`](<../rulepacks/java/其他规则/10-版本控制规则.md>) | `c30dbc64495c0d851e31ff0edecdc014a1ed4f9c19d04a99bd0517c69431f6a9` | — | — |
 | [`rulepacks/java/其他规则/11-性能优化规则.md`](<../rulepacks/java/其他规则/11-性能优化规则.md>) | `f192581348949a70bebcc42508498dfd9386c2bcd748fc02088569da56978540` | — | arthas.aliyun.com |
 | [`rulepacks/java/其他规则/12-安全规则.md`](<../rulepacks/java/其他规则/12-安全规则.md>) | `66780dc2bcfac2b56baabf41531cbbae7e3a6592959a41652e21ce692b325459` | — | 169.254.169.254, admin.example.com, app.example.com, github.com, xn--`-h47aw02l |
 | [`rulepacks/java/其他规则/13-部署运维规则.md`](<../rulepacks/java/其他规则/13-部署运维规则.md>) | `c7447d0666666b9e23eb4f8ac22f378739c9a3a54057ff856c86ec75373f73a5` | — | — |
