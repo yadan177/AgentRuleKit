@@ -40,6 +40,15 @@ test("Python、TypeScript、Unity 工程完成安装与安全更新闭环", asyn
       assert.match(await readFile(path.join(target, "AGENTS.md"), "utf8"), /agent-rule:start/);
     }
 
+    const onlyTypeScript = path.join(root, "typescript-only");
+    await mkdir(onlyTypeScript);
+    const relativeSource = path.relative(onlyTypeScript, source).split(path.sep).join("/");
+    await writeFile(path.join(onlyTypeScript, "agent-rules.yaml"), `schemaVersion: 1\nsource:\n  type: workspace\n  path: ${relativeSource}\nrulepacks:\n  - typescript\ntargets:\n  - codex\nproject:\n  overrides: .agent-rules/overrides.md\nupdates:\n  channel: stable\n  strategy: manual\n`);
+    expectExit(command("update", onlyTypeScript, "--apply"), 0, "仅声明 TypeScript 时安装依赖");
+    const typescriptLock = JSON.parse(await readFile(path.join(onlyTypeScript, ".agent-rules.lock.json"), "utf8"));
+    assert.ok(typescriptLock.rulepacks.javascript, "TypeScript 必须自动安装 JavaScript 基线");
+    expectExit(command("validate", onlyTypeScript), 0, "TypeScript 依赖安装后校验");
+
     const python = path.join(root, "python");
     const installed = path.join(python, ".agent-rules", "common", "entry.md");
     const overrides = path.join(python, ".agent-rules", "overrides.md");

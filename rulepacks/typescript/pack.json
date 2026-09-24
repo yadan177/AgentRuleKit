@@ -6,7 +6,8 @@
   "kind": "development",
   "entry": "09-AI通用入口规则.md",
   "dependencies": [
-    "common"
+    "common",
+    "javascript"
   ],
   "rules": [
     "00-文档总览.md",

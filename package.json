@@ -14,11 +14,12 @@
   },
   "scripts": {
     "build": "npm run build --workspace @agentrulekit/core && npm run build --workspace @agentrulekit/adapter-codex && npm run build --workspace agentrulekit",
-    "check": "npm run build && npm run test",
+    "check": "npm run check:rulepacks && npm run build && npm run test",
+    "check:rulepacks": "node scripts/validate-rulepacks.mjs",
     "clean": "npm run clean --workspaces --if-present",
     "dev": "npm run dev --workspace agentrulekit --",
     "manifests": "node scripts/generate-rulepack-manifests.mjs",
-    "test": "npm run test --workspaces --if-present && node --test scripts/tests/session-start.test.mjs scripts/tests/cli-e2e.test.mjs scripts/tests/package-install.test.mjs",
+    "test": "npm run test --workspaces --if-present && node --test scripts/tests/session-start.test.mjs scripts/tests/cli-e2e.test.mjs scripts/tests/package-install.test.mjs scripts/tests/rulepacks-validation.test.mjs",
     "typecheck": "npm run typecheck --workspace @agentrulekit/core && npm run build --workspace @agentrulekit/core && npm run typecheck --workspace @agentrulekit/adapter-codex && npm run build --workspace @agentrulekit/adapter-codex && npm run typecheck --workspace agentrulekit",
     "validate": "npm run check"
   },

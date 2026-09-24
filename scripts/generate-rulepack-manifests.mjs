@@ -1,9 +1,10 @@
-import { readdir, stat, writeFile } from "node:fs/promises";
+import { readdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const rulepacksRoot = path.join(repositoryRoot, "rulepacks");
+const toolkitVersion = JSON.parse(await readFile(path.join(repositoryRoot, "package.json"), "utf8")).version;
 
 const packs = [
   { id: "common", kind: "common", entry: "entry.md", dependencies: [] },
@@ -11,7 +12,7 @@ const packs = [
   { id: "go", kind: "development", entry: "13-AI通用入口规则.md", dependencies: ["common"] },
   { id: "java", kind: "development", entry: "14-AI通用入口规则.md", dependencies: ["common"] },
   { id: "javascript", kind: "development", entry: "15-AI通用入口规则.md", dependencies: ["common"] },
-  { id: "typescript", kind: "development", entry: "09-AI通用入口规则.md", dependencies: ["common"] },
+  { id: "typescript", kind: "development", entry: "09-AI通用入口规则.md", dependencies: ["common", "javascript"] },
   { id: "unity", kind: "development", entry: "15-AI通用入口规则.md", dependencies: ["common"] },
   { id: "pico", kind: "development", entry: "PICO Unity SDK.md", dependencies: ["common", "unity"] },
   { id: "rule-authoring", kind: "common", entry: "规则文档编写格式规范.md", dependencies: ["common"] },
@@ -48,7 +49,7 @@ for (const pack of packs) {
   const manifest = {
     $schema: schemaPath,
     id: pack.id,
-    version: "0.1.0",
+    version: toolkitVersion,
     status: "ready",
     kind: pack.kind,
     entry: pack.entry,
