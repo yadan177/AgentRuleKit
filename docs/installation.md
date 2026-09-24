@@ -59,3 +59,4 @@ node packages/cli/dist/index.js init /absolute/path/to/test-project --source-wor
 ```
 
 本地试用配置会记录 `workspace` 来源，之后的 `check`、`diff` 和 `update` 都读取该本地仓库；不要把指向个人绝对路径的测试配置提交到正式业务项目。
+本地规则源仍需由使用者信任；CLI 会校验将安装的规则包清单和文件路径，拒绝规则源内部的符号链接与畸形清单，但这不等同于对规则正文来源或版权的审查。

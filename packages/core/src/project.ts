@@ -31,6 +31,7 @@ import type {
 
 const TOOLKIT_VERSION = "0.1.0";
 const PACK_ID_PATTERN = /^[a-z0-9][a-z0-9/-]*$/;
+const PACK_VERSION_PATTERN = /^\d+\.\d+\.\d+$/;
 const VERSION_PATTERN = /^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?$/;
 const DIGEST_PATTERN = /^sha256:[a-f0-9]{64}$/;
 const COMMIT_PATTERN = /^[a-f0-9]{40}(?:[a-f0-9]{24})?$/;
@@ -103,8 +104,8 @@ function isManagedPath(relativePath: string): boolean {
   return segments.length > 1 && segments.every((segment) => segment !== "" && segment !== "." && segment !== "..");
 }
 
-function isPackRulePath(relativePath: string): boolean {
-  return typeof relativePath === "string" && relativePath.endsWith(".md") && !relativePath.includes("\\") &&
+function isPackRulePath(relativePath: unknown): relativePath is string {
+  return typeof relativePath === "string" && relativePath.endsWith(".md") && !/[\\:\0]/.test(relativePath) &&
     !path.posix.isAbsolute(relativePath) && relativePath.split("/").every((segment) => segment !== "" && segment !== "." && segment !== "..");
 }
 
@@ -142,19 +143,38 @@ async function loadRulePack(
   }
   const directory = resolveInside(path.join(sourceRoot, "rulepacks"), id);
   const manifestPath = path.join(directory, "pack.json");
-  const manifest = JSON.parse(await readFile(manifestPath, "utf8")) as RulePackManifest;
-  if (manifest.id !== id) {
-    throw new Error(`规则包 ${id} 的 manifest ID 不匹配：${manifest.id}`);
+  if (await hasSymlinkAncestor(sourceRoot, path.posix.join("rulepacks", id, "pack.json"))) {
+    throw new Error(`规则包 ${id} 的清单路径包含符号链接`);
   }
-  if (manifest.status !== "ready" || !manifest.entry) {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(await readFile(manifestPath, "utf8"));
+  } catch {
+    throw new Error(`规则包 ${id} 的 manifest 缺失或不是合法 JSON`);
+  }
+  if (!isRecord(parsed)) throw new Error(`规则包 ${id} 的 manifest 必须是对象`);
+  assertKnownFields(parsed, ["$schema", "id", "version", "status", "kind", "entry", "dependencies", "rules"], `规则包 ${id}`);
+  if (parsed.id !== id) throw new Error(`规则包 ${id} 的 manifest ID 不匹配：${String(parsed.id)}`);
+  if ((parsed.$schema !== undefined && typeof parsed.$schema !== "string") ||
+    typeof parsed.version !== "string" || !PACK_VERSION_PATTERN.test(parsed.version) ||
+    !["common", "development", "documentation"].includes(String(parsed.kind)) ||
+    !Array.isArray(parsed.dependencies) || parsed.dependencies.some((dependency) => typeof dependency !== "string" || !PACK_ID_PATTERN.test(dependency) || dependency.includes("//") || dependency.endsWith("/")) ||
+    new Set(parsed.dependencies).size !== parsed.dependencies.length ||
+    !Array.isArray(parsed.rules) || parsed.rules.length === 0 || parsed.rules.some((rule) => !isPackRulePath(rule)) ||
+    new Set(parsed.rules).size !== parsed.rules.length || !isPackRulePath(parsed.entry) || !parsed.rules.includes(parsed.entry)) {
+    throw new Error(`规则包 ${id} 的 manifest 字段、入口或文件路径不合法`);
+  }
+  if (parsed.status !== "ready") {
     throw new Error(`规则包 ${id} 尚未准备完成`);
   }
-  const declaredFiles = new Set(manifest.rules);
-  if (!declaredFiles.has(manifest.entry)) {
-    throw new Error(`规则包 ${id} 的入口未列入 rules：${manifest.entry}`);
-  }
+  const manifest = parsed as unknown as RulePackManifest;
   for (const rule of manifest.rules) {
-    await access(resolveInside(directory, rule));
+    if (await hasSymlinkAncestor(sourceRoot, path.posix.join("rulepacks", id, rule))) {
+      throw new Error(`规则包 ${id} 的规则路径包含符号链接：${rule}`);
+    }
+    if (!(await lstat(resolveInside(directory, rule))).isFile()) {
+      throw new Error(`规则包 ${id} 的规则不是普通文件：${rule}`);
+    }
   }
   return { directory, manifest };
 }

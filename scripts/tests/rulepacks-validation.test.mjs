@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -52,6 +52,20 @@ test("规则源校验发现依赖循环和不安全文件路径", async () => {
     const result = await validateRulepacks(root, "0.1.0");
     assert.ok(result.issues.some((issue) => issue.includes("依赖形成循环")));
     assert.ok(result.issues.some((issue) => issue.includes("路径不安全")));
+  });
+});
+
+test("规则源校验与安装器一致地拒绝未知清单字段和空规则包", async () => {
+  await withRulepacks(async (root) => {
+    await writePack(root, "common");
+    const manifest = path.join(root, "common", "pack.json");
+    const pack = JSON.parse(await readFile(manifest, "utf8"));
+    pack.installer = "unexpected";
+    pack.rules = [];
+    await writeFile(manifest, JSON.stringify(pack));
+    const result = await validateRulepacks(root, "0.1.0");
+    assert.ok(result.issues.some((issue) => issue.includes("未知字段")));
+    assert.ok(result.issues.some((issue) => issue.includes("没有规则文件")));
   });
 });
 

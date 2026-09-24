@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rename, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -134,6 +134,55 @@ test("未知文件冲突阻止初始化，且不留下半成品", async () => {
     await assert.rejects(initializeProject(target, testAdapter, source), /unknown-file-collision/);
     assert.equal(await readFile(path.join(target, ".agent-rules", "go", "entry.md"), "utf8"), "用户文件\n");
     await assert.rejects(readFile(path.join(target, "agent-rules.yaml"), "utf8"), /ENOENT/);
+  });
+});
+
+test("本地规则源的畸形 manifest 在修改业务工程前被拒绝", async () => {
+  await withTempProject(async (root) => {
+    const source = path.join(root, "source");
+    await writePack(source, "common", "entry.md");
+    const manifestPath = path.join(source, "rulepacks", "common", "pack.json");
+    const base = JSON.parse(await readFile(manifestPath, "utf8"));
+    const cases: Array<[string, object, RegExp]> = [
+      ["missing-rules", { rules: null }, /manifest 字段/],
+      ["unsafe-path", { rules: ["entry.md", "../outside.md"] }, /manifest 字段/],
+      ["duplicate-rules", { rules: ["entry.md", "entry.md"] }, /manifest 字段/],
+      ["missing-dependencies", { dependencies: null }, /manifest 字段/],
+      ["schema-object", { $schema: { unexpected: true } }, /manifest 字段/],
+      ["unknown-field", { installer: "run-me" }, /不支持的字段/],
+    ];
+    for (const [name, patch, error] of cases) {
+      const target = path.join(root, name);
+      await mkdir(target);
+      const userFile = path.join(target, "keep.md");
+      await writeFile(userFile, "业务文件\n");
+      await writeFile(manifestPath, JSON.stringify({ ...base, ...patch }));
+      await assert.rejects(initializeProject(target, testAdapter, source), error);
+      assert.equal(await readFile(userFile, "utf8"), "业务文件\n");
+      await assert.rejects(readFile(path.join(target, "agent-rules.yaml"), "utf8"), /ENOENT/);
+      await assert.rejects(readFile(path.join(target, ".agent-rules.lock.json"), "utf8"), /ENOENT/);
+    }
+  });
+});
+
+test("本地规则源的内部符号链接不会被安装到业务工程", async (context) => {
+  if (process.platform === "win32") context.skip("Windows 测试环境可能不允许创建符号链接");
+  await withTempProject(async (root) => {
+    const source = path.join(root, "source");
+    const target = path.join(root, "target");
+    await mkdir(target);
+    await writePack(source, "common", "entry.md");
+    const outside = path.join(root, "outside.md");
+    await writeFile(outside, "项目外文件\n");
+    const packDirectory = path.join(source, "rulepacks", "common");
+    await symlink(outside, path.join(packDirectory, "linked.md"));
+    const manifestPath = path.join(packDirectory, "pack.json");
+    const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+    manifest.rules.push("linked.md");
+    await writeFile(manifestPath, JSON.stringify(manifest));
+    await assert.rejects(initializeProject(target, testAdapter, source), /符号链接/);
+    await assert.rejects(readFile(path.join(target, "agent-rules.yaml"), "utf8"), /ENOENT/);
+    assert.equal(await readFile(outside, "utf8"), "项目外文件\n");
   });
 });
 

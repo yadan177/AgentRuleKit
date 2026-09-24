@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const defaultRulepacksRoot = path.join(repositoryRoot, "rulepacks");
 const PACK_ID = /^[a-z0-9][a-z0-9/-]*$/;
+const MANIFEST_FIELDS = new Set(["$schema", "id", "version", "status", "kind", "entry", "dependencies", "rules"]);
 
 function isInside(root, target) {
   return target === root || target.startsWith(`${root}${path.sep}`);
@@ -110,6 +111,9 @@ export async function validateRulepacks(root = defaultRulepacksRoot, expectedVer
     let pack;
     try { pack = JSON.parse(await readFile(manifestPath, "utf8")); }
     catch { issues.push(`规则包 manifest 无法解析：${id}`); continue; }
+    if (!pack || typeof pack !== "object" || Array.isArray(pack)) { issues.push(`规则包 manifest 必须是对象：${id}`); continue; }
+    for (const field of Object.keys(pack)) if (!MANIFEST_FIELDS.has(field)) issues.push(`规则包 manifest 包含未知字段：${id}/${field}`);
+    if (pack.$schema !== undefined && typeof pack.$schema !== "string") issues.push(`规则包 schema 声明不合法：${id}`);
     packs.set(id, pack);
     if (pack.id !== id) issues.push(`规则包 ID 与目录不一致：${id}`);
     if (pack.status !== "ready") issues.push(`规则包未处于 ready 状态：${id}`);
@@ -117,9 +121,11 @@ export async function validateRulepacks(root = defaultRulepacksRoot, expectedVer
     if (expectedVersion && pack.version !== expectedVersion) issues.push(`规则包版本与 CLI 不一致：${id} (${pack.version} != ${expectedVersion})`);
     if (!["common", "development", "documentation"].includes(pack.kind)) issues.push(`规则包类型不合法：${id}`);
     if (!Array.isArray(pack.rules) || !Array.isArray(pack.dependencies)) { issues.push(`规则包列表字段不合法：${id}`); continue; }
+    if (pack.rules.length === 0) issues.push(`规则包没有规则文件：${id}`);
     if (new Set(pack.rules).size !== pack.rules.length) issues.push(`规则包有重复规则路径：${id}`);
     if (new Set(pack.dependencies).size !== pack.dependencies.length) issues.push(`规则包有重复依赖：${id}`);
-    if (!pack.rules.includes(pack.entry)) issues.push(`规则包入口未列入规则清单：${id}`);
+    if (!safeRelativeFile(pack.entry) || !pack.entry.endsWith(".md") || !pack.rules.includes(pack.entry)) issues.push(`规则包入口不安全或未列入规则清单：${id}`);
+    for (const dependency of pack.dependencies) if (typeof dependency !== "string" || !PACK_ID.test(dependency) || dependency.includes("//") || dependency.endsWith("/")) issues.push(`规则包依赖 ID 不合法：${id} -> ${String(dependency)}`);
     for (const rule of pack.rules) {
       if (!safeRelativeFile(rule) || !rule.endsWith(".md")) { issues.push(`规则包路径不安全：${id}/${String(rule)}`); continue; }
       const file = path.join(path.dirname(manifestPath), rule);
