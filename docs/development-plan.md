@@ -25,7 +25,7 @@
 
 ## 发布前必须过的门槛
 
-- CI 在 Linux、macOS、Windows 的 Node.js 22/24 上通过，并检查 npm 包内容与版本一致性；`npm run check:rulepacks` 检查 manifest、依赖、版本与本地 Markdown 链接。旧文档脚本报告的排版告警仍须单独整理，不视为已清零。
+- CI 在 Linux、macOS、Windows 的 Node.js 22/24 上运行，并检查 npm 包内容与版本一致性；`npm run check:rulepacks` 检查 manifest、依赖、版本与本地 Markdown 链接。独立 Linux 作业运行 `scripts/check-rule-docs.sh`，检查规则文档结构、相对链接及已知内容冲突；这不代替一般技术准确性或版权审查。
 - Git 历史、归档资料、依赖与许可证完成公开审查；不能只依赖简单密钥模式扫描。
 - GitHub Release 存在可下载规则包及 SHA-256 digest；失败下载、校验失败和不安全归档不会修改项目。
 - npm 包 `agentrulekit` 的所有权、首次发布和可信发布者由仓库所有者配置；不要求向开发代理提供 npm 密码或令牌。

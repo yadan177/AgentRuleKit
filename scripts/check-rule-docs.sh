@@ -81,8 +81,9 @@ files.each do |file|
   lines = File.readlines(file, encoding: 'UTF-8')
   relative = file.delete_prefix(repo_root + '/')
   adapter = relative.include?('/适配器模板/')
+  package_index = relative == 'rulepacks/project-docs/README.md'
   first = lines.first.to_s.chomp
-  unless adapter || first.match?(/^# \d{2} - /)
+  unless adapter || package_index || first.match?(/^# \d{2} - /)
     findings << "H1 #{relative}:1 #{first}"
     counts[:h1] += 1
   end

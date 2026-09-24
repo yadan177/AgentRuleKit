@@ -2,13 +2,13 @@
 
 本清单由 `node scripts/generate-legacy-archive-inventory.mjs --write` 生成，CI 用 `--check` 检查同步。仅比较 Git 跟踪的当前工作树中 `archive/legacy-rules/` 与 `rulepacks/`、`adapters/` 的 Markdown 文件；SHA-256 按 CRLF 转 LF 后的文本计算。完全相同只说明内容相同，不证明作者、授权或归档可以删除；未找到完全相同的当前文件也不证明内容独有。**本清单不覆盖 Git 历史中已删除或修改的旧内容。**
 
-当前归档 157 份 Markdown；52 份与当前规则正文完全相同，0 份与当前适配器 Markdown 完全相同，105 份在这两个目录未找到完全相同的内容。两类匹配数可能重叠。以上均待人工审查公开权限。
+当前归档 157 份 Markdown；51 份与当前规则正文完全相同，0 份与当前适配器 Markdown 完全相同，106 份在这两个目录未找到完全相同的内容。两类匹配数可能重叠。以上均待人工审查公开权限。
 
 ## 分组汇总
 
 | 归档分组 | 文件数 | 与当前规则正文相同 | 与当前适配器相同 | 无完全相同内容 |
 |---|---:|---:|---:|---:|
-| AIcoding项目开发规范 | 111 | 52 | 0 | 59 |
+| AIcoding项目开发规范 | 111 | 51 | 0 | 60 |
 | AIcoding项目文档编写规范 | 45 | 0 | 0 | 45 |
 | README.md | 1 | 0 | 0 | 1 |
 
@@ -38,7 +38,7 @@
 | [`archive/legacy-rules/AIcoding项目开发规范/go-rules/适配器模板/codex/AGENTS.md`](<../archive/legacy-rules/AIcoding项目开发规范/go-rules/适配器模板/codex/AGENTS.md>) | `e3afd2c86de6d59d50b9c5b3ca66a114e506a2c5bb32962c83a05327367e10a7` | — |
 | [`archive/legacy-rules/AIcoding项目开发规范/go-rules/适配器模板/qoder/.qoder/rules/go-core.md`](<../archive/legacy-rules/AIcoding项目开发规范/go-rules/适配器模板/qoder/.qoder/rules/go-core.md>) | `ccb53288eaa2c7bf028321e598dcd9c0e65b7559fef5e506599e8c95b88dd75a` | — |
 | [`archive/legacy-rules/AIcoding项目开发规范/go-rules/适配器模板/trae/00-TRAE手动使用说明.md`](<../archive/legacy-rules/AIcoding项目开发规范/go-rules/适配器模板/trae/00-TRAE手动使用说明.md>) | `dcaa50ab0c1186aadf0b518c1e455cf4effdfb2e4d4a1adfb302354568859b38` | — |
-| [`archive/legacy-rules/AIcoding项目开发规范/java_rulers/00-文档总览.md`](<../archive/legacy-rules/AIcoding项目开发规范/java_rulers/00-文档总览.md>) | `e6a5d47c7515d8175d5aa7b43b6f340478758cecd2c4443a211cdd12f22492af` | [`rulepacks/java/00-文档总览.md`](<../rulepacks/java/00-文档总览.md>) |
+| [`archive/legacy-rules/AIcoding项目开发规范/java_rulers/00-文档总览.md`](<../archive/legacy-rules/AIcoding项目开发规范/java_rulers/00-文档总览.md>) | `e6a5d47c7515d8175d5aa7b43b6f340478758cecd2c4443a211cdd12f22492af` | — |
 | [`archive/legacy-rules/AIcoding项目开发规范/java_rulers/14-AI通用入口规则.md`](<../archive/legacy-rules/AIcoding项目开发规范/java_rulers/14-AI通用入口规则.md>) | `50fb3ed54ea25505546c8c7aa44f6c7e172b46da6b2ec63a7ea84f16b536736a` | — |
 | [`archive/legacy-rules/AIcoding项目开发规范/java_rulers/其他规则/01-代码编写规则.md`](<../archive/legacy-rules/AIcoding项目开发规范/java_rulers/其他规则/01-代码编写规则.md>) | `e4fe657854138b30b355054db7ad456cc2788cdaff8b16128cc07681dc99ab69` | — |
 | [`archive/legacy-rules/AIcoding项目开发规范/java_rulers/其他规则/02-代码风格规则.md`](<../archive/legacy-rules/AIcoding项目开发规范/java_rulers/其他规则/02-代码风格规则.md>) | `f09a656dda6bd26d79a617cb76614cf684976e3aa5f3041dc3da8921721ffa62` | — |

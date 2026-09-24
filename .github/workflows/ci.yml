@@ -44,9 +44,16 @@ jobs:
           npm install --global @openai/codex@0.142.0
           node scripts/verify-codex-plugin-install.mjs
 
+  rule-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: 检查规则文档结构与已知冲突
+        run: bash scripts/check-rule-docs.sh
+
   release:
     if: startsWith(github.ref, 'refs/tags/v') && github.event.repository.private == false
-    needs: [check, plugin-install]
+    needs: [check, plugin-install, rule-docs]
     runs-on: ubuntu-latest
     permissions:
       contents: write
