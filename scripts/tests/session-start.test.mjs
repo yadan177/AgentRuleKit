@@ -9,7 +9,7 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 const hook = fileURLToPath(new URL("../../plugins/agent-rule-kit/hooks/session_start.mjs", import.meta.url));
-const fakeFetch = fileURLToPath(new URL("./fixtures/mock-release-fetch.mjs", import.meta.url));
+const fakeFetch = new URL("./fixtures/mock-release-fetch.mjs", import.meta.url).href;
 const hash = (value) => createHash("sha256").update(value).digest("hex");
 
 async function runHook(root, dataDir, mock) {
