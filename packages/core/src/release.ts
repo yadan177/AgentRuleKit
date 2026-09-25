@@ -142,8 +142,9 @@ export async function downloadRulepacks(release: ReleaseInfo, fetcher: typeof fe
         }
         seen.add(name);
         const manifestEntry = name === RELEASE_MANIFEST && entry.type === "File" && entry.size <= 1024;
+        const licenseEntry = name === "LICENSE" && entry.type === "File" && entry.size > 0 && entry.size <= 64 * 1024;
         const ruleEntry = parts[0] === "rulepacks" && !parts.some((part) => part === ".." || part === "." || part === "") && !name.includes("\\") && !path.posix.isAbsolute(name) && ["File", "Directory"].includes(entry.type);
-        if (!manifestEntry && !ruleEntry) parser.abort(new Error(`规则包归档包含不安全条目：${entry.path}`));
+        if (!manifestEntry && !licenseEntry && !ruleEntry) parser.abort(new Error(`规则包归档包含不安全条目：${entry.path}`));
       } });
       const input = createReadStream(archive);
       let settled = false;

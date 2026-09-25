@@ -68,7 +68,7 @@ jobs:
         run: |
           node scripts/verify-release-version.mjs "$GITHUB_REF_NAME"
           node scripts/create-release-manifest.mjs "$GITHUB_REF_NAME" "$(git rev-parse HEAD)"
-          tar -czf agentrulekit-rulepacks.tar.gz agentrulekit-release.json rulepacks
+          tar -czf agentrulekit-rulepacks.tar.gz agentrulekit-release.json LICENSE rulepacks
       - name: 发布规则包 Release
         env:
           GH_TOKEN: ${{ github.token }}

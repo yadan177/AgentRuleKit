@@ -35,10 +35,11 @@ test("完整规则源按 Release 布局打包后可校验和读取", async () =>
   const root = await mkdtemp(path.join(os.tmpdir(), "agentrulekit-release-bundle-"));
   try {
     await cp(path.join(repository, "rulepacks"), path.join(root, "rulepacks"), { recursive: true });
+    await cp(path.join(repository, "LICENSE"), path.join(root, "LICENSE"));
     const sourceCommit = "b".repeat(40);
     await writeFile(path.join(root, "agentrulekit-release.json"), JSON.stringify({ schemaVersion: 1, version: packageVersion, sourceCommit }));
     const archive = path.join(root, "agentrulekit-rulepacks.tar.gz");
-    await c({ gzip: true, file: archive, cwd: root }, ["agentrulekit-release.json", "rulepacks"]);
+    await c({ gzip: true, file: archive, cwd: root }, ["agentrulekit-release.json", "LICENSE", "rulepacks"]);
     const bytes = await readFile(archive);
     const digest = `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
     const assetUrl = `https://github.com/yadan177/AgentRuleKit/releases/download/v${packageVersion}/agentrulekit-rulepacks.tar.gz`;
@@ -46,6 +47,7 @@ test("完整规则源按 Release 布局打包后可校验和读取", async () =>
     const downloaded = await downloadRulepacks({ version: packageVersion, assetUrl, digest }, fetcher);
     try {
       assert.equal(downloaded.sourceCommit, sourceCommit);
+      assert.equal(await readFile(path.join(downloaded.sourceRoot, "LICENSE"), "utf8"), await readFile(path.join(repository, "LICENSE"), "utf8"));
       assert.match(await readFile(path.join(downloaded.sourceRoot, "rulepacks", "common", "pack.json"), "utf8"), /"id": "common"/);
     } finally {
       await downloaded.cleanup();
