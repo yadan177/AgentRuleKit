@@ -410,6 +410,16 @@ async function prepareProject(root: string, config: ProjectConfig, adapter: Targ
   assertTargetAdapter(adapter);
   assertSupportedConfig(config, adapter);
   const resolvedRoot = path.resolve(root);
+  const rulesDirectory = path.join(resolvedRoot, ".agent-rules");
+  let rulesDirectoryStat;
+  try {
+    rulesDirectoryStat = await lstat(rulesDirectory);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+  }
+  if (rulesDirectoryStat && !rulesDirectoryStat.isDirectory() && !rulesDirectoryStat.isSymbolicLink()) {
+    throw new Error("[invalid-managed-directory] .agent-rules 已被非目录文件占用；拒绝安装或更新");
+  }
   if (!ownsWriteLock && await exists(path.join(resolvedRoot, OPERATION_LOCK))) {
     throw new Error(`检测到规则写入操作锁 ${OPERATION_LOCK}；请等待当前操作结束，或确认进程已停止后人工检查`);
   }
@@ -428,7 +438,6 @@ async function prepareProject(root: string, config: ProjectConfig, adapter: Targ
       }
     }
   }
-  const rulesDirectory = path.join(resolvedRoot, ".agent-rules");
   const entryPath = path.join(resolvedRoot, adapter.entryFile);
   const lockPath = path.join(resolvedRoot, ".agent-rules.lock.json");
   const conflicts: ValidationIssue[] = [];
@@ -525,6 +534,8 @@ async function prepareProject(root: string, config: ProjectConfig, adapter: Targ
     conflicts.push({ code: "unsafe-overrides", message: `项目覆盖规则路径不安全：${overrideRelative}` });
   } else if (await hasSymlinkAncestor(resolvedRoot, overrideRelative)) {
     conflicts.push({ code: "symlink-path", message: `项目覆盖规则路径包含符号链接：${overrideRelative}` });
+  } else if (await exists(overrideTarget) && !(await lstat(overrideTarget)).isFile()) {
+    conflicts.push({ code: "invalid-overrides-type", message: `项目覆盖规则不是普通文件：${overrideRelative}` });
   }
   return { plan: { changes, conflicts, from: oldLock?.rulepacks ?? {}, to: lock.rulepacks }, files, entryContent, lock, oldLock };
 }
@@ -807,6 +818,8 @@ export async function validateProject(root: string, adapter: TargetAdapter): Pro
       issues.push({ code: "symlink-path", message: `项目覆盖规则路径包含符号链接：${config.project.overrides}` });
     } else if (!(await exists(resolveInside(resolvedRoot, config.project.overrides)))) {
       issues.push({ code: "missing-overrides", message: `缺少项目覆盖规则 ${config.project.overrides}` });
+    } else if (!(await lstat(resolveInside(resolvedRoot, config.project.overrides))).isFile()) {
+      issues.push({ code: "invalid-overrides-type", message: `项目覆盖规则不是普通文件：${config.project.overrides}` });
     }
     if (!config.targets.includes(adapter.id)) {
       issues.push({ code: "missing-target", message: `尚未将 ${adapter.id} 配置为目标工具` });
