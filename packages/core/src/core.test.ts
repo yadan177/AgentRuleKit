@@ -128,6 +128,41 @@ test("initializeProject creates a valid generic adapter scaffold", async () => {
   });
 });
 
+test("来源许可文件作为受管文件安装，未知同名文件阻止接管", async () => {
+  await withTempProject(async (root) => {
+    const source = path.join(root, "source");
+    const target = path.join(root, "target");
+    await mkdir(target);
+    await writePack(source, "common", "entry.md");
+    await writeFile(path.join(source, "LICENSE"), "Apache License\nVersion 2.0\n");
+    const licensePath = path.join(target, ".agent-rules", "LICENSE");
+    await mkdir(path.dirname(licensePath));
+    await writeFile(licensePath, "项目自己的许可说明\n");
+    await assert.rejects(initializeProject(target, testAdapter, source), /unknown-file-collision/);
+    assert.equal(await readFile(licensePath, "utf8"), "项目自己的许可说明\n");
+    await rm(licensePath);
+    await initializeProject(target, testAdapter, source);
+    assert.equal(await readFile(licensePath, "utf8"), "Apache License\nVersion 2.0\n");
+    assert.deepEqual(await validateProject(target, testAdapter), { valid: true, issues: [] });
+  });
+});
+
+test("许可文件为符号链接或异常大文件时拒绝安装", async () => {
+  await withTempProject(async (root) => {
+    const source = path.join(root, "source");
+    const target = path.join(root, "target");
+    await mkdir(target);
+    await writePack(source, "common", "entry.md");
+    await writeFile(path.join(source, "actual-license"), "Apache License\n");
+    await symlink("actual-license", path.join(source, "LICENSE"));
+    await assert.rejects(initializeProject(target, testAdapter, source), /许可文件.*普通文件/);
+    await rm(path.join(source, "LICENSE"));
+    await writeFile(path.join(source, "LICENSE"), "x".repeat(64 * 1024 + 1));
+    await assert.rejects(initializeProject(target, testAdapter, source), /许可文件.*体积/);
+    await assert.rejects(readFile(path.join(target, ".agent-rules.lock.json"), "utf8"), /ENOENT/);
+  });
+});
+
 test("同一工程并发初始化只允许一个写入", async () => {
   await withTempProject(async (root) => {
     const source = path.join(root, "source");
