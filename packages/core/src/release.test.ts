@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { createHash, randomBytes } from "node:crypto";
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -21,8 +21,9 @@ test("GitHub Release 资产经 SHA-256 验证后才解包", async () => {
     await writeFile(path.join(pack, "entry.md"), "# 远程规则\n");
     const sourceCommit = "a".repeat(40);
     await writeFile(path.join(root, "agentrulekit-release.json"), JSON.stringify({ schemaVersion: 1, version: "0.2.0", sourceCommit }));
+    await writeFile(path.join(root, "LICENSE"), "Apache License\nVersion 2.0\n");
     const archive = path.join(root, "asset.tar.gz");
-    await c({ gzip: true, file: archive, cwd: root }, ["agentrulekit-release.json", "rulepacks"]);
+    await c({ gzip: true, file: archive, cwd: root }, ["agentrulekit-release.json", "LICENSE", "rulepacks"]);
     const bytes = await readFile(archive);
     const digest = `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
     const url = "https://github.com/yadan177/AgentRuleKit/releases/download/v0.2.0/agentrulekit-rulepacks.tar.gz";
@@ -37,6 +38,7 @@ test("GitHub Release 资产经 SHA-256 验证后才解包", async () => {
     try {
       assert.equal(downloaded.version, "0.2.0");
       assert.equal(downloaded.sourceCommit, sourceCommit);
+      assert.equal(await readFile(path.join(downloaded.sourceRoot, "LICENSE"), "utf8"), "Apache License\nVersion 2.0\n");
       assert.equal(await readFile(path.join(downloaded.sourceRoot, "rulepacks", "common", "pack.json"), "utf8"), manifest);
       const target = path.join(root, "external-project");
       await mkdir(target);
@@ -137,6 +139,11 @@ test("Release 归档缺少来源提交或与版本不符时拒绝安装", async 
     await attempt(["agentrulekit-release.json", "rulepacks"], /版本不匹配/);
     await writeFile(path.join(root, "agentrulekit-release.json"), JSON.stringify({ schemaVersion: 1, version: "0.2.0", sourceCommit: "a".repeat(40) }));
     await attempt(["agentrulekit-release.json", "agentrulekit-release.json", "rulepacks"], /重复条目/);
+    await symlink("rulepacks/common/entry.md", path.join(root, "LICENSE"));
+    await attempt(["agentrulekit-release.json", "LICENSE", "rulepacks"], /不安全条目/);
+    await rm(path.join(root, "LICENSE"));
+    await writeFile(path.join(root, "LICENSE"), randomBytes(64 * 1024 + 1));
+    await attempt(["agentrulekit-release.json", "LICENSE", "rulepacks"], /不安全条目/);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

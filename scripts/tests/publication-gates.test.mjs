@@ -27,6 +27,12 @@ test("GitHub Release 与 npm 发布只允许在公开仓库的版本标签上运
   }
 });
 
+test("后续 GitHub 规则包 Release 必须附带仓库许可文本", async () => {
+  const parsed = await workflow("ci.yml");
+  const steps = parsed.jobs.release.steps;
+  assert.ok(steps.some((step) => /tar\s+-czf\s+agentrulekit-rulepacks\.tar\.gz\s+agentrulekit-release\.json\s+LICENSE\s+rulepacks/.test(String(step.run ?? ""))));
+});
+
 test("npm 发布前必须核对对应 GitHub Release", async () => {
   const parsed = await workflow("publish-npm.yml");
   const steps = parsed.jobs.publish.steps;
