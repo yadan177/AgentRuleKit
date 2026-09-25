@@ -16,12 +16,12 @@
 |---|---|---|---|
 | A. 核心闭环 | 安全初始化、锁文件、完整性校验、版本检查、差异预览、显式更新和中断恢复 | 本地代码已实现 | 自动化端到端测试覆盖 Python、TypeScript、Unity；独立 npm 包在六类技术栈临时工程初始化和校验，并在 Go 工程完成差异预览与显式更新 |
 | B. Codex 接入 | 规则入口、四个 Skills、仓库插件市场、可信任后启用的会话后台检查 | 本地代码已实现；隔离 CLI 安装、四个 Skills 发现及已安装 Hook 脚本模拟运行已通过，桌面端交互与 Hook 信任仍待验收 | 插件/Skill 校验；Hook 模拟首次请求、每日缓存与锁变刷新；隔离 CLI 安装及提示输入检查；桌面端验收 |
-| C. 公开分发 | 仓库公开、安全审计、GitHub Release 规则包、npm 首次发布、外部干净环境复测 | 所有者确认后仓库已公开；`v0.1.0` Release 的规则包摘要和来源提交已核对，本地打包安装的 CLI 在全新临时 TypeScript 工程完成真实远程 `init/validate/check/diff/update --apply`（同版本无变更）；npm 首发与正式跨版本更新仍待验收 | 真实远程安装、npm 独立安装和后续版本更新均通过 |
+| C. 公开分发 | 仓库公开、安全审计、GitHub Release 规则包、npm 首次发布、外部干净环境复测 | 所有者确认后仓库已公开；`v0.1.0` Release 的规则包摘要和来源提交已核对，本地打包安装的 CLI 已在全新 Go、TypeScript、Unity 临时工程完成真实远程 `init/validate/check/diff/update --apply`（同版本无变更）；npm 首发与正式跨版本更新仍待验收 | 真实远程安装、npm 独立安装和后续版本更新均通过 |
 | D. 后续扩展 | Cursor、TRAE、Qoder 适配器；可选的更新 PR 自动化 | 不在首版范围 | 每个适配器独立能力矩阵与跨平台测试 |
 
 独立 npm 包的六类临时工程测试还会核对生成的 `AGENTS.md`：项目覆盖规则位于读取提示的前面，每个已安装规则包都列出与 `pack.json` 一致且实际存在的入口文件。这验证入口文件路径，不等同于 Codex 模型实际执行了规则。
 
-`scripts/tests/remote-cli-e2e.test.mjs` 用模拟 GitHub Release 响应、真实 tar.gz 资产和 CLI 进程，覆盖远程初始化、版本检查、差异预览、错误摘要拒绝、显式更新及最终校验。真实 `v0.1.0` Release 已额外通过外部网络安装验证，但因尚无第二个正式版本，不能把同版本无变更检查当作真实跨版本更新验收；npm 发布也尚未完成。
+`scripts/tests/remote-cli-e2e.test.mjs` 用模拟 GitHub Release 响应、真实 tar.gz 资产和 CLI 进程，覆盖远程初始化、版本检查、差异预览、错误摘要拒绝、显式更新及最终校验。`npm run smoke:public` 另将当前 CLI 打包安装在隔离目录，从真实公开 Release 在 Go、TypeScript、Unity 临时工程执行同版本闭环；此命令需要访问 GitHub，不放入每次提交的离线 CI。因尚无第二个正式版本，不能把同版本无变更检查当作真实跨版本更新验收；npm 发布也尚未完成。
 
 ## 发布前必须过的门槛
 
