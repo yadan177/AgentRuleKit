@@ -4,7 +4,7 @@
 
 - 在通用入口规则中明确：更新共享规则必须先审查差异，并由用户决定是否应用。
 - npm 包新增中文包级 README；CLI 命令入口和注册表独立安装纳入自动测试。
-- 为 npm 发布工作流配置 GitHub Actions Trusted Publisher，并固定兼容的 npm CLI 版本；实际 OIDC 发布将在此版本验收。
+- 为 npm 发布工作流配置 GitHub Actions Trusted Publisher，并固定兼容的 npm CLI 版本；本版本已通过 OIDC 发布验收。
 - 增加真实 GitHub Release 和 npm 包的独立安装验收脚本。
 
 ## 0.1.0 - 2026-09-25

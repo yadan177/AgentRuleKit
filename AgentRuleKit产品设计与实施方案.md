@@ -252,7 +252,7 @@ updates:
   strategy: manual
 ```
 
-当前 `0.1.0` 只支持 `stable` 和人工批准的 `manual` 更新；`pull-request` 是后续可选能力，当前配置不能使用。未公开发布时应使用 `source.type: workspace` 和本地 `source.path` 试用。
+当前 `0.1.1` 只支持 `stable` 和人工批准的 `manual` 更新；`pull-request` 是后续可选能力，当前配置不能使用。正式使用可选择公开 GitHub Release；离线开发试用则使用 `source.type: workspace` 和本地 `source.path`。
 
 `.agent-rules.lock.json` 表达实际安装状态。下面仅示意字段，省略了其他受管文件；实际文件由 CLI 生成，不应手工复制占位摘要：
 
@@ -284,7 +284,7 @@ updates:
 
 ## 10. CLI 产品形态
 
-CLI 是跨平台产品核心，命令名为 `agent-rule`。首版准备通过 npm 发布，规则源通过 GitHub Release 分发；独立可执行文件属于后续扩展。
+CLI 是跨平台产品核心，命令名为 `agent-rule`。当前已通过 npm 发布，规则源通过 GitHub Release 分发；独立可执行文件属于后续扩展。
 
 ### 10.1 命令清单
 
@@ -304,7 +304,7 @@ agent-rule doctor               检查运行环境与适配能力
 agent-rule version              输出 CLI 和规则包版本
 ```
 
-`add`、`remove`、`target` 和 `doctor` 属于后续规划，当前 `0.1.0` 尚未实现。`version` 当前只输出 CLI 版本。
+`add`、`remove`、`target` 和 `doctor` 属于后续规划，当前 `0.1.1` 尚未实现。`version` 当前只输出 CLI 版本。
 
 ### 10.2 初始化流程
 
