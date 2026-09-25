@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { mkdir, mkdtemp, readFile, rename, rm, symlink, writeFile } from "node:fs/promises";
+import { lstat, mkdir, mkdtemp, readFile, rename, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -245,6 +245,20 @@ test("未知文件冲突阻止初始化，且不留下半成品", async () => {
     await writeFile(path.join(target, ".agent-rules", "go", "entry.md"), "用户文件\n");
     await assert.rejects(initializeProject(target, testAdapter, source), /unknown-file-collision/);
     assert.equal(await readFile(path.join(target, ".agent-rules", "go", "entry.md"), "utf8"), "用户文件\n");
+    await assert.rejects(readFile(path.join(target, "agent-rules.yaml"), "utf8"), /ENOENT/);
+  });
+});
+
+test("受管目录被未知普通文件占用时初始化明确拒绝且保留原文件", async () => {
+  await withTempProject(async (root) => {
+    const source = path.join(root, "source");
+    const target = path.join(root, "target");
+    await mkdir(target);
+    await writePack(source, "common", "entry.md");
+    const occupied = path.join(target, ".agent-rules");
+    await writeFile(occupied, "项目原有文件\n");
+    await assert.rejects(initializeProject(target, testAdapter, source), /invalid-managed-directory/);
+    assert.equal(await readFile(occupied, "utf8"), "项目原有文件\n");
     await assert.rejects(readFile(path.join(target, "agent-rules.yaml"), "utf8"), /ENOENT/);
   });
 });
@@ -522,6 +536,24 @@ test("自定义项目覆盖规则路径会写入目标入口并受校验", async
     assert.match(await readFile(path.join(target, testAdapter.entryFile), "utf8"), /\.agent-rules\/project-notes\.md/);
     assert.match(await readFile(path.join(target, ".agent-rules", "project-notes.md"), "utf8"), /项目覆盖规则/);
     assert.deepEqual(await validateProject(target, testAdapter), { valid: true, issues: [] });
+  });
+});
+
+test("项目覆盖规则被同名目录占用时校验、预览与更新都拒绝", async () => {
+  await withTempProject(async (root) => {
+    const source = path.join(root, "source");
+    const target = path.join(root, "target");
+    await mkdir(target);
+    await writePack(source, "common", "entry.md");
+    await initializeProject(target, testAdapter, source);
+    const override = path.join(target, ".agent-rules", "overrides.md");
+    await rm(override);
+    await mkdir(override);
+    const config = await loadProjectConfig(target);
+    assert.ok((await validateProject(target, testAdapter)).issues.some((issue) => issue.code === "invalid-overrides-type"));
+    assert.ok((await planProject(target, config, testAdapter)).conflicts.some((issue) => issue.code === "invalid-overrides-type"));
+    await assert.rejects(applyProject(target, config, testAdapter), /invalid-overrides-type/);
+    assert.ok((await lstat(override)).isDirectory());
   });
 });
 
