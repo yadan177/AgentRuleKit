@@ -35,6 +35,17 @@ test("npm 发布前必须核对对应 GitHub Release", async () => {
   assert.ok(verification >= 0 && publication > verification, "Release 校验必须先于 npm publish");
 });
 
+test("npm 可信发布工作流保留 OIDC 权限与固定的兼容 CLI", async () => {
+  const parsed = await workflow("publish-npm.yml");
+  assert.equal(parsed.permissions?.["id-token"], "write");
+  assert.equal(parsed.permissions?.contents, "read");
+  const steps = parsed.jobs.publish.steps;
+  const setup = steps.find((step) => String(step.uses ?? "").startsWith("actions/setup-node@"));
+  assert.equal(setup?.with?.["node-version"], 24);
+  assert.equal(setup?.with?.["package-manager-cache"], false);
+  assert.ok(steps.some((step) => String(step.run ?? "").includes("npm install -g npm@11.15.0")));
+});
+
 test("npm 发布门禁验证 Release 标签、资产摘要与来源提交", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "agentrulekit-publication-test-"));
   try {
