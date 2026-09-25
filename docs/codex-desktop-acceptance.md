@@ -10,7 +10,7 @@
 | 隔离安装与结构 | `scripts/verify-codex-plugin-install.mjs` 在临时 Codex 环境验证安装、四个 Skills 可发现、已安装 Hook 脚本可运行；官方插件校验器通过 | 已通过隔离验收 |
 | 当前个人 Codex 环境 | 本机 `codex-cli 0.142.0` 的 `codex plugin list` 未列出 `agent-rule-kit` 或 `agentrulekit` 市场 | 尚未在当前个人环境确认安装 |
 | 桌面端插件界面、Skill 实际调用、Hook 信任与会话调度 | 当前任务无法通过桌面端自动化接口读取 Codex 自身界面，且未获得用户的 Hook 信任操作结果 | 待用户实际验收 |
-| 真实远端更新提醒 | 本仓库尚无可供默认 CLI 使用的正式 GitHub Release | 发布门槛完成后再验收 |
+| 真实远端更新提醒 | 已有 `v0.1.0` 正式 GitHub Release，但尚无第二个正式版本 | 有新版时再验收提醒与显式更新 |
 
 ## 请在桌面端完成的步骤
 
@@ -18,7 +18,7 @@
 2. 如桌面端仍无法发现仓库市场，可由用户在本机明确选择是否运行 `codex plugin marketplace add <AgentRuleKit 仓库绝对路径>`，然后重启桌面端再次查找。该命令会修改个人 Codex 的市场配置；验收人员应记录是否使用了此步骤。
 3. 由用户在插件目录安装 `agent-rule-kit`，新建一个任务，分别确认 `rules-bootstrap`、`rules-review`、`rules-doc-impact`、`rules-update` 四个 Skills 可见。用一个临时工程做只读的规则审查试用，记录是否实际调用了 Skill；不要对正式业务工程试装规则。
 4. 单独审查 `plugins/agent-rule-kit/hooks/hooks.json` 与 `hooks/session_start.mjs` 后，由用户自行决定是否信任 `SessionStart` Hook。根据[官方插件说明](https://developers.openai.com/plugins/build/plugins)，安装或启用插件不会自动信任其 Hook；未信任时应维持跳过状态，不能为通过验收而绕过信任。
-5. Hook 只在锁文件声明 GitHub 来源的项目中向 `api.github.com` 查询该仓库的最新 Release 元数据，缓存写在个人插件数据目录，不自动修改项目。当前还不能验证默认仓库真实新版本提醒；待正式 Release 发布后，再在测试工程中确认“会话启动提醒 → `diff` 审查 → 用户明确执行 `update --apply`”全过程。
+5. Hook 只在锁文件声明 GitHub 来源的项目中向 `api.github.com` 查询该仓库的最新 Release 元数据，缓存写在个人插件数据目录，不自动修改项目。当前已有 `v0.1.0` 正式 Release，但尚无第二个正式版本；待新版发布后，再在测试工程中确认“会话启动提醒 → `diff` 审查 → 用户明确执行 `update --apply`”全过程。
 
 ## 验收填写
 
