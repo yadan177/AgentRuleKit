@@ -20,6 +20,8 @@ test("独立 npm 包可在六类工程初始化，并完成 Go 工程的显式�
   const root = await mkdtemp(path.join(os.tmpdir(), "agentrulekit-package-"));
   try {
     const packed = JSON.parse(run(process.execPath, [npmCli, "pack", "--workspace", "agentrulekit", "--pack-destination", root, "--json"]));
+    assert.ok(packed[0].files.some((file) => file.path === "README.md"), "npm 包必须包含中文安装说明");
+    assert.ok(packed[0].files.some((file) => file.path === "LICENSE"), "npm 包必须包含许可证");
     const archive = path.join(root, packed[0].filename);
     const install = path.join(root, "installed");
     run(process.execPath, [npmCli, "install", "--prefix", install, archive, "--ignore-scripts", "--no-audit", "--no-fund"]);
