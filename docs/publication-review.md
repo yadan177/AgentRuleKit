@@ -32,6 +32,7 @@
 - [x] 在独立临时 `CODEX_HOME` 中从公开的 `yadan177/AgentRuleKit` GitHub 仓库添加 Marketplace 并安装 `agent-rule-kit@agentrulekit` `0.1.0`；`codex plugin list` 确认来源，安装缓存含四个 Skills 和 Hook，`codex debug prompt-input` 确认四个 Skills 可发现（2026-09-25）。这不等同于桌面端交互或 Hook 信任验收。
 - [x] CLI 已用模拟 GitHub Release 完成 `init/check/diff/update --apply/validate` 命令级闭环，并验证摘要错误不会修改业务项目；这项模拟测试本身不代表真实远端验收，真实 `v0.1.0` 结果见下一项。
 - [x] `v0.1.0` GitHub Release 已发布：资产 `agentrulekit-rulepacks.tar.gz` 的 API SHA-256、实际下载内容和来源提交 `09567ea` 已核对；本地打包安装的 CLI 在全新临时 TypeScript 工程从真实 Release 完成 `init/validate/check/diff/update --apply`，同版本没有待更新文件。尚未验证 npm 独立安装或真实跨版本更新。
+- [x] `npm run smoke:public` 又在全新 Go、TypeScript、Unity 临时工程从真实公开 Release 运行 `init/validate/check/diff/update --apply`，核对 GitHub 来源、版本、摘要与来源提交一致，确认同版本应用后锁文件不变（2026-09-25）。CLI 仍来自本地 tarball，不等同于 npm 注册表安装或正式跨版本更新。
 - [ ] 按[Codex 桌面端验收记录](codex-desktop-acceptance.md)补齐四个 Skills 的逐项试用、Hook 信任选择及实际会话调度结果。用户的概括性确认与 CLI 隔离验收均不能替代这些细节。
 - [x] 仓库所有者明确确认公开范围并同意设为 Public；具体来源证据仍由内容提供方负责保存或后续补录。
 - [ ] 按[发布说明](releasing.md)完成 npm 包名所有权与首次发布、从 npm 独立安装及真实跨版本更新闭环；GitHub Release 资产与从真实远端初始化已通过。
