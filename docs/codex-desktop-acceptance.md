@@ -2,12 +2,13 @@
 
 本清单用于补齐[首版开发计划](development-plan.md)的 Codex 桌面端证据。用户已在本次对话中概括确认插件安装、Hook 审查与信任决定；未提供版本、测试工程和逐项运行结果，因此以下详细验收栏仍待填写。CLI 隔离安装、插件格式校验与 Hook 脚本模拟运行已经通过，但它们不能证明桌面端实际调用了 Skill 或 Hook。
 
-## 当前证据边界（2026-09-24）
+## 当前证据边界（2026-09-25）
 
 | 检查项 | 当前证据 | 结论 |
 |---|---|---|
 | 仓库本地市场 | `.agents/plugins/marketplace.json` 声明 `agentrulekit` 市场与 `agent-rule-kit` 插件 | 已配置，未证明桌面端显示 |
 | 隔离安装与结构 | `scripts/verify-codex-plugin-install.mjs` 在临时 Codex 环境验证安装、四个 Skills 可发现、已安装 Hook 脚本可运行；官方插件校验器通过 | 已通过隔离验收 |
+| 公开仓库市场安装 | 在独立的临时 `CODEX_HOME` 中运行 `codex plugin marketplace add yadan177/AgentRuleKit` 和 `codex plugin add agent-rule-kit@agentrulekit`；安装结果为 `0.1.0`，来源是公开 Git 仓库，缓存含四个 Skills 与 Hook，`codex debug prompt-input` 列出四个 Skills | 已通过远端 CLI 安装验收；未修改个人配置 |
 | 当前个人 Codex 环境 | 本机 `codex-cli 0.142.0` 的 `codex plugin list` 未列出 `agent-rule-kit` 或 `agentrulekit` 市场 | 尚未在当前个人环境确认安装 |
 | 桌面端插件界面、Skill 实际调用、Hook 信任与会话调度 | 当前任务无法通过桌面端自动化接口读取 Codex 自身界面，且未获得用户的 Hook 信任操作结果 | 待用户实际验收 |
 | 真实远端更新提醒 | 已有 `v0.1.0` 正式 GitHub Release，但尚无第二个正式版本 | 有新版时再验收提醒与显式更新 |
