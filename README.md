@@ -4,7 +4,7 @@ AgentRuleKit 是面向 AI 编程代理的平台无关工程规则与工作流分
 
 ## 当前状态
 
-`0.1.0` 已完成 GitHub Release 与 npm CLI 的首次公开发布，当前代码包含：
+`0.1.0` 已完成首次公开发布；最新正式版本为 `0.1.1`。当前代码包含：
 
 - 基于证据检测技术栈的 TypeScript 核心包。
 - 支持 `detect`、`init`、`validate`、`check`、`diff` 和 `update` 的 `agent-rule` CLI。
@@ -17,7 +17,7 @@ AgentRuleKit 是面向 AI 编程代理的平台无关工程规则与工作流分
 - GitHub Release 规则包下载与 SHA-256 验证、Codex 会话开始时每天至多一次的后台更新检查。
 - 独立 npm CLI 构建、仓库插件市场入口和跨平台 CI 配置。
 
-GitHub 仓库已公开，`v0.1.0` GitHub Release 的规则包已通过摘要与来源提交校验。[npm CLI `agentrulekit@0.1.0`](https://www.npmjs.com/package/agentrulekit) 已发布，并在独立的 Go、TypeScript、Unity 临时工程完成从 npm 安装及真实远端规则源的同版本闭环。Codex 桌面端交互细节和真实跨版本更新仍待验收；非 Codex 自动生成器尚未实现。
+GitHub 仓库已公开；[`v0.1.1` GitHub Release](https://github.com/yadan177/AgentRuleKit/releases/tag/v0.1.1) 和 [npm CLI `agentrulekit@0.1.1`](https://www.npmjs.com/package/agentrulekit) 已发布。Go、TypeScript、Unity 临时工程完成真实 `0.1.0 → 0.1.1` 的检查、差异预览、显式更新与复验；npm 发布工作流的 OIDC/provenance 也已验收。Codex 桌面端插件交互与 Hook 实际调度仍待用户验收；非 Codex 自动生成器尚未实现。
 
 ## 业务项目如何使用
 
