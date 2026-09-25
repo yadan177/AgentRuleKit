@@ -8,7 +8,7 @@
 
 因此，一台电脑可以维护多个项目；项目成员即使尚未安装插件，也能从项目 Git 仓库读取已固定版本的规则。
 
-## npm 包发布后的首次安装
+## 从 npm 首次安装
 
 需要 Node.js 22+、npm 和可访问 GitHub 的网络。
 
@@ -21,7 +21,7 @@ agent-rule validate /absolute/path/to/project
 
 默认来源是 `yadan177/AgentRuleKit` 的最新正式 GitHub Release。CLI 验证 Release 资产的 SHA-256 后才解包；下载、校验或规则清单有问题时不会安装。初始化会保留已有 `AGENTS.md` 的非受管内容，若目标位置已有未知文件则停止并报告冲突。请审查并提交上述生成文件。
 
-当前 `v0.1.0` GitHub Release 已可用，但 npm CLI 尚未首次发布；在 npm 包可安装前，请按下文“尚未发布 npm 时的本地试用”从源码构建 CLI。不要把上面的 `npm install -g agentrulekit` 命令误认为现在已经可执行。
+`agentrulekit@0.1.0` 已在 npm 公开发布；上面的安装命令已在隔离环境从 npm 注册表验证。`v0.1.0` GitHub Release 也已可用。请仍先在临时工程试用，再决定是否安装到现有业务项目。
 
 `init` 会先打印检测到的技术栈依据和建议规则包，然后尝试安装；它不会等待二次确认。若希望先判断技术栈而不写入项目，只运行 `detect`。规则更新与首次初始化不同，始终先用 `diff` 审查，再显式执行 `update --apply`。
 
@@ -58,11 +58,11 @@ agent-rule validate /absolute/path/to/project
 
 插件启用并被信任后，会在 Codex 会话开始时后台检查；同一项目安装状态下至多每天检查一次。发现新版本只在后续适合的对话里提醒用户，不会自动更新，也不会主动开启新对话。
 
-## 尚未发布 npm 时的本地试用
+## 本地开发与离线试用
 
-若只想安全体验完整流程，在本仓库运行 `npm run demo:local`；它只操作临时 TypeScript 工程和临时规则源，不访问 GitHub，也不安装个人插件。需要查看生成文件时运行 `npm run demo:local -- --keep`，完成后自行清理输出的临时目录。真实 `v0.1.0` Release 已单独通过远程初始化验证；本地演示仍不代替 npm 包安装或跨版本更新验收。
+若只想离线体验完整流程，在本仓库运行 `npm run demo:local`；它只操作临时 TypeScript 工程和临时规则源，不访问 GitHub，也不安装个人插件。需要查看生成文件时运行 `npm run demo:local -- --keep`，完成后自行清理输出的临时目录。正式 npm 包已单独通过真实远端初始化验证；本地演示仍不代替真实跨版本更新验收。
 
-在 AgentRuleKit 仓库运行 `npm ci && npm run build`。若要试用已发布的真实 `v0.1.0` 规则源，在临时工程运行：
+在 AgentRuleKit 仓库运行 `npm ci && npm run build`。若要从源码试用已发布的真实 `v0.1.0` 规则源，在临时工程运行：
 
 ```bash
 node packages/cli/dist/index.js init /absolute/path/to/test-project

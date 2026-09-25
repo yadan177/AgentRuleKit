@@ -1,6 +1,6 @@
 # 公开发布前审查清单
 
-当前决定：仓库所有者已在本次对话中确认 `rulepacks/`、`archive/legacy-rules/` 和 Git 历史可以公开；仓库已于 2026-09-25 改为 **Public**。这是所有者的授权声明，不代表开发代理独立核实了每份材料的权属。GitHub Release 与 npm 发布仍须分别通过下述技术门槛；npm 账户认证和首次发布不能由此项授权推定已完成。
+当前决定：仓库所有者已在本次对话中确认 `rulepacks/`、`archive/legacy-rules/` 和 Git 历史可以公开；仓库已于 2026-09-25 改为 **Public**，`v0.1.0` GitHub Release 与 `agentrulekit@0.1.0` npm 包已发布。这是所有者的授权声明，不代表开发代理独立核实了每份材料的权属；剩余人工审查和正式跨版本验收仍按下述清单处理。
 
 已完成的机器筛查范围、结果和限制见 [2026-09-24 自动筛查记录](publication-audit-2026-09-24.md)。[逐文件来源索引](rulepack-provenance-inventory.md)与[内容权利复核表](content-rights-review.md)用于人工审查；机器筛查不代替下面的人工授权确认。
 
@@ -31,9 +31,11 @@
 - [x] 在隔离的 Codex CLI `0.142.0` 环境中添加本地 Marketplace 并安装插件；`codex debug prompt-input` 确认四个 Skills 可发现，安装缓存中的 SessionStart Hook 脚本在模拟 Release 响应下可运行。此项由 `scripts/verify-codex-plugin-install.mjs` 复测，不等同于 Codex 会话实际调度 Hook。
 - [x] 在独立临时 `CODEX_HOME` 中从公开的 `yadan177/AgentRuleKit` GitHub 仓库添加 Marketplace 并安装 `agent-rule-kit@agentrulekit` `0.1.0`；`codex plugin list` 确认来源，安装缓存含四个 Skills 和 Hook，`codex debug prompt-input` 确认四个 Skills 可发现（2026-09-25）。这不等同于桌面端交互或 Hook 信任验收。
 - [x] CLI 已用模拟 GitHub Release 完成 `init/check/diff/update --apply/validate` 命令级闭环，并验证摘要错误不会修改业务项目；这项模拟测试本身不代表真实远端验收，真实 `v0.1.0` 结果见下一项。
-- [x] `v0.1.0` GitHub Release 已发布：资产 `agentrulekit-rulepacks.tar.gz` 的 API SHA-256、实际下载内容和来源提交 `09567ea` 已核对；本地打包安装的 CLI 在全新临时 TypeScript 工程从真实 Release 完成 `init/validate/check/diff/update --apply`，同版本没有待更新文件。尚未验证 npm 独立安装或真实跨版本更新。
+- [x] `v0.1.0` GitHub Release 已发布：资产 `agentrulekit-rulepacks.tar.gz` 的 API SHA-256、实际下载内容和来源提交 `09567ea` 已核对；本地打包安装的 CLI 在全新临时 TypeScript 工程从真实 Release 完成 `init/validate/check/diff/update --apply`，同版本没有待更新文件。npm 独立安装另见下项；真实跨版本更新仍待验收。
 - [x] `npm run smoke:public` 又在全新 Go、TypeScript、Unity 临时工程从真实公开 Release 运行 `init/validate/check/diff/update --apply`，核对 GitHub 来源、版本、摘要与来源提交一致，确认同版本应用后锁文件不变（2026-09-25）。CLI 仍来自本地 tarball，不等同于 npm 注册表安装或正式跨版本更新。
+- [x] 仓库所有者启用 npm 账户 2FA 后，已从固定的 `v0.1.0` 标签首次发布公开包 [`agentrulekit@0.1.0`](https://www.npmjs.com/package/agentrulekit)（2026-09-25）。npm 注册表返回的版本、`agent-rule` 命令入口与 SHA-512 integrity 均已核对；在隔离目录从 npm 注册表全新安装，Go、TypeScript、Unity 临时工程均通过 `detect/init/validate/check/diff/update --apply/validate`，同版本无待更新文件且锁文件哈希不变。包级 README 是首发标签之后加入主分支的，未包含在 `0.1.0` 包中。
 - [ ] 按[Codex 桌面端验收记录](codex-desktop-acceptance.md)补齐四个 Skills 的逐项试用、Hook 信任选择及实际会话调度结果。用户的概括性确认与 CLI 隔离验收均不能替代这些细节。
 - [x] 仓库所有者明确确认公开范围并同意设为 Public；具体来源证据仍由内容提供方负责保存或后续补录。
-- [ ] 按[发布说明](releasing.md)完成 npm 包名所有权与首次发布、从 npm 独立安装及真实跨版本更新闭环；GitHub Release 资产与从真实远端初始化已通过。
-- [x] README 已分别说明公开 GitHub Release 可用、npm CLI 尚未首次发布，不把部分发布写成全部完成。
+- [ ] 发布第二个正式版本后，按[发布说明](releasing.md)完成真实跨版本 `check/diff/update --apply/validate` 与更新提醒验收；同版本无变更不能代替此项。
+- [ ] 在 npm 包设置中配置 `.github/workflows/publish-npm.yml` 的 GitHub Actions 可信发布者，再验收后续标签的 OIDC 发布；不要重发已存在的 `0.1.0`。
+- [x] README 已分别说明公开 GitHub Release 与 npm CLI 可用，同时保留桌面端和真实跨版本验收的边界。

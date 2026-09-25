@@ -27,6 +27,7 @@ test("独立 npm 包可在六类工程初始化，并完成 Go 工程的显式�
     run(process.execPath, [npmCli, "install", "--prefix", install, archive, "--ignore-scripts", "--no-audit", "--no-fund"]);
     const cli = path.join(install, "node_modules", "agentrulekit", "dist", "index.js");
     assert.equal(run(process.execPath, [cli, "--version"]).trim(), "0.1.0");
+    assert.equal(run(process.execPath, [npmCli, "exec", "--prefix", install, "--", "agent-rule", "--version"]).trim(), "0.1.0");
     const source = path.join(root, "source");
     await cp(path.join(repository, "rulepacks"), path.join(source, "rulepacks"), { recursive: true });
     const fixtures = [
