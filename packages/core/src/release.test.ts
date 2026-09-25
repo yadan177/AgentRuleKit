@@ -152,15 +152,16 @@ test("Release 归档缺少来源提交或与版本不符时拒绝安装", async 
 test("模拟两个 Release 的远程安装、差异预览与显式更新", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "agentrulekit-release-update-"));
   try {
-    async function bundle(version: string, sourceCommit: string, rule: string) {
+    async function bundle(version: string, sourceCommit: string, rule: string, license?: string) {
       const directory = path.join(root, `bundle-${version}`);
       const pack = path.join(directory, "rulepacks", "common");
       await mkdir(pack, { recursive: true });
       await writeFile(path.join(pack, "pack.json"), JSON.stringify({ id: "common", version, status: "ready", kind: "common", entry: "entry.md", dependencies: [], rules: ["entry.md"] }));
       await writeFile(path.join(pack, "entry.md"), rule);
       await writeFile(path.join(directory, "agentrulekit-release.json"), JSON.stringify({ schemaVersion: 1, version, sourceCommit }));
+      if (license) await writeFile(path.join(directory, "LICENSE"), license);
       const archive = path.join(directory, "asset.tar.gz");
-      await c({ gzip: true, file: archive, cwd: directory }, ["agentrulekit-release.json", "rulepacks"]);
+      await c({ gzip: true, file: archive, cwd: directory }, ["agentrulekit-release.json", ...(license ? ["LICENSE"] : []), "rulepacks"]);
       const bytes = await readFile(archive);
       const release = {
         version,
@@ -184,13 +185,14 @@ test("模拟两个 Release 的远程安装、差异预览与显式更新", async
     }
     const override = path.join(target, ".agent-rules", "overrides.md");
     await writeFile(override, "# 用户项目规则\n");
-    const second = await bundle("0.3.0", "b".repeat(40), "# 新规则\n");
+    const second = await bundle("0.3.0", "b".repeat(40), "# 新规则\n", "Apache License\nVersion 2.0\n");
     const updated = await downloadRulepacks(second.release, second.fetcher);
     try {
       const snapshot = { root: updated.sourceRoot, version: updated.version, digest: second.release.digest, commit: updated.sourceCommit };
       const preview = await planProject(target, config, testAdapter, snapshot);
       assert.deepEqual(preview.conflicts, []);
       assert.ok(preview.changes.some((change) => change.path === ".agent-rules/common/entry.md" && change.after === "# 新规则\n"));
+      assert.ok(preview.changes.some((change) => change.path === ".agent-rules/LICENSE" && change.action === "add" && change.after === "Apache License\nVersion 2.0\n"));
       assert.equal(await readFile(path.join(target, ".agent-rules", "common", "entry.md"), "utf8"), "# 旧规则\n");
       await applyProject(target, config, testAdapter, undefined, snapshot);
       const lock = JSON.parse(await readFile(path.join(target, ".agent-rules.lock.json"), "utf8"));
@@ -199,6 +201,8 @@ test("模拟两个 Release 的远程安装、差异预览与显式更新", async
       assert.equal(lock.sourceDigest, second.release.digest);
       assert.equal(await readFile(override, "utf8"), "# 用户项目规则\n");
       assert.deepEqual(await validateProject(target, testAdapter), { valid: true, issues: [] });
+      assert.equal(await readFile(path.join(target, ".agent-rules", "LICENSE"), "utf8"), "Apache License\nVersion 2.0\n");
+      assert.ok(Object.hasOwn(lock.managedFiles, ".agent-rules/LICENSE"));
       const older = await downloadRulepacks(first.release, first.fetcher);
       try {
         const stale = { root: older.sourceRoot, version: older.version, digest: first.release.digest, commit: older.sourceCommit };

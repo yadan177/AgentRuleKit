@@ -39,6 +39,8 @@ const DIGEST_PATTERN = /^sha256:[a-f0-9]{64}$/;
 const COMMIT_PATTERN = /^[a-f0-9]{40}(?:[a-f0-9]{24})?$/;
 const TRANSACTION_PREFIX = ".agent-rules.transaction-";
 const OPERATION_LOCK = ".agent-rules.operation.lock";
+const MANAGED_LICENSE = ".agent-rules/LICENSE";
+const MAX_LICENSE_BYTES = 64 * 1024;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -91,6 +93,29 @@ async function exists(filePath: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+async function loadOptionalLicense(sourceRoot: string): Promise<string | undefined> {
+  const licensePath = path.join(sourceRoot, "LICENSE");
+  let info;
+  try {
+    info = await lstat(licensePath);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+    throw error;
+  }
+  if (!info.isFile()) throw new Error("规则源许可文件 LICENSE 必须是普通文件");
+  if (info.size < 1 || info.size > MAX_LICENSE_BYTES) throw new Error("规则源许可文件 LICENSE 体积不合法");
+  const bytes = await readFile(licensePath);
+  if (bytes.length < 1 || bytes.length > MAX_LICENSE_BYTES) throw new Error("规则源许可文件 LICENSE 体积不合法");
+  let content: string;
+  try {
+    content = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  } catch {
+    throw new Error("规则源许可文件 LICENSE 不是 UTF-8 文本");
+  }
+  if (content.includes("\0")) throw new Error("规则源许可文件 LICENSE 包含非法空字符");
+  return content;
 }
 
 function digest(content: string): string {
@@ -360,7 +385,7 @@ async function inspectLockedManagedFiles(root: string, lock: ProjectLock): Promi
     }
   }
   for (const relativePath of Object.keys(lock.managedFiles ?? {})) {
-    if (!expected.has(relativePath)) issues.push({ code: "unexpected-managed-file", message: `锁文件试图接管非规则包文件：${relativePath}` });
+    if (!expected.has(relativePath) && relativePath !== MANAGED_LICENSE) issues.push({ code: "unexpected-managed-file", message: `锁文件试图接管非规则包文件：${relativePath}` });
   }
   for (const relativePath of expected) {
     if (!Object.hasOwn(lock.managedFiles ?? {}, relativePath)) issues.push({ code: "missing-managed-lock", message: `锁文件缺少已安装规则文件：${relativePath}` });
@@ -460,6 +485,8 @@ async function prepareProject(root: string, config: ProjectConfig, adapter: Targ
   const entryContent = mergeManagedBlock(oldEntry, block, adapter);
   const files = new Map<string, string>();
   const managedFiles: Record<string, string> = {};
+  const license = await loadOptionalLicense(sourceRoot);
+  if (license !== undefined) files.set(MANAGED_LICENSE, license);
   if (oldLock) conflicts.push(...await inspectLockedManagedFiles(resolvedRoot, oldLock));
   if (!oldLock && oldEntry.includes(adapter.blockStart)) {
     conflicts.push({ code: "unknown-managed-block", message: `${adapter.entryFile} 已含受控区块，但缺少可验证的锁文件` });
