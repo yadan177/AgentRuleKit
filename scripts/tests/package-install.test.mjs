@@ -7,6 +7,7 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 const repository = fileURLToPath(new URL("../../", import.meta.url));
+const packageVersion = JSON.parse(await readFile(path.join(repository, "packages/cli/package.json"), "utf8")).version;
 
 function run(executable, args, cwd = repository) {
   const result = spawnSync(executable, args, { cwd, encoding: "utf8" });
@@ -26,8 +27,8 @@ test("独立 npm 包可在六类工程初始化，并完成 Go 工程的显式�
     const install = path.join(root, "installed");
     run(process.execPath, [npmCli, "install", "--prefix", install, archive, "--ignore-scripts", "--no-audit", "--no-fund"]);
     const cli = path.join(install, "node_modules", "agentrulekit", "dist", "index.js");
-    assert.equal(run(process.execPath, [cli, "--version"]).trim(), "0.1.0");
-    assert.equal(run(process.execPath, [npmCli, "exec", "--prefix", install, "--", "agent-rule", "--version"]).trim(), "0.1.0");
+    assert.equal(run(process.execPath, [cli, "--version"]).trim(), packageVersion);
+    assert.equal(run(process.execPath, [npmCli, "exec", "--prefix", install, "--", "agent-rule", "--version"]).trim(), packageVersion);
     const source = path.join(root, "source");
     await cp(path.join(repository, "rulepacks"), path.join(source, "rulepacks"), { recursive: true });
     const fixtures = [

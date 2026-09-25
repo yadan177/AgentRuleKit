@@ -28,7 +28,7 @@
 - CI 在 Linux、macOS、Windows 的 Node.js 22/24 上运行，并检查 npm 包内容与版本一致性；`npm run check:rulepacks` 检查 manifest、依赖、版本与本地 Markdown 链接。独立 Linux 作业运行 `scripts/check-rule-docs.sh`，检查规则文档结构、相对链接及已知内容冲突；这不代替一般技术准确性或版权审查。
 - Git 历史、归档资料、依赖与许可证完成公开审查；不能只依赖简单密钥模式扫描。
 - GitHub Release 存在可下载规则包及 SHA-256 digest；失败下载、校验失败和不安全归档不会修改项目。
-- npm 包 `agentrulekit` 的所有权与首次发布已由仓库所有者完成；可信发布者仍需在 npm 包设置中配置，不要求向开发代理提供 npm 密码或令牌。
+- npm 包 `agentrulekit` 的所有权、首次发布与 GitHub Actions 可信发布者配置已由仓库所有者完成；下一正式版本仍须验收 OIDC 实际发布，不要求向开发代理提供 npm 密码或令牌。
 - 已在全新环境从 npm 和 GitHub Release 公开入口安装并验证；尚未完成的桌面端和真实跨版本验收须在文档中分别说明。
 
 当前实现细节见 [安装与更新](installation.md)；公开前先完成 [审查清单](publication-review.md)，再按 [发布说明](releasing.md) 操作。
