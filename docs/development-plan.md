@@ -21,7 +21,7 @@
 
 独立 npm 包的六类临时工程测试还会核对生成的 `AGENTS.md`：项目覆盖规则位于读取提示的前面，每个已安装规则包都列出与 `pack.json` 一致且实际存在的入口文件。这验证入口文件路径，不等同于 Codex 模型实际执行了规则。
 
-`scripts/tests/remote-cli-e2e.test.mjs` 用模拟 GitHub Release 响应、真实 tar.gz 资产和 CLI 进程，覆盖远程初始化、版本检查、差异预览、错误摘要拒绝、显式更新及最终校验。`npm run smoke:public` 将当前 CLI 打包安装在隔离目录；`npm run smoke:npm -- 0.1.1` 则从 npm 注册表独立安装指定正式版本。两者均在 Go、TypeScript、Unity 临时工程从真实公开 Release 执行同版本闭环，需要访问网络，不放入每次提交的离线 CI。另用旧版 npm CLI 创建的三个工程完成 `0.1.0 → 0.1.1` 真正跨版本的 `check/diff/update --apply/validate`；同版本和跨版本证据分别记录在[发布说明](releasing.md)。
+`scripts/tests/remote-cli-e2e.test.mjs` 用模拟 GitHub Release 响应、真实 tar.gz 资产和 CLI 进程，覆盖远程初始化、版本检查、差异预览、错误摘要拒绝、显式更新及最终校验；其中旧资产没有 `LICENSE`，新资产带有 `LICENSE`，测试会核对许可文本的预览、安装、锁定和漂移检出。独立 npm 打包安装测试也会在六类技术栈工程核对许可文本。`npm run smoke:public` 将当前 CLI 打包安装在隔离目录；`npm run smoke:npm -- 0.1.1` 则从 npm 注册表独立安装指定正式版本。两者均在 Go、TypeScript、Unity 临时工程从真实公开 Release 执行同版本闭环，需要访问网络，不放入每次提交的离线 CI。另用旧版 npm CLI 创建的三个工程完成 `0.1.0 → 0.1.1` 真正跨版本的 `check/diff/update --apply/validate`；同版本和跨版本证据分别记录在[发布说明](releasing.md)。
 
 ## 发布前必须过的门槛
 
