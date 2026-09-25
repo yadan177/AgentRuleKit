@@ -31,6 +31,8 @@ test("独立 npm 包可在六类工程初始化，并完成 Go 工程的显式�
     assert.equal(run(process.execPath, [npmCli, "exec", "--prefix", install, "--", "agent-rule", "--version"]).trim(), packageVersion);
     const source = path.join(root, "source");
     await cp(path.join(repository, "rulepacks"), path.join(source, "rulepacks"), { recursive: true });
+    const license = await readFile(path.join(repository, "LICENSE"), "utf8");
+    await writeFile(path.join(source, "LICENSE"), license);
     const fixtures = [
       { name: "python", marker: "pyproject.toml", content: "[project]\nname = 'packaged-demo'\n", packs: ["python", "project-docs/python"] },
       { name: "go", marker: "go.mod", content: "module example.com/demo\n\ngo 1.22\n", packs: ["go", "project-docs/go"] },
@@ -52,6 +54,8 @@ test("独立 npm 包可在六类工程初始化，并完成 Go 工程的显式�
       assert.match(run(process.execPath, [cli, "validate", project]), /验证通过/);
       assert.match(run(process.execPath, [cli, "check", project]), /最新版本/);
       const lock = JSON.parse(await readFile(path.join(project, ".agent-rules.lock.json"), "utf8"));
+      assert.equal(await readFile(path.join(project, ".agent-rules", "LICENSE"), "utf8"), license, `${fixture.name} 未安装规则源许可文本`);
+      assert.ok(Object.hasOwn(lock.managedFiles, ".agent-rules/LICENSE"), `${fixture.name} 未锁定规则源许可文本`);
       for (const pack of ["common", ...fixture.packs]) assert.ok(lock.rulepacks[pack], `${fixture.name} 未安装 ${pack}`);
       const codexEntry = await readFile(path.join(project, "AGENTS.md"), "utf8");
       assert.ok(codexEntry.indexOf(".agent-rules/overrides.md") < codexEntry.indexOf("已配置规则包"), `${fixture.name} 未优先提示项目覆盖规则`);

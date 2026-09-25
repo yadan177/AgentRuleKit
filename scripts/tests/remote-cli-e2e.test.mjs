@@ -25,7 +25,7 @@ function expectExit(result, code, context) {
   assert.equal(result.status, code, `${context}\n${result.stdout}\n${result.stderr}`);
 }
 
-async function bundle(root, version, sourceCommit, rule) {
+async function bundle(root, version, sourceCommit, rule, license) {
   const directory = path.join(root, `bundle-${version}`);
   const pack = path.join(directory, "rulepacks", "common");
   await mkdir(pack, { recursive: true });
@@ -37,8 +37,9 @@ async function bundle(root, version, sourceCommit, rule) {
   await writeFile(path.join(directory, "agentrulekit-release.json"), JSON.stringify({
     schemaVersion: 1, version, sourceCommit,
   }));
+  if (license !== undefined) await writeFile(path.join(directory, "LICENSE"), license);
   const assetPath = path.join(directory, assetName);
-  await c({ gzip: true, file: assetPath, cwd: directory }, ["agentrulekit-release.json", "rulepacks"]);
+  await c({ gzip: true, file: assetPath, cwd: directory }, ["agentrulekit-release.json", ...(license !== undefined ? ["LICENSE"] : []), "rulepacks"]);
   const bytes = await readFile(assetPath);
   const digest = `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
   const assetUrl = `https://github.com/yadan177/AgentRuleKit/releases/download/v${version}/${assetName}`;
@@ -57,6 +58,7 @@ test("CLI 模拟 GitHub Release 完成远程安装、检查、预览与显式更
     const project = path.join(root, "project");
     const statePath = path.join(root, "release-state.json");
     const installedRule = path.join(project, ".agent-rules", "common", "entry.md");
+    const installedLicense = path.join(project, ".agent-rules", "LICENSE");
     const override = path.join(project, ".agent-rules", "overrides.md");
     await mkdir(project);
     await writeFile(path.join(project, "AGENTS.md"), "# 原有项目说明\n");
@@ -78,7 +80,7 @@ test("CLI 模拟 GitHub Release 完成远程安装、检查、预览与显式更
     expectExit(command(statePath, "check", project), 0, "首次远程版本检查");
 
     await writeFile(override, "# 项目专属规则\n请保留\n");
-    const second = await bundle(root, "0.2.0", "b".repeat(40), "# 新规则\n");
+    const second = await bundle(root, "0.2.0", "b".repeat(40), "# 新规则\n", "Apache License\nVersion 2.0\n");
     await writeFile(statePath, JSON.stringify(second));
     const updateFound = command(statePath, "check", project);
     expectExit(updateFound, 3, "发现远程新版本");
@@ -86,7 +88,11 @@ test("CLI 模拟 GitHub Release 完成远程安装、检查、预览与显式更
     const preview = command(statePath, "diff", project);
     expectExit(preview, 0, "远程差异预览");
     assert.match(preview.stdout, /\+# 新规则/);
+    const licenseDiff = preview.stdout.split("diff --agent-rule .agent-rules/LICENSE")[1]?.split("diff --agent-rule")[0];
+    assert.ok(licenseDiff, "差异预览未列出许可文件");
+    assert.match(licenseDiff, /\+Apache License/);
     assert.equal(await readFile(installedRule, "utf8"), "# 旧规则\n");
+    await assert.rejects(readFile(installedLicense, "utf8"), /ENOENT/);
 
     const rejectedState = structuredClone(second);
     rejectedState.release.assets[0].digest = `sha256:${"0".repeat(64)}`;
@@ -102,14 +108,20 @@ test("CLI 模拟 GitHub Release 完成远程安装、检查、预览与显式更
     expectExit(updated, 0, "显式应用远程更新");
     assert.match(updated.stdout, /已在 .* 应用/);
     assert.equal(await readFile(installedRule, "utf8"), "# 新规则\n");
+    assert.equal(await readFile(installedLicense, "utf8"), "Apache License\nVersion 2.0\n");
     assert.equal(await readFile(override, "utf8"), "# 项目专属规则\n请保留\n");
     assert.equal(await readFile(path.join(project, "keep.md"), "utf8"), "业务文件\n");
     const finalLock = JSON.parse(await readFile(path.join(project, ".agent-rules.lock.json"), "utf8"));
     assert.equal(finalLock.sourceVersion, "0.2.0");
     assert.equal(finalLock.sourceDigest, second.release.assets[0].digest);
     assert.equal(finalLock.sourceCommit, "b".repeat(40));
+    assert.ok(Object.hasOwn(finalLock.managedFiles, ".agent-rules/LICENSE"));
     expectExit(command(statePath, "validate", project), 0, "远程更新后校验");
     expectExit(command(statePath, "check", project), 0, "远程更新后版本检查");
+    await writeFile(installedLicense, "未经审查的手工修改\n");
+    const invalid = command(statePath, "validate", project);
+    expectExit(invalid, 1, "许可文件漂移必须检出");
+    assert.match(invalid.stderr, /managed-file-drift.*\.agent-rules\/LICENSE/);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
