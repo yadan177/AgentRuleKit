@@ -2,7 +2,7 @@
 
 本清单由 `node scripts/generate-provenance-inventory.mjs --write` 从当前 `rulepacks/` 清单和文件内容生成；CI 用 `--check` 检查同步。SHA-256 按 CRLF 转 LF 后的文本计算，以便跨平台复核。它只提供人工复核线索，不判断原创性、许可或公开权限。文件内容变化会改变摘要；已完成的人工授权记录必须针对变更重新核对。`archive/legacy-rules/` 需单独审查。
 
-当前纳入 14 个规则包、116 份 Markdown；4 份包含明确的来源措辞线索，24 份含外部 URL。没有线索或外链不代表内容由本仓库原创；有外链也不代表正文来自该网站。
+当前纳入 14 个规则包、116 份 Markdown；5 份包含明确的来源措辞线索，24 份含外部 URL。没有线索或外链不代表内容由本仓库原创；有外链也不代表正文来自该网站。
 
 ## 规则包汇总
 
@@ -32,10 +32,10 @@
 | [`rulepacks/common/entry.md`](<../rulepacks/common/entry.md>) | `dcbf442758430f13a28c3452ff435cfec8a12ef2a0c609d68ff9aede08e5c132` | — | — |
 | [`rulepacks/go/00-文档总览.md`](<../rulepacks/go/00-文档总览.md>) | `9c29814361d57ce33005db864f9b35b1b076cde8ec8198bc72a54e473b9ba5eb` | L115 | github.com |
 | [`rulepacks/go/13-AI通用入口规则.md`](<../rulepacks/go/13-AI通用入口规则.md>) | `261175f49ca34786a80b4d245ab053910b999d2a5d31a70c3456c800da6e6382` | — | — |
-| [`rulepacks/go/其他规则/01-代码编写规则.md`](<../rulepacks/go/其他规则/01-代码编写规则.md>) | `4c541402bb4f5a31131cbd91cc5c7f642047e41c960edf7bdb4a3acf814d28d7` | — | pkg.go.dev |
+| [`rulepacks/go/其他规则/01-代码编写规则.md`](<../rulepacks/go/其他规则/01-代码编写规则.md>) | `7ea4a9918c635d3b2476a0f3e819a64fb5c577c4659d4aff4b557720de3ce2e8` | L801 | github.com, pkg.go.dev |
 | [`rulepacks/go/其他规则/02-模式设计.md`](<../rulepacks/go/其他规则/02-模式设计.md>) | `7e911ea20f92cbb618cbfc06f2ef5a1ee3b01c94bd641d454ef1e19861e296e2` | — | github.com |
 | [`rulepacks/go/其他规则/03-性能优化.md`](<../rulepacks/go/其他规则/03-性能优化.md>) | `019419212468e074cfc9ba4f0a8b94b79545852d1da2d9f3e0d1f8787ffe3f93` | L8 | github.com, go.dev |
-| [`rulepacks/go/其他规则/04-API设计规则.md`](<../rulepacks/go/其他规则/04-API设计规则.md>) | `bbfe85df66dddf98390c56ceff7d45af4f84291535a2cf0c1a61d0dcc1f8e307` | L121 | github.com |
+| [`rulepacks/go/其他规则/04-API设计规则.md`](<../rulepacks/go/其他规则/04-API设计规则.md>) | `0da96961698d6d757934897871872ac75b09d9f5714c60608a5982408e342e95` | L121 | github.com |
 | [`rulepacks/go/其他规则/05-数据库与持久化.md`](<../rulepacks/go/其他规则/05-数据库与持久化.md>) | `303b807bb4e834efedd032000319e1206b1f47fd46bd3aacbbb9ac535b8137a3` | — | atlasgo.io, github.com, pkg.go.dev |
 | [`rulepacks/go/其他规则/06-项目配置规则.md`](<../rulepacks/go/其他规则/06-项目配置规则.md>) | `60f826dcf6f53b60799a3af4905d73278e9ae602f0b5ee04cd6f0326af7ebab8` | — | github.com |
 | [`rulepacks/go/其他规则/07-日志调试规则.md`](<../rulepacks/go/其他规则/07-日志调试规则.md>) | `3a05104889258fac50893d9582f0bc048c034158f3f0e23e21372850daf97c0c` | — | — |

@@ -2,13 +2,13 @@
 
 本清单由 `node scripts/generate-legacy-archive-inventory.mjs --write` 生成，CI 用 `--check` 检查同步。仅比较 Git 跟踪的当前工作树中 `archive/legacy-rules/` 与 `rulepacks/`、`adapters/` 的 Markdown 文件；SHA-256 按 CRLF 转 LF 后的文本计算。完全相同只说明内容相同，不证明作者、授权或归档可以删除；未找到完全相同的当前文件也不证明内容独有。**本清单不覆盖 Git 历史中已删除或修改的旧内容。**
 
-当前归档 157 份 Markdown；50 份与当前规则正文完全相同，0 份与当前适配器 Markdown 完全相同，107 份在这两个目录未找到完全相同的内容。两类匹配数可能重叠。以上均待人工审查公开权限。
+当前归档 157 份 Markdown；48 份与当前规则正文完全相同，0 份与当前适配器 Markdown 完全相同，109 份在这两个目录未找到完全相同的内容。两类匹配数可能重叠。以上均待人工审查公开权限。
 
 ## 分组汇总
 
 | 归档分组 | 文件数 | 与当前规则正文相同 | 与当前适配器相同 | 无完全相同内容 |
 |---|---:|---:|---:|---:|
-| AIcoding项目开发规范 | 111 | 50 | 0 | 61 |
+| AIcoding项目开发规范 | 111 | 48 | 0 | 63 |
 | AIcoding项目文档编写规范 | 45 | 0 | 0 | 45 |
 | README.md | 1 | 0 | 0 | 1 |
 
@@ -22,10 +22,10 @@
 | [`archive/legacy-rules/AIcoding项目开发规范/AI编程规则文档编写规范/规则文档编写格式规范.md`](<../archive/legacy-rules/AIcoding项目开发规范/AI编程规则文档编写规范/规则文档编写格式规范.md>) | `d763783a806fa76a4331a07a13d4b8733e5b2673549b813f4cc2af096562c501` | [`rulepacks/rule-authoring/规则文档编写格式规范.md`](<../rulepacks/rule-authoring/规则文档编写格式规范.md>) |
 | [`archive/legacy-rules/AIcoding项目开发规范/go-rules/00-文档总览.md`](<../archive/legacy-rules/AIcoding项目开发规范/go-rules/00-文档总览.md>) | `9c29814361d57ce33005db864f9b35b1b076cde8ec8198bc72a54e473b9ba5eb` | [`rulepacks/go/00-文档总览.md`](<../rulepacks/go/00-文档总览.md>) |
 | [`archive/legacy-rules/AIcoding项目开发规范/go-rules/13-AI通用入口规则.md`](<../archive/legacy-rules/AIcoding项目开发规范/go-rules/13-AI通用入口规则.md>) | `db3a1d74e7b9fa27b88de53239e10389db437f7bfd66a42b372d521947d934cc` | — |
-| [`archive/legacy-rules/AIcoding项目开发规范/go-rules/其他规则/01-代码编写规则.md`](<../archive/legacy-rules/AIcoding项目开发规范/go-rules/其他规则/01-代码编写规则.md>) | `4c541402bb4f5a31131cbd91cc5c7f642047e41c960edf7bdb4a3acf814d28d7` | [`rulepacks/go/其他规则/01-代码编写规则.md`](<../rulepacks/go/其他规则/01-代码编写规则.md>) |
+| [`archive/legacy-rules/AIcoding项目开发规范/go-rules/其他规则/01-代码编写规则.md`](<../archive/legacy-rules/AIcoding项目开发规范/go-rules/其他规则/01-代码编写规则.md>) | `4c541402bb4f5a31131cbd91cc5c7f642047e41c960edf7bdb4a3acf814d28d7` | — |
 | [`archive/legacy-rules/AIcoding项目开发规范/go-rules/其他规则/02-模式设计.md`](<../archive/legacy-rules/AIcoding项目开发规范/go-rules/其他规则/02-模式设计.md>) | `7e911ea20f92cbb618cbfc06f2ef5a1ee3b01c94bd641d454ef1e19861e296e2` | [`rulepacks/go/其他规则/02-模式设计.md`](<../rulepacks/go/其他规则/02-模式设计.md>) |
 | [`archive/legacy-rules/AIcoding项目开发规范/go-rules/其他规则/03-性能优化.md`](<../archive/legacy-rules/AIcoding项目开发规范/go-rules/其他规则/03-性能优化.md>) | `2e9b8225813a99af5af074a47dbf27a1036036d9536c087078dd4a38990be759` | — |
-| [`archive/legacy-rules/AIcoding项目开发规范/go-rules/其他规则/04-API设计规则.md`](<../archive/legacy-rules/AIcoding项目开发规范/go-rules/其他规则/04-API设计规则.md>) | `bbfe85df66dddf98390c56ceff7d45af4f84291535a2cf0c1a61d0dcc1f8e307` | [`rulepacks/go/其他规则/04-API设计规则.md`](<../rulepacks/go/其他规则/04-API设计规则.md>) |
+| [`archive/legacy-rules/AIcoding项目开发规范/go-rules/其他规则/04-API设计规则.md`](<../archive/legacy-rules/AIcoding项目开发规范/go-rules/其他规则/04-API设计规则.md>) | `bbfe85df66dddf98390c56ceff7d45af4f84291535a2cf0c1a61d0dcc1f8e307` | — |
 | [`archive/legacy-rules/AIcoding项目开发规范/go-rules/其他规则/05-数据库与持久化.md`](<../archive/legacy-rules/AIcoding项目开发规范/go-rules/其他规则/05-数据库与持久化.md>) | `303b807bb4e834efedd032000319e1206b1f47fd46bd3aacbbb9ac535b8137a3` | [`rulepacks/go/其他规则/05-数据库与持久化.md`](<../rulepacks/go/其他规则/05-数据库与持久化.md>) |
 | [`archive/legacy-rules/AIcoding项目开发规范/go-rules/其他规则/06-项目配置规则.md`](<../archive/legacy-rules/AIcoding项目开发规范/go-rules/其他规则/06-项目配置规则.md>) | `60f826dcf6f53b60799a3af4905d73278e9ae602f0b5ee04cd6f0326af7ebab8` | [`rulepacks/go/其他规则/06-项目配置规则.md`](<../rulepacks/go/其他规则/06-项目配置规则.md>) |
 | [`archive/legacy-rules/AIcoding项目开发规范/go-rules/其他规则/07-日志调试规则.md`](<../archive/legacy-rules/AIcoding项目开发规范/go-rules/其他规则/07-日志调试规则.md>) | `3a05104889258fac50893d9582f0bc048c034158f3f0e23e21372850daf97c0c` | [`rulepacks/go/其他规则/07-日志调试规则.md`](<../rulepacks/go/其他规则/07-日志调试规则.md>) |

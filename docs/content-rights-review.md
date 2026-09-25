@@ -29,7 +29,7 @@
 
 | 审查项 | 决策或证据 | 状态 |
 |---|---|---|
-| `archive/legacy-rules/` 当前内容及 Git 历史是否可公开；若不能，拟采用什么公开范围与历史处理方案 | [逐文件哈希对照清单](legacy-archive-inventory.md)已生成：157 份中目前 50 份与规则正文完全相同、107 份无完全相同的当前文件；来源标注或格式整理会改变哈希，内容权利和公开范围仍待仓库所有者确认 | 待核 |
+| `archive/legacy-rules/` 当前内容及 Git 历史是否可公开；若不能，拟采用什么公开范围与历史处理方案 | [逐文件哈希对照清单](legacy-archive-inventory.md)已生成：157 份中目前 48 份与规则正文完全相同、109 份无完全相同的当前文件；来源标注或格式整理会改变哈希，内容权利和公开范围仍待仓库所有者确认 | 待核 |
 | Git 提交者邮箱等元数据是否可公开 | [当前可达历史复扫](publication-audit-2026-09-25.md)发现 1 个个人邮箱及 1 个 GitHub 合并机器人地址；仓库所有者已概括确认 Git 历史可公开，但个人邮箱的具体公开意愿仍需与相关本人确认 | 待核 |
 | `LICENSE` 的 Apache-2.0 是否仅覆盖有权许可的自有内容；第三方内容如何处理 | 待权利人与仓库所有者确认 | 待核 |
 | 示例、截图、客户名称、内部域名和非标准凭据的人工复核 | 待填写 | 待核 |
@@ -41,8 +41,8 @@
 | 上游与本地位置 | 已查到的线索 | 仍需内容负责人确认 |
 |---|---|---|
 | 阿里 P3C：`rulepacks/java/00-文档总览.md` 及 Java 规则包 | [P3C 固定提交的 README](https://github.com/alibaba/p3c/blob/6c59c8c36ecd8722c712d5685b8c3822c1c8b030/README.md) 指向《Java开发手册（黄山版）》PDF；同一提交有 [Apache-2.0 许可文件](https://github.com/alibaba/p3c/blob/6c59c8c36ecd8722c712d5685b8c3822c1c8b030/license.txt)。本仓库总览称该版为“源材料”。 | 逐份说明哪些段落和示例为独立撰写、改写或引用；核对 PDF 及相关材料的适用许可、署名和修改说明要求。不能仅凭仓库许可证或“增加现代 Java 内容”认定全部 Java 规则可分发。 |
-| Uber Go 指南：`rulepacks/go/00-文档总览.md`、`rulepacks/go/其他规则/03-性能优化.md` | [固定提交的 Performance 章节](https://github.com/uber-go/guide/blob/1d60a91aa5e87d443002e23c21903c49489dbde5/style.md#performance) 明确写有“性能专项建议只适用于热路径”的英文原句，并有 `fmt`/`strconv`、固定字符串转 `[]byte`、map/slice 容量示例；本规则对应译述及若干示例与之相近。上游仓库有 [Apache-2.0 许可文件](https://github.com/uber-go/guide/blob/1d60a91aa5e87d443002e23c21903c49489dbde5/LICENSE)。正式规则已补上固定版本来源与上游许可链接，但已发布版本及归档旧版未因此自动变更。 | 内容负责人仍须核对各段落、代码示例的形成过程、使用范围及 Apache-2.0 的复制许可、署名、修改说明和通知要求；确认安装到业务项目及 Release 资产时如何携带必要材料。上游许可证存在、规则中有链接，都不等于这些义务已履行，也不把该文件计为“已核”。 |
-| 未定位的本地来源：`rulepacks/go/其他规则/04-API设计规则.md` | 文中写有“源材料：序列化结构体使用字段标签.md”；当前文件、归档及本次可达 Git 历史的文件路径中均未找到同名文件。 | 找到原始材料及作者、形成过程与授权依据，或由内容负责人核实该标注是否过时；在查明前不要把该段示例认定为自有内容。 |
+| Uber Go 指南：`rulepacks/go/00-文档总览.md`、`rulepacks/go/其他规则/01-代码编写规则.md`、`rulepacks/go/其他规则/03-性能优化.md` | [固定提交的 Performance 章节](https://github.com/uber-go/guide/blob/1d60a91aa5e87d443002e23c21903c49489dbde5/style.md#performance) 有热路径原句与 `fmt`/`strconv`、固定字符串转 `[]byte`、容器容量示例；[Use field tags in marshaled structs 章节](https://github.com/uber-go/guide/blob/1d60a91aa5e87d443002e23c21903c49489dbde5/style.md#use-field-tags-in-marshaled-structs) 的 `Stock` 示例与本地 Go 01 第 7.1 节相近。上游仓库有 [Apache-2.0 许可文件](https://github.com/uber-go/guide/blob/1d60a91aa5e87d443002e23c21903c49489dbde5/LICENSE)。正式规则已补固定版本来源与上游许可链接；已发布版本及归档旧版未因此自动变更。 | 内容负责人仍须核对各段落、代码示例的形成过程、使用范围及 Apache-2.0 的复制许可、署名、修改说明和通知要求；确认安装到业务项目及 Release 资产时如何携带必要材料。上游许可证存在、规则中有链接，都不等于这些义务已履行，也不把文件计为“已核”。 |
+| 未定位的原标注：`rulepacks/go/其他规则/04-API设计规则.md` | 原文称“源材料：序列化结构体使用字段标签.md”；当前文件、归档及本机可达 Git 历史中未找到同名独立文件。正式 Go 01 的[第 7.1 节](../rulepacks/go/其他规则/01-代码编写规则.md#71-序列化结构体使用字段标签)有同名标题和 `Stock` 示例，并与 Uber 指南主题相近；Go 04 的 `User` 示例并不等同于该上游示例。Go 04 已将失效文件名改为可用的内部章节链接，并保留原标注以供追查。 | 同名章节只能确定现在有可参考的内部规则，不能证明原标注文件或 `User` 示例的实际作者。内容负责人需核对形成过程与授权依据；查明前不要将该段示例认定为自有内容。 |
 
 `archive/legacy-rules/` 中有对应的 Java、Go 旧文件；公开仓库时它们仍需单独按归档范围审查。上述链接固定了本次核对的上游提交，但不代替本仓库逐文件的相似度、权属和隐私人工审查。
 
