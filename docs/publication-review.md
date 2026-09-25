@@ -17,7 +17,7 @@
 
 - [x] 对分支快照 `40475ec` 的本地可达 Git 历史运行[脱敏模式复扫](publication-audit-2026-09-24.md#可达-git-历史模式复扫分支快照-40475ec)；1 处历史 Sentry 形式 URL 用户信息候选与 1 个提交元数据邮箱仍待人工判断。此项仅代表模式筛查完成，不代表下面的人工审查通过。
 - [ ] 审查当前文件和完整 Git 历史中的凭据、个人信息、内部域名、客户资料、私有项目名及可追溯的业务代码；模式扫描只能辅助，不能替代人工审查。
-- [ ] 复核依赖、GitHub Actions 权限、Release 资产验证与插件 Hook 的联网行为。
+- [x] 已复核当前依赖、GitHub Actions 权限、Release 资产验证与插件 Hook 的联网行为（2026-09-25）：`npm audit --omit=dev` 和完整 `npm audit` 均报告 0 条当前已知漏洞；CI 默认 `contents: read`，仅公开版本标签的 Release 作业使用 `contents: write`，npm 发布工作流使用 `contents: read` 与 `id-token: write`；`verify-published-release.mjs` 再次通过 `v0.1.0` 的摘要与来源提交校验；Hook 仅对锁文件声明的 GitHub 来源查询 `api.github.com` 最新 Release，缓存写在 `PLUGIN_DATA`，不自动修改项目。此项是当前配置和已知漏洞库的技术复核，不保证将来依赖无漏洞，也不替代以下人工隐私与权利审查。
 - [ ] 确认示例工程、文档截图和规则模板没有暴露不宜公开的信息。
 
 ## 发布决策与验收
