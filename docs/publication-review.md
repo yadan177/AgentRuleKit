@@ -1,6 +1,6 @@
 # 公开发布前审查清单
 
-当前决定：仓库所有者已在本次对话中确认 `rulepacks/`、`archive/legacy-rules/` 和 Git 历史可以公开，并同意将仓库改为 **Public**。这是所有者的授权声明，不代表开发代理独立核实了每份材料的权属。GitHub Release 与 npm 发布仍须分别通过下述技术门槛；npm 账户认证和首次发布不能由此项授权推定已完成。
+当前决定：仓库所有者已在本次对话中确认 `rulepacks/`、`archive/legacy-rules/` 和 Git 历史可以公开；仓库已于 2026-09-25 改为 **Public**。这是所有者的授权声明，不代表开发代理独立核实了每份材料的权属。GitHub Release 与 npm 发布仍须分别通过下述技术门槛；npm 账户认证和首次发布不能由此项授权推定已完成。
 
 已完成的机器筛查范围、结果和限制见 [2026-09-24 自动筛查记录](publication-audit-2026-09-24.md)。[逐文件来源索引](rulepack-provenance-inventory.md)与[内容权利复核表](content-rights-review.md)用于人工审查；机器筛查不代替下面的人工授权确认。
 
@@ -23,6 +23,7 @@
 ## 发布决策与验收
 
 - [x] 所有者明确确认当前规则正文、历史归档和可达 Git 历史可公开，并授权仓库改为 Public（本次对话）。公开将同时使既有 GitHub Actions 历史与日志可见；开发代理未把机器扫描等同于内容授权。
+- [x] GitHub 仓库已按所有者授权改为 Public，并通过 GitHub API 核对可见性（2026-09-25）。
 - [x] 用户确认已在 Codex 桌面端安装插件、审查 Hook 并作出是否信任的决定（本次对话）。尚未提供桌面端版本、测试工程、四个 Skills 的逐项试用结果或 Hook 信任选择，详细结果仍须在[桌面端验收记录](codex-desktop-acceptance.md)中补充，不得声称开发代理亲自观察到这些行为。
 
 - [x] 四个 Codex Skills 已用 Codex 内置 `skill-creator/scripts/quick_validate.py` 完成一次本地格式校验（2026-09-24）；Codex 内置 `plugin-creator/scripts/validate_plugin.py` 对插件 manifest、Skills 等完成本地校验（2026-09-24）。`npm run check` 持续检查仓库内插件入口、Skill 基本结构、Hook 声明及行为。上述校验不等同于实际安装验收。

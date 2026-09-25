@@ -17,7 +17,7 @@ AgentRuleKit 是面向 AI 编程代理的平台无关工程规则与工作流分
 - GitHub Release 规则包下载与 SHA-256 验证、Codex 会话开始时每天至多一次的后台更新检查。
 - 独立 npm CLI 构建、仓库插件市场入口和跨平台 CI 配置。
 
-公开仓库、GitHub Release 和 npm 首次发布尚未完成，因此外部用户暂时不能执行默认的远程 `init`。非 Codex 自动生成器尚未实现。
+GitHub 仓库现已公开，但首个 GitHub Release 和 npm 发布尚未完成，因此外部用户暂时不能执行默认的远程 `init`。非 Codex 自动生成器尚未实现。
 
 ## 业务项目如何使用
 
