@@ -37,5 +37,6 @@
 - [ ] 按[Codex 桌面端验收记录](codex-desktop-acceptance.md)补齐四个 Skills 的逐项试用、Hook 信任选择及实际会话调度结果。用户的概括性确认与 CLI 隔离验收均不能替代这些细节。
 - [x] 仓库所有者明确确认公开范围并同意设为 Public；具体来源证据仍由内容提供方负责保存或后续补录。
 - [ ] 发布第二个正式版本后，按[发布说明](releasing.md)完成真实跨版本 `check/diff/update --apply/validate` 与更新提醒验收；同版本无变更不能代替此项。
-- [ ] 在 npm 包设置中配置 `.github/workflows/publish-npm.yml` 的 GitHub Actions 可信发布者，再验收后续标签的 OIDC 发布；不要重发已存在的 `0.1.0`。
+- [x] 已在 npm 包设置中配置 GitHub Actions 可信发布者；`npm trust list agentrulekit` 返回 `yadan177/AgentRuleKit`、`publish-npm.yml` 以及 `publish, stage publish` 权限（2026-09-25）。
+- [ ] 在下一个正式版本的标签上验收 OIDC 发布；不要重发已存在的 `0.1.0`。建立可信关系本身不能证明工作流实际发布成功。
 - [x] README 已分别说明公开 GitHub Release 与 npm CLI 可用，同时保留桌面端和真实跨版本验收的边界。
