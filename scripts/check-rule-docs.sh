@@ -81,8 +81,9 @@ files.each do |file|
   lines = File.readlines(file, encoding: 'UTF-8')
   relative = file.delete_prefix(repo_root + '/')
   adapter = relative.include?('/适配器模板/')
+  package_index = relative == 'rulepacks/project-docs/README.md'
   first = lines.first.to_s.chomp
-  unless adapter || first.match?(/^# \d{2} - /)
+  unless adapter || package_index || first.match?(/^# \d{2} - /)
     findings << "H1 #{relative}:1 #{first}"
     counts[:h1] += 1
   end
@@ -239,7 +240,6 @@ conflicts = {
   /fetch 默认不带 cookie/ => 'incorrect Fetch credentials default',
   /context\.WithTimeout.*正则/ => 'non-cancellable regexp timeout claim',
   /panic 不会.*整个进程/ => 'incorrect Go panic process behavior',
-  /本文件适用于 Java 项目安全红线/ => 'Java scope copied into JavaScript security rules',
   /^\*\*POST 必须带 CSRF token/ => 'unconditional CSRF requirement',
   /legacy 装饰器.*已废弃/ => 'legacy decorators treated as universally deprecated',
   /experimentalDecorators: false.*用 TC39/ => 'unconditional standard decorators configuration',
@@ -307,6 +307,11 @@ conflicts = {
 files.each do |file|
   relative = file.delete_prefix(repo_root + '/')
   File.foreach(file, encoding: 'UTF-8').with_index(1) do |line, number|
+    if relative.match?(%r{\Arulepacks/(?:javascript|typescript)/.*安全规则\.md\z}) &&
+       line.match?(/本文件适用于 Java 项目安全红线/)
+      findings << "CONFLICT #{relative}:#{number} Java scope copied into JavaScript/TypeScript security rules"
+      counts[:conflict] += 1
+    end
     conflicts.each do |pattern, label|
       next unless line.match?(pattern)
       findings << "CONFLICT #{relative}:#{number} #{label}"

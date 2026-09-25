@@ -1,0 +1,20 @@
+{
+  "name": "agentrulekit",
+  "interface": {
+    "displayName": "AI开发工具箱"
+  },
+  "plugins": [
+    {
+      "name": "agent-rule-kit",
+      "source": {
+        "source": "local",
+        "path": "./plugins/agent-rule-kit"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

@@ -1,18 +1,28 @@
 {
-  "name": "@agentrulekit/cli",
+  "name": "agentrulekit",
   "version": "0.1.0",
-  "private": true,
+  "description": "AI开发工具箱：跨项目安装、检查和安全更新 Codex 工程规则",
+  "license": "Apache-2.0",
+  "repository": "https://github.com/yadan177/AgentRuleKit",
+  "engines": { "node": ">=22" },
+  "files": ["dist"],
+  "publishConfig": { "access": "public" },
   "type": "module",
   "bin": {
     "agent-rule": "./dist/index.js"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "npm run clean && esbuild src/index.ts --bundle --platform=node --format=esm --target=node22 --outfile=dist/index.js --external:tar --external:yaml",
     "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
     "dev": "npm run build && node dist/index.js",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "tar": "^7.5.22",
+    "yaml": "^2.8.1"
+  },
+  "devDependencies": {
+    "@agentrulekit/adapter-codex": "0.1.0",
     "@agentrulekit/core": "0.1.0"
   }
 }

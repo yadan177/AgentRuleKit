@@ -1,21 +1,38 @@
-# AgentRuleKit
+# AgentRuleKit（AI开发工具箱）
 
 AgentRuleKit 是面向 AI 编程代理的平台无关工程规则与工作流分发系统。Codex 是第一个实现的适配器；Cursor、TRAE、Qoder 等工具后续通过相同的适配器边界接入。
 
 ## 当前状态
 
-`0.1.0` 是可运行的基础版本，当前包含：
+`0.1.0` 正在完成首个公开版本，当前代码包含：
 
 - 基于证据检测技术栈的 TypeScript 核心包。
-- 支持 `detect`、`init`、`generate`、`check` 和 `validate` 的 `agent-rule` CLI。
+- 支持 `detect`、`init`、`validate`、`check`、`diff` 和 `update` 的 `agent-rule` CLI。
 - 管理 `AGENTS.md` 受控区块的 Codex 适配器。
 - 包含四个初始 Skills 的 Codex 插件。
 - 规则包、项目配置、锁文件和适配器 Schema。
 - 已迁移的 14 个规则包，共 116 份开发与技术文档规则。
 - Codex 入口模板、TRAE 手动指南和 Qoder 入口模板归档。
-- 将规则真实安装到业务工程并检测受管文件漂移的本地工作区流程。
+- 将规则真实安装到业务工程，预览差异后再应用更新；发生受管文件漂移或未知文件碰撞时拒绝覆盖。
+- GitHub Release 规则包下载与 SHA-256 验证、Codex 会话开始时每天至多一次的后台更新检查。
+- 独立 npm CLI 构建、仓库插件市场入口和跨平台 CI 配置。
 
-远程规则下载、远程版本更新和非 Codex 自动生成器尚未实现。
+GitHub 仓库现已公开，但首个 GitHub Release 和 npm 发布尚未完成，因此外部用户暂时不能执行默认的远程 `init`。非 Codex 自动生成器尚未实现。
+
+## 业务项目如何使用
+
+公开发布完成后，在个人电脑安装 CLI；Codex 插件可另行安装到个人 Codex 环境。规则本身安装在每个业务项目的 `.agent-rules/` 中并提交 Git：
+
+```bash
+npm install -g agentrulekit
+agent-rule detect /absolute/path/to/project
+agent-rule init /absolute/path/to/project
+agent-rule validate /absolute/path/to/project
+```
+
+`init` 只在没有 `agent-rules.yaml` 的项目执行。它检测技术栈，从官方 GitHub Release 下载并校验规则包；已有 `AGENTS.md` 的非受管内容会保留。完整步骤见 [安装与更新](docs/installation.md)。
+
+更新分成三步：`check` 发现新版本，`diff` 让人审查，`update --apply` 才修改项目文件。自动检查仅提醒，不会自动应用。项目本地覆盖规则和未知文件受保护。
 
 ## 迁移状态
 
@@ -25,7 +42,7 @@ AgentRuleKit 是面向 AI 编程代理的平台无关工程规则与工作流分
 
 ## 本地开发
 
-环境要求：Node.js 20 或更高版本，以及 npm。
+环境要求：Node.js 22 或更高版本，以及 npm。
 
 ```bash
 npm install
@@ -36,11 +53,13 @@ node packages/cli/dist/index.js detect .
 初始化一个临时或外部测试工程：
 
 ```bash
-node packages/cli/dist/index.js init /absolute/path/to/project
+node packages/cli/dist/index.js init /absolute/path/to/project --source-workspace /absolute/path/to/AgentRuleKit
 node packages/cli/dist/index.js validate /absolute/path/to/project
 ```
 
-在没有审查受管文件范围前，不要对已有业务工程直接运行 `init`。
+也可以运行 `npm run demo:local`，让脚本在独立临时工程中完整演示检测、安装、检查、差异预览和显式更新；默认自动清理，`npm run demo:local -- --keep` 可保留工程供检查。详见[本地试用示例](examples/README.md)。
+
+首版阶段和验收标准见 [开发与跑通计划](docs/development-plan.md)；发布流程和仍需完成的外部前提见 [发布说明](docs/releasing.md)。在没有审查受管文件范围前，不要对已有业务工程直接运行 `init`。
 
 ## 仓库结构
 

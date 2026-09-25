@@ -1,7 +1,7 @@
 # 06 - Java Web/API 设计规则
 
-> 🟢 本文件适用于 Java 项目的 Web API 设计（RESTful/Controller/参数校验/限流等）。
-> 🔴 不适用：业务逻辑实现、UI 样式细节、数据库 schema 设计
+> - 🟢 本文件适用于 Java 项目的 Web API 设计（RESTful/Controller/参数校验/限流等）。
+> - 🔴 不适用：业务逻辑实现、UI 样式细节、数据库 schema 设计
 
 ---
 
@@ -106,8 +106,6 @@
 - ❌ 过长嵌套：`/api/companies/{c}/departments/{d}/employees/{e}/projects/{p}/tasks`（5 层）
 - ❌ Query String 用作路径语义：`/api/orders?id=123` 应该是 `/api/orders/123`
 
----
-
 ## 2. Controller 编写规范
 
 ### 2.1 Controller 应薄
@@ -188,8 +186,6 @@ public ApiResponse<OrderDTO> createOrder(@Valid @RequestBody CreateOrderRequest 
 - Controller 命名：`XxxController`（不带 `Controller` 后缀的也算标准，但带后缀更清晰）
 - Controller 放接口层包：`interfaces.controller` 或 `controller`
 - 一个 Controller 不超过 30 个端点（多了就拆，按业务域拆）
-
----
 
 ## 3. 参数校验（Bean Validation）
 
@@ -329,8 +325,6 @@ public class UserDTO {
 - 重定向到用户可控 URL 时禁止（防止开放重定向漏洞）
 
 
----
-
 ## 4. 统一响应格式
 
 详细 `ApiResponse` 设计见 见 03-异常处理规则 § 6.2。这里补充 **Web 层的统一响应规范**。
@@ -418,8 +412,6 @@ public ApiResponse<PageResponse<OrderDTO>> list(
 - 文件下载：`Content-Type: application/octet-stream`，响应体直接是字节流，不包装 JSON
 - 文件上传：`multipart/form-data`，参数用 `@RequestParam("file") MultipartFile`
 - 大文件分片上传：客户端先调 `POST /files/init` 获取 uploadId，再分片上传 `PUT /files/{uploadId}/parts/{partNumber}`，最后 `POST /files/{uploadId}/complete` 合并
-
----
 
 ## 5. 接口文档（OpenAPI 3 / Swagger）
 
@@ -517,8 +509,6 @@ public ApiResponse<Void> delete(@PathVariable Long id) { ... }
 )
 ```
 
-
----
 
 ## 6. 接口幂等性
 
@@ -629,8 +619,6 @@ ALTER TABLE orders ADD UNIQUE INDEX uk_order_no (order_no);
 
 - **资金相关接口必须 2 种以上幂等方案组合**（token + 唯一索引 / token + 状态机）
 
----
-
 ## 7. 限流 / 熔断 / 降级
 
 ### 7.1 限流必要性
@@ -730,8 +718,6 @@ private Order fallback(CreateOrderRequest req, Throwable t) {
 - 限流触发返回 HTTP `429 Too Many Requests`
 - 业务码统一用 `"50901"`（"系统繁忙"系列）
 
-
----
 
 ## 8. 跨域（CORS）
 

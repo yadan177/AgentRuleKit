@@ -46,10 +46,29 @@ export interface ProjectConfig {
 export interface ProjectLock {
   schemaVersion: 1;
   toolkitVersion: string;
+  sourceType: "workspace" | "github";
   source: string;
+  sourceVersion?: string;
+  sourceDigest?: string;
+  sourceCommit?: string;
   rulepacks: Record<string, string>;
   targets: Record<string, string>;
   managedFiles: Record<string, string>;
+  managedBlockDigest: string;
+}
+
+export interface ProjectChange {
+  path: string;
+  action: "add" | "modify" | "remove";
+  before?: string;
+  after?: string;
+}
+
+export interface ProjectPlan {
+  changes: ProjectChange[];
+  conflicts: ValidationIssue[];
+  from: Record<string, string>;
+  to: Record<string, string>;
 }
 
 export interface RulePackManifest {

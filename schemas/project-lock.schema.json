@@ -3,15 +3,20 @@
   "$id": "https://agentrulekit.dev/schemas/project-lock.schema.json",
   "title": "AgentRuleKit project lock",
   "type": "object",
-  "required": ["schemaVersion", "toolkitVersion", "source", "rulepacks", "targets", "managedFiles"],
+  "required": ["schemaVersion", "toolkitVersion", "sourceType", "source", "rulepacks", "targets", "managedFiles", "managedBlockDigest"],
   "properties": {
     "$schema": { "type": "string" },
     "schemaVersion": { "const": 1 },
-    "toolkitVersion": { "type": "string" },
-    "source": { "type": "string" },
-    "rulepacks": { "type": "object", "additionalProperties": { "type": "string" } },
-    "targets": { "type": "object", "additionalProperties": { "type": "string" } },
-    "managedFiles": { "type": "object", "additionalProperties": { "type": "string" } }
+    "toolkitVersion": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+([-+][A-Za-z0-9.-]+)?$" },
+    "sourceType": { "enum": ["workspace", "github"] },
+    "source": { "type": "string", "minLength": 1 },
+    "sourceVersion": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+([-+][A-Za-z0-9.-]+)?$" },
+    "sourceDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "sourceCommit": { "type": "string", "pattern": "^[a-f0-9]{40}([a-f0-9]{24})?$" },
+    "rulepacks": { "type": "object", "minProperties": 1, "additionalProperties": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+([-+][A-Za-z0-9.-]+)?$" } },
+    "targets": { "type": "object", "minProperties": 1, "maxProperties": 1, "additionalProperties": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+([-+][A-Za-z0-9.-]+)?$" } },
+    "managedFiles": { "type": "object", "maxProperties": 5000, "additionalProperties": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" } },
+    "managedBlockDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
   },
   "additionalProperties": false
 }
