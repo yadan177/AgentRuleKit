@@ -24,7 +24,7 @@ import {
 } from "@agentrulekit/core";
 import type { DetectionResult, ProjectChange, ProjectPlan } from "@agentrulekit/core";
 
-const VERSION = "0.1.0";
+const VERSION = "0.1.1";
 const DEFAULT_REPOSITORY = "yadan177/AgentRuleKit";
 
 function printHelp(): void {

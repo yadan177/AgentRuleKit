@@ -1,7 +1,7 @@
 {
   "$schema": "../../schemas/rulepack.schema.json",
   "id": "typescript",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "status": "ready",
   "kind": "development",
   "entry": "09-AI通用入口规则.md",

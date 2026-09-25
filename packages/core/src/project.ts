@@ -31,7 +31,7 @@ import type {
   ValidationResult,
 } from "./types.js";
 
-const TOOLKIT_VERSION = "0.1.0";
+const TOOLKIT_VERSION = "0.1.1";
 const PACK_ID_PATTERN = /^[a-z0-9][a-z0-9/-]*$/;
 const PACK_VERSION_PATTERN = /^\d+\.\d+\.\d+$/;
 const VERSION_PATTERN = /^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?$/;

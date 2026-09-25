@@ -29,7 +29,7 @@
 
 | 文件 | 规范化文本 SHA-256 | 来源线索行 | 外链域名 |
 |---|---|---|---|
-| [`rulepacks/common/entry.md`](<../rulepacks/common/entry.md>) | `1d368a68ad011d4c5c72831a707be90743ace1a0b2bc0bbe4bb81fc6353cc46b` | — | — |
+| [`rulepacks/common/entry.md`](<../rulepacks/common/entry.md>) | `dcbf442758430f13a28c3452ff435cfec8a12ef2a0c609d68ff9aede08e5c132` | — | — |
 | [`rulepacks/go/00-文档总览.md`](<../rulepacks/go/00-文档总览.md>) | `9c29814361d57ce33005db864f9b35b1b076cde8ec8198bc72a54e473b9ba5eb` | L115 | github.com |
 | [`rulepacks/go/13-AI通用入口规则.md`](<../rulepacks/go/13-AI通用入口规则.md>) | `261175f49ca34786a80b4d245ab053910b999d2a5d31a70c3456c800da6e6382` | — | — |
 | [`rulepacks/go/其他规则/01-代码编写规则.md`](<../rulepacks/go/其他规则/01-代码编写规则.md>) | `4c541402bb4f5a31131cbd91cc5c7f642047e41c960edf7bdb4a3acf814d28d7` | — | pkg.go.dev |
