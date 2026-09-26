@@ -25,3 +25,5 @@ Release 和 npm 发布作业都要求仓库已经是 Public；Private 状态下�
 Release 更新不会自动修改业务项目。每个项目由成员查看差异后决定何时运行 `update --apply`。
 
 后续版本的 GitHub 规则包 Release 资产会在根目录附带本仓库的 `LICENSE`，安装器会把它作为 `.agent-rules/LICENSE` 纳入业务项目的受管文件与更新差异；解包器仍接受旧版不含该文件的资产。已发布的 `v0.1.0`、`v0.1.1` 资产不会被追溯修改，旧版规则安装不会凭空生成许可文本。附带仓库许可文本不代表各规则文件的第三方来源或授权已完成逐项复核；这些问题继续按[内容权利复核表](content-rights-review.md)处理。
+
+从 `v0.1.2` 起，npm 发布前的 `verify-published-release.mjs` 会下载真实 Release 资产，将其中的 `LICENSE` 与标签检出的仓库文件逐字节核对；发布后的 `smoke:public`、`smoke:npm` 还会检查业务项目中已安装并锁定的 `.agent-rules/LICENSE`。`v0.1.2` 在此处仅是下一版的校验门槛，不表示该版本已经发布。
