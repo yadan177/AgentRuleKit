@@ -4,7 +4,7 @@ import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { parse, stringify } from "yaml";
 
 const repository = fileURLToPath(new URL("../../", import.meta.url));
@@ -173,7 +173,7 @@ test("CLI 卸载先预览再应用，保留项目本地规则且无需联网", a
     assert.equal(await readFile(lockPath, "utf8"), before);
     const denyNetwork = path.join(root, "deny-network.mjs");
     await writeFile(denyNetwork, "globalThis.fetch = () => { throw new Error('卸载不应联网'); };\n");
-    const applied = spawnSync(process.execPath, ["--import", denyNetwork, cli, "uninstall", "--apply", target], { encoding: "utf8" });
+    const applied = spawnSync(process.execPath, ["--import", pathToFileURL(denyNetwork).href, cli, "uninstall", "--apply", target], { encoding: "utf8" });
     expectExit(applied, 0, "应用卸载");
     assert.match(applied.stdout, /已在 .* 卸载 AgentRuleKit 项目规则/);
     assert.equal(await readFile(overridePath, "utf8"), "# 本地规则\n");
