@@ -1,6 +1,6 @@
 {
   "id": "bootstrap",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "status": "implemented-in-codex",
   "intent": "检测项目技术栈并在不覆盖未知文件的前提下初始化 AgentRuleKit"
 }

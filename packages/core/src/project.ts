@@ -33,7 +33,7 @@ import type {
   ValidationResult,
 } from "./types.js";
 
-const TOOLKIT_VERSION = "0.1.2";
+const TOOLKIT_VERSION = "0.1.3";
 const PACK_ID_PATTERN = /^[a-z0-9][a-z0-9/-]*$/;
 const PACK_VERSION_PATTERN = /^\d+\.\d+\.\d+$/;
 const VERSION_PATTERN = /^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?$/;
@@ -710,7 +710,13 @@ async function planUninstallInternal(root: string, adapter: TargetAdapter, ownsW
   const entryContent = await readFile(entryPath, "utf8");
   const block = extractManagedBlock(entryContent, adapter);
   if (!block) throw new Error(`${adapter.entryFile} 中没有完整的 AgentRuleKit 受控区块`);
-  const entryAfter = entryContent === `${block}\n` ? undefined : entryContent.replace(block, "");
+  let entryAfter: string | undefined;
+  if (entryContent !== `${block}\n`) {
+    const start = entryContent.indexOf(block);
+    const prefix = entryContent.slice(0, start);
+    const suffix = entryContent.slice(start + block.length);
+    entryAfter = `${prefix.endsWith("\n\n") ? prefix.slice(0, -1) : prefix}${suffix.startsWith("\n") ? suffix.slice(1) : suffix}`;
+  }
   const changes: ProjectChange[] = [];
   for (const relativePath of Object.keys(lock.managedFiles).sort()) {
     changes.push({ path: relativePath, action: "remove", before: await readFile(resolveInside(resolvedRoot, relativePath), "utf8") });
