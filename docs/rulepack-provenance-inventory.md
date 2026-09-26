@@ -30,7 +30,7 @@
 | 文件 | 规范化文本 SHA-256 | 来源线索行 | 外链域名 |
 |---|---|---|---|
 | [`rulepacks/common/entry.md`](<../rulepacks/common/entry.md>) | `dcbf442758430f13a28c3452ff435cfec8a12ef2a0c609d68ff9aede08e5c132` | — | — |
-| [`rulepacks/go/00-文档总览.md`](<../rulepacks/go/00-文档总览.md>) | `9c29814361d57ce33005db864f9b35b1b076cde8ec8198bc72a54e473b9ba5eb` | L115 | github.com |
+| [`rulepacks/go/00-文档总览.md`](<../rulepacks/go/00-文档总览.md>) | `015228d53a2611b962ac36d6380f91e1eacb8c2c2b37ab0b37576aefe59f036a` | L115 | github.com |
 | [`rulepacks/go/13-AI通用入口规则.md`](<../rulepacks/go/13-AI通用入口规则.md>) | `261175f49ca34786a80b4d245ab053910b999d2a5d31a70c3456c800da6e6382` | — | — |
 | [`rulepacks/go/其他规则/01-代码编写规则.md`](<../rulepacks/go/其他规则/01-代码编写规则.md>) | `7ea4a9918c635d3b2476a0f3e819a64fb5c577c4659d4aff4b557720de3ce2e8` | L801 | github.com, pkg.go.dev |
 | [`rulepacks/go/其他规则/02-模式设计.md`](<../rulepacks/go/其他规则/02-模式设计.md>) | `7e911ea20f92cbb618cbfc06f2ef5a1ee3b01c94bd641d454ef1e19861e296e2` | — | github.com |
@@ -44,7 +44,7 @@
 | [`rulepacks/go/其他规则/10-代码风格规则.md`](<../rulepacks/go/其他规则/10-代码风格规则.md>) | `7d2503022943a77cc0773ed76336a17eed4bed9902dcbb265fe72ae30bf45a2e` | — | golangci-lint.run |
 | [`rulepacks/go/其他规则/11-测试与可观测性.md`](<../rulepacks/go/其他规则/11-测试与可观测性.md>) | `87b6c2f77246c40be005be4867b6354470a59fba0eba9a825e8ae9665763247c` | — | prometheus.io |
 | [`rulepacks/go/其他规则/12-安全规则.md`](<../rulepacks/go/其他规则/12-安全规则.md>) | `8be05382160aff6aacdde1294587c4cbac8b4d679279540ac1ff74d1bc3909cf` | — | 169.254.169.254, admin.example.com, app.example.com, owasp.org |
-| [`rulepacks/java/00-文档总览.md`](<../rulepacks/java/00-文档总览.md>) | `de93b7a00450a4a08a209ed39c418e9857c9489763f5db9e9eeae82f189f7255` | L118 | github.com |
+| [`rulepacks/java/00-文档总览.md`](<../rulepacks/java/00-文档总览.md>) | `66e9a4c3f7f61af694c62b801ab5d6e7d13dcbe14a0d81b2b14a157d28c7e13d` | L118 | github.com |
 | [`rulepacks/java/14-AI通用入口规则.md`](<../rulepacks/java/14-AI通用入口规则.md>) | `a636566e9bdb744ee71f265e4ae75a1ff855c35e7cdca68ab1c046643de4e068` | — | — |
 | [`rulepacks/java/其他规则/01-代码编写规则.md`](<../rulepacks/java/其他规则/01-代码编写规则.md>) | `43f5fdbbdaac7f36a6fa3065ddd55626b405cdc024604f39de3db05bd045ef86` | — | — |
 | [`rulepacks/java/其他规则/02-代码风格规则.md`](<../rulepacks/java/其他规则/02-代码风格规则.md>) | `9e64690deec7a92d321bbbaccdf6f9898ab9562cc7632ffea117a24cbfd58372` | — | checkstyle.org |
@@ -59,7 +59,7 @@
 | [`rulepacks/java/其他规则/11-性能优化规则.md`](<../rulepacks/java/其他规则/11-性能优化规则.md>) | `dc19b5efd1c66edb4720095f8daeef7800b7b51248318220455841fa8503e6ea` | — | arthas.aliyun.com |
 | [`rulepacks/java/其他规则/12-安全规则.md`](<../rulepacks/java/其他规则/12-安全规则.md>) | `9f878899f9b1a336ac2a3cf191bfdc4532877a49ce22ed5326c63a0b7f9df048` | — | 169.254.169.254, admin.example.com, app.example.com, github.com, xn--`-h47aw02l |
 | [`rulepacks/java/其他规则/13-部署运维规则.md`](<../rulepacks/java/其他规则/13-部署运维规则.md>) | `14a0a07c1c1518970eb6f66978d0851c9a8350a58724164b17f415a23828fe8c` | — | — |
-| [`rulepacks/javascript/00-文档总览.md`](<../rulepacks/javascript/00-文档总览.md>) | `9f555d3751e65dda132bc103874fcb4f208f5aba0155952d8583c3a5e2aefb65` | — | — |
+| [`rulepacks/javascript/00-文档总览.md`](<../rulepacks/javascript/00-文档总览.md>) | `083e98793c94eb5e18d064c488cc0ce44d0a84fc4a37f3fcec4d03fd1cd39937` | — | — |
 | [`rulepacks/javascript/15-AI通用入口规则.md`](<../rulepacks/javascript/15-AI通用入口规则.md>) | `7756ab99bbf53f4f03a2a0a93e3260eeece0c8048f672405431273cf5ae5d4f8` | — | — |
 | [`rulepacks/javascript/其他规则/01-代码编写规则.md`](<../rulepacks/javascript/其他规则/01-代码编写规则.md>) | `cfee9626ae657710fd7669b71d041caf51897c76014946286a14d783c5a68254` | — | api.example.com |
 | [`rulepacks/javascript/其他规则/02-模式设计规则.md`](<../rulepacks/javascript/其他规则/02-模式设计规则.md>) | `22166e0529f8bf93fa469d8e2cd4ab4c078320fc7b893c4be347176e2fd795c4` | — | — |
@@ -118,7 +118,7 @@
 | [`rulepacks/python/其他规则/12-安全规则.md`](<../rulepacks/python/其他规则/12-安全规则.md>) | `731e9412581d7b6c813fbaf424bfcfc8beec6d3490e05a9cd5d9e500e5c805b3` | — | — |
 | [`rulepacks/python/其他规则/13-部署运维规则.md`](<../rulepacks/python/其他规则/13-部署运维规则.md>) | `bcdba313d811927f838965304902b20a7327b4965a4a18aae11d5c17b5ad3052` | — | — |
 | [`rulepacks/rule-authoring/规则文档编写格式规范.md`](<../rulepacks/rule-authoring/规则文档编写格式规范.md>) | `d763783a806fa76a4331a07a13d4b8733e5b2673549b813f4cc2af096562c501` | — | — |
-| [`rulepacks/typescript/00-文档总览.md`](<../rulepacks/typescript/00-文档总览.md>) | `2c55f9773a854ee2b5390b89674db2d17d1a2d0e1441b21cdb0207dc7c59f086` | — | — |
+| [`rulepacks/typescript/00-文档总览.md`](<../rulepacks/typescript/00-文档总览.md>) | `c0aa85f3b564cf0d771362ce738ecb7f652037b2ba4f2a08d50cb470fe0999a2` | — | — |
 | [`rulepacks/typescript/09-AI通用入口规则.md`](<../rulepacks/typescript/09-AI通用入口规则.md>) | `e9b5335f83a47c92c57e25314e22bfe201efed0bf79def09d6fd42c1754a2ebf` | — | — |
 | [`rulepacks/typescript/其他规则/01-类型系统.md`](<../rulepacks/typescript/其他规则/01-类型系统.md>) | `3a0ce8c5fffde3d70f47c3b418538231157dd935c4f6831dcca599b84c233af0` | — | ..., api.example.com |
 | [`rulepacks/typescript/其他规则/02-类型守卫与收窄.md`](<../rulepacks/typescript/其他规则/02-类型守卫与收窄.md>) | `7c8e7ea3a27904aab9721d5cdbd9df4ae8676c4d138116b7ae6dbfb6bb954718` | — | — |
@@ -128,7 +128,7 @@
 | [`rulepacks/typescript/其他规则/06-tsconfig 严格度.md`](<../rulepacks/typescript/其他规则/06-tsconfig 严格度.md>) | `f57074a42c315007c664973b376755619038a35fca6ebf226994f4f39c2c3aa8` | — | — |
 | [`rulepacks/typescript/其他规则/07-ESLint + Prettier TS 集成.md`](<../rulepacks/typescript/其他规则/07-ESLint + Prettier TS 集成.md>) | `7ac46ba25e67ca6148fcd1527e10802ec09e6c340fc4f1aef85e082570b601de` | — | — |
 | [`rulepacks/typescript/其他规则/08-常见反模式与 AI 自检.md`](<../rulepacks/typescript/其他规则/08-常见反模式与 AI 自检.md>) | `d67eb001ff78547a5493bda16c9203312cf15a8a4203b24b4e4c1c2247325870` | — | — |
-| [`rulepacks/unity/00-文档总览.md`](<../rulepacks/unity/00-文档总览.md>) | `4bff68b2ae3d7b2757708a59838b37d7bd032a82bf23be201553c5161f882a4a` | — | — |
+| [`rulepacks/unity/00-文档总览.md`](<../rulepacks/unity/00-文档总览.md>) | `970e37d161918add6c1153c88ea619d5162fe28fd015f643e9607832b36c7b6a` | — | — |
 | [`rulepacks/unity/15-AI通用入口规则.md`](<../rulepacks/unity/15-AI通用入口规则.md>) | `08840facbce7e5cb813ec6ee7673f9780058a615488330ee002444a523f8f974` | — | — |
 | [`rulepacks/unity/其他规则/01-代码编写规则.md`](<../rulepacks/unity/其他规则/01-代码编写规则.md>) | `076ad851be50a4061fe7984dd1019457b64926ae09755a4bed9d3e88843114c8` | — | — |
 | [`rulepacks/unity/其他规则/02-模式设计规则.md`](<../rulepacks/unity/其他规则/02-模式设计规则.md>) | `408a459158c1fa1a0431ebee0c4b562f30849b882866d5c13d2fe9fd59a3d8a5` | — | — |

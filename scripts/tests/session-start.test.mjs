@@ -50,6 +50,24 @@ test("本地工作区路径即使像 owner/repo 也不会触发远程检查", as
   }
 });
 
+test("项目规则卸载后 Hook 不再识别该项目或查询 Release", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "agentrulekit-hook-uninstalled-"));
+  try {
+    const dataDir = path.join(root, "plugin-data");
+    const requestLog = path.join(root, "requests.log");
+    const mock = { release: releaseFixture("0.2.0", "b"), requestLog };
+    await writeFile(path.join(root, "agent-rules.yaml"), "schemaVersion: 1\n");
+    await writeFile(path.join(root, ".agent-rules.lock.json"), JSON.stringify({ sourceType: "github", source: "yadan177/AgentRuleKit", sourceVersion: "0.1.0", sourceDigest: `sha256:${"a".repeat(64)}` }));
+    assert.match(await runHook(root, dataDir, mock), /新版本/);
+    await rm(path.join(root, "agent-rules.yaml"));
+    await rm(path.join(root, ".agent-rules.lock.json"));
+    assert.equal(await runHook(root, dataDir, mock), "");
+    assert.equal((await readFile(requestLog, "utf8")).trim().split("\n").length, 1);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("首次检查联网、当天复用缓存，锁文件变化后重新检查", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "agentrulekit-hook-network-"));
   try {

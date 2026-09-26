@@ -1,7 +1,7 @@
 {
   "$schema": "../../../schemas/rulepack.schema.json",
   "id": "project-docs/python",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "status": "ready",
   "kind": "documentation",
   "entry": "其他规则/04-PythonAI技术文档任务入口.md",

@@ -1,7 +1,7 @@
 {
   "$schema": "../../schemas/rulepack.schema.json",
   "id": "go",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "status": "ready",
   "kind": "development",
   "entry": "13-AI通用入口规则.md",

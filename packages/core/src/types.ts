@@ -71,6 +71,12 @@ export interface ProjectPlan {
   to: Record<string, string>;
 }
 
+export interface UninstallPlan {
+  changes: ProjectChange[];
+  retainedPaths: string[];
+  conflicts: ValidationIssue[];
+}
+
 export interface RulePackManifest {
   $schema?: string;
   id: string;

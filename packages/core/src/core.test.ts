@@ -11,6 +11,8 @@ import {
   initializeProject,
   planProject,
   applyProject,
+  planUninstall,
+  applyUninstall,
   loadProjectConfig,
   listInterruptedTransactions,
   recoverInterruptedProject,
@@ -125,6 +127,140 @@ test("initializeProject creates a valid generic adapter scaffold", async () => {
     );
     assert.equal(JSON.parse(await readFile(path.join(target, ".agent-rules.lock.json"), "utf8")).sourceType, "workspace");
     assert.deepEqual(await validateProject(target, testAdapter), { valid: true, issues: [] });
+  });
+});
+
+test("项目规则卸载先预览，再保留本地文件并允许重新安装", async () => {
+  await withTempProject(async (root) => {
+    const source = path.join(root, "source");
+    const target = path.join(root, "target");
+    await mkdir(target);
+    await writePack(source, "common", "entry.md");
+    await initializeProject(target, testAdapter, source);
+    const entryPath = path.join(target, testAdapter.entryFile);
+    const lockPath = path.join(target, ".agent-rules.lock.json");
+    const configPath = path.join(target, "agent-rules.yaml");
+    const managedPath = path.join(target, ".agent-rules", "common", "entry.md");
+    const overridePath = path.join(target, ".agent-rules", "overrides.md");
+    const localPath = path.join(target, ".agent-rules", "common", "notes.md");
+    await writeFile(overridePath, "# 项目自己的规则\n");
+    await writeFile(localPath, "# 个人笔记\n");
+    const before = await readFile(lockPath, "utf8");
+
+    const preview = await planUninstall(target, testAdapter);
+    assert.deepEqual(preview.conflicts, []);
+    assert.ok(preview.changes.some((change) => change.path === ".agent-rules/common/entry.md" && change.action === "remove"));
+    assert.ok(preview.changes.some((change) => change.path === testAdapter.entryFile && change.action === "remove"));
+    assert.deepEqual(preview.retainedPaths, [".agent-rules/common/notes.md", ".agent-rules/overrides.md"]);
+    assert.equal(await readFile(lockPath, "utf8"), before, "预览不得修改项目");
+    await applyUninstall(target, testAdapter, preview);
+    for (const file of [entryPath, lockPath, configPath, managedPath]) {
+      await assert.rejects(readFile(file, "utf8"), /ENOENT/);
+    }
+    assert.equal(await readFile(overridePath, "utf8"), "# 项目自己的规则\n");
+    assert.equal(await readFile(localPath, "utf8"), "# 个人笔记\n");
+    assert.deepEqual(await listInterruptedTransactions(target), []);
+    await initializeProject(target, testAdapter, source);
+    assert.deepEqual(await validateProject(target, testAdapter), { valid: true, issues: [] });
+  });
+});
+
+test("卸载只移除入口中的 AgentRuleKit 区块，保留其他内容", async () => {
+  await withTempProject(async (root) => {
+    const source = path.join(root, "source");
+    const target = path.join(root, "target");
+    await mkdir(target);
+    await writePack(source, "common", "entry.md");
+    await writeFile(path.join(target, testAdapter.entryFile), "# 项目原有指令\n");
+    await initializeProject(target, testAdapter, source);
+    const preview = await planUninstall(target, testAdapter);
+    assert.ok(preview.changes.some((change) => change.path === testAdapter.entryFile && change.action === "modify"));
+    await applyUninstall(target, testAdapter, preview);
+    const entry = await readFile(path.join(target, testAdapter.entryFile), "utf8");
+    assert.match(entry, /项目原有指令/);
+    assert.doesNotMatch(entry, /test-rule:start|AgentRuleKit/);
+  });
+});
+
+test("卸载拒绝受管文件漂移、伪造锁文件、符号链接及过期预览", async () => {
+  await withTempProject(async (root) => {
+    const source = path.join(root, "source");
+    const target = path.join(root, "target");
+    await mkdir(target);
+    await writePack(source, "common", "entry.md");
+    await initializeProject(target, testAdapter, source);
+    const managedPath = path.join(target, ".agent-rules", "common", "entry.md");
+    const original = await readFile(managedPath, "utf8");
+    const preview = await planUninstall(target, testAdapter);
+    await writeFile(managedPath, "# 手工修改\n");
+    assert.ok((await planUninstall(target, testAdapter)).conflicts.some((issue) => issue.code === "managed-file-drift"));
+    await assert.rejects(applyUninstall(target, testAdapter, preview), /managed-file-drift/);
+    await writeFile(managedPath, original);
+
+    const lockPath = path.join(target, ".agent-rules.lock.json");
+    const lock = JSON.parse(await readFile(lockPath, "utf8"));
+    lock.managedFiles[".agent-rules/overrides.md"] = `sha256:${createHash("sha256").update(await readFile(path.join(target, ".agent-rules", "overrides.md"))).digest("hex")}`;
+    await writeFile(lockPath, JSON.stringify(lock));
+    assert.ok((await planUninstall(target, testAdapter)).conflicts.some((issue) => issue.code === "unexpected-managed-file"));
+    await assert.rejects(applyUninstall(target, testAdapter), /unexpected-managed-file/);
+    delete lock.managedFiles[".agent-rules/overrides.md"];
+    await writeFile(lockPath, JSON.stringify(lock));
+
+    await rm(managedPath);
+    await symlink(path.join(target, ".agent-rules", "overrides.md"), managedPath);
+    assert.ok((await planUninstall(target, testAdapter)).conflicts.some((issue) => issue.code === "symlink-path"));
+    await assert.rejects(applyUninstall(target, testAdapter), /symlink-path/);
+    await rm(managedPath);
+    await writeFile(managedPath, original);
+
+    const entryPath = path.join(target, testAdapter.entryFile);
+    const originalEntry = await readFile(entryPath, "utf8");
+    await writeFile(entryPath, originalEntry.replace("AgentRuleKit", "用户改写"));
+    assert.ok((await planUninstall(target, testAdapter)).conflicts.some((issue) => issue.code === "managed-block-drift"));
+    await assert.rejects(applyUninstall(target, testAdapter), /managed-block-drift/);
+    await writeFile(entryPath, originalEntry);
+
+    await writeFile(path.join(target, "agent-rules.yaml"), `${await readFile(path.join(target, "agent-rules.yaml"), "utf8")}\n`);
+    await assert.rejects(applyUninstall(target, testAdapter, preview), /预览后项目文件发生变化/);
+  });
+});
+
+test("卸载遇到操作锁或中断事务时拒绝继续，并能恢复中断的卸载", async () => {
+  await withTempProject(async (root) => {
+    const source = path.join(root, "source");
+    const target = path.join(root, "target");
+    await mkdir(target);
+    await writePack(source, "common", "entry.md");
+    await initializeProject(target, testAdapter, source);
+    const operationLock = path.join(target, ".agent-rules.operation.lock");
+    await writeFile(operationLock, "busy");
+    assert.ok((await planUninstall(target, testAdapter)).conflicts.some((issue) => issue.code === "operation-in-progress"));
+    await assert.rejects(applyUninstall(target, testAdapter), /已有规则写入操作锁/);
+    await rm(operationLock);
+
+    const entryPath = path.join(target, testAdapter.entryFile);
+    const lockPath = path.join(target, ".agent-rules.lock.json");
+    const configPath = path.join(target, "agent-rules.yaml");
+    const snapshots = Object.fromEntries(await Promise.all([entryPath, lockPath, configPath].map(async (file) => [path.basename(file), await readFile(file, "utf8")])));
+    const transaction = path.join(target, ".agent-rules.transaction-uninstall-test");
+    await mkdir(transaction);
+    await writeFile(path.join(transaction, "journal.json"), JSON.stringify({ schemaVersion: 1, hadRules: true, snapshots }));
+    await rename(path.join(target, ".agent-rules"), path.join(transaction, "backup"));
+    await rm(lockPath);
+    await rm(configPath);
+    assert.ok((await planUninstall(target, testAdapter)).conflicts.some((issue) => issue.code === "interrupted-transaction"));
+    const recovered = await recoverInterruptedProject(target, testAdapter);
+    assert.ok(recovered?.includes(".agent-rules.recovered-"));
+    assert.deepEqual(await validateProject(target, testAdapter), { valid: true, issues: [] });
+
+    const preview = await planUninstall(target, testAdapter);
+    const results = await Promise.allSettled([
+      applyUninstall(target, testAdapter, preview),
+      applyUninstall(target, testAdapter, preview),
+    ]);
+    assert.equal(results.filter((result) => result.status === "fulfilled").length, 1);
+    assert.equal(results.filter((result) => result.status === "rejected").length, 1);
+    assert.equal(await readFile(path.join(target, ".agent-rules", "overrides.md"), "utf8"), "# 项目覆盖规则\n\n在此添加项目特有规则。AgentRuleKit 更新时会保留本文件。\n");
   });
 });
 
