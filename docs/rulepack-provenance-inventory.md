@@ -1,6 +1,6 @@
 # 规则包内容来源逐文件清单
 
-本清单由 `node scripts/generate-provenance-inventory.mjs --write` 从当前 `rulepacks/` 清单和文件内容生成；CI 用 `--check` 检查同步。SHA-256 按 CRLF 转 LF 后的文本计算，以便跨平台复核。它只提供人工复核线索，不判断原创性、许可或公开权限。文件内容变化会改变摘要；已完成的人工授权记录必须针对变更重新核对。`archive/legacy-rules/` 需单独审查。
+本清单由 `node scripts/generate-provenance-inventory.mjs --write` 从当前 `rulepacks/` 清单和文件内容生成；CI 用 `--check` 检查同步。SHA-256 按 CRLF 转 LF 后的文本计算，以便跨平台复核。它只提供人工复核线索，不判断原创性、许可或公开权限。文件内容变化会改变摘要；已完成的人工授权记录必须针对变更重新核对。迁移前的规则内容仍可在 Git 历史中查阅并需单独审查。
 
 当前纳入 14 个规则包、116 份 Markdown；5 份包含明确的来源措辞线索，24 份含外部 URL。没有线索或外链不代表内容由本仓库原创；有外链也不代表正文来自该网站。
 

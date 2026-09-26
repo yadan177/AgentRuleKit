@@ -62,7 +62,7 @@ agent-rule validate /absolute/path/to/project
 
 ## 本地开发与离线试用
 
-若只想离线体验完整流程，在本仓库运行 `npm run demo:local`；它只操作临时 TypeScript 工程和临时规则源，不访问 GitHub，也不安装个人插件。需要查看生成文件时运行 `npm run demo:local -- --keep`，完成后自行清理输出的临时目录。正式 npm 包已单独通过真实远端初始化验证；本地演示仍不代替真实跨版本更新验收。
+若只想离线试用，请先准备独立临时工程，再用下面的 `--source-workspace` 命令从本仓库安装规则。此方式不访问 GitHub，也不安装个人插件；试用后可在临时工程运行 `check`、`diff` 和经审查的 `update --apply`。正式 npm 包已单独通过真实远端初始化验证；本地试用不代替真实跨版本更新验收。
 
 在 AgentRuleKit 仓库运行 `npm ci && npm run build`。若要从源码试用已发布的最新正式规则源，在临时工程运行：
 
