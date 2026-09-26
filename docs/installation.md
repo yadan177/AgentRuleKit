@@ -60,6 +60,15 @@ agent-rule validate /absolute/path/to/project
 
 插件启用并被信任后，会在 Codex 会话开始时后台检查；同一项目安装状态下至多每天检查一次。发现新版本只在后续适合的对话里提醒用户，不会自动更新，也不会主动开启新对话。
 
+## 卸载业务项目中的规则
+
+```bash
+agent-rule uninstall /absolute/path/to/project
+agent-rule uninstall /absolute/path/to/project --apply
+```
+
+第一条命令只预览删除差异，并列出保留在 `.agent-rules/` 中的项目本地文件；第二条命令重新核对并应用。卸载无需访问 GitHub，只删除锁文件登记且未被手工修改的规则文件、项目配置和锁文件。`AGENTS.md` 只移除 AgentRuleKit 受控区块；文件完全由该区块组成时才删除整个文件。`.agent-rules/overrides.md` 和其他非受管内容原地保留。配置、锁文件或受管文件异常时命令会停止，可先用 `recover` 处理已中断事务。此命令不会卸载个人电脑上的 CLI 或 Codex 插件。
+
 ## 本地开发与离线试用
 
 若只想离线试用，请先准备独立临时工程，再用下面的 `--source-workspace` 命令从本仓库安装规则。此方式不访问 GitHub，也不安装个人插件；试用后可在临时工程运行 `check`、`diff` 和经审查的 `update --apply`。正式 npm 包已单独通过真实远端初始化验证；本地试用不代替真实跨版本更新验收。

@@ -14,6 +14,8 @@ import {
   loadProjectConfig,
   loadProjectLock,
   planProject,
+  planUninstall,
+  applyUninstall,
   validateProject,
   findLatestRelease,
   downloadRulepacks,
@@ -22,7 +24,7 @@ import {
   listInterruptedTransactions,
   recoverInterruptedProject,
 } from "@agentrulekit/core";
-import type { DetectionResult, ProjectChange, ProjectPlan } from "@agentrulekit/core";
+import type { DetectionResult, ProjectChange, ProjectPlan, UninstallPlan } from "@agentrulekit/core";
 
 const VERSION = "0.1.1";
 const DEFAULT_REPOSITORY = "yadan177/AgentRuleKit";
@@ -39,6 +41,7 @@ function printHelp(): void {
   check       检查本地完整性及规则源是否有更新
   diff        展示待更新文件的可审查差异
   update      预览更新；加 --apply 才会应用
+  uninstall   预览项目规则卸载；加 --apply 才会卸载
   recover     查看中断事务；加 --apply 才会恢复原版本
   generate    update 的兼容命令，同样需要 --apply
   validate    只验证已安装项目文件的完整性
@@ -47,6 +50,7 @@ function printHelp(): void {
 
 示例：agent-rule diff /path/to/project
       agent-rule update /path/to/project --apply
+      agent-rule uninstall /path/to/project --apply
       agent-rule init /path/to/project --source-workspace /path/to/AgentRuleKit`);
 }
 
@@ -84,6 +88,12 @@ function printPlan(plan: ProjectPlan): void {
   console.log(`规则包版本：${JSON.stringify(plan.from)} → ${JSON.stringify(plan.to)}`);
   if (!plan.changes.length) console.log("没有待更新文件。");
   for (const change of plan.changes) console.log(renderChange(change));
+  for (const conflict of plan.conflicts) console.error(`[${conflict.code}] ${conflict.message}`);
+}
+
+function printUninstallPlan(plan: UninstallPlan): void {
+  for (const change of plan.changes) console.log(renderChange(change));
+  console.log(plan.retainedPaths.length ? `保留项目本地文件：\n${plan.retainedPaths.map((file) => `- ${file}`).join("\n")}` : "没有需要保留的项目本地文件。");
   for (const conflict of plan.conflicts) console.error(`[${conflict.code}] ${conflict.message}`);
 }
 
@@ -197,6 +207,26 @@ async function run(): Promise<void> {
       }
       const recovered = await recoverInterruptedProject(root, codexAdapter);
       console.log(`已恢复更新前的项目文件；中断期间的文件保留在 ${recovered}`);
+      return;
+    }
+    case "uninstall": {
+      const args = process.argv.slice(3);
+      const unknownFlags = args.filter((arg) => arg.startsWith("--") && arg !== "--apply");
+      const directories = args.filter((arg) => !arg.startsWith("--"));
+      if (unknownFlags.length || directories.length > 1) throw new Error(`uninstall 参数不合法：${args.join(" ")}`);
+      const target = directories[0] ?? process.cwd();
+      const plan = await planUninstall(target, codexAdapter);
+      printUninstallPlan(plan);
+      if (plan.conflicts.length) {
+        process.exitCode = 2;
+        return;
+      }
+      if (!args.includes("--apply")) {
+        console.log("审查以上差异和保留文件后，运行 uninstall <project-directory> --apply 卸载项目规则。");
+        return;
+      }
+      await applyUninstall(target, codexAdapter, plan);
+      console.log(`已在 ${target} 卸载 AgentRuleKit 项目规则；保留 ${plan.retainedPaths.length} 个项目本地文件。`);
       return;
     }
     case "validate": {

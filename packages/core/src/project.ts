@@ -9,6 +9,7 @@ import {
   readdir,
   rename,
   rm,
+  rmdir,
   writeFile,
 } from "node:fs/promises";
 import path from "node:path";
@@ -25,6 +26,7 @@ import type {
   ProjectChange,
   ProjectLock,
   ProjectPlan,
+  UninstallPlan,
   RulePackManifest,
   StackId,
   ValidationIssue,
@@ -676,6 +678,119 @@ export async function applyProject(root: string, config: ProjectConfig, adapter:
   return withProjectWriteLock(root, () => applyProjectUnlocked(root, config, adapter, configContent, snapshot, expectedPlan));
 }
 
+async function listRetainedRulePaths(root: string, managedFiles: Record<string, string>): Promise<string[]> {
+  const retained: string[] = [];
+  const visit = async (directory: string): Promise<void> => {
+    for (const entry of await readdir(path.join(root, directory), { withFileTypes: true })) {
+      const relativePath = path.posix.join(directory, entry.name);
+      if (entry.isDirectory()) await visit(relativePath);
+      else if (!Object.hasOwn(managedFiles, relativePath)) retained.push(relativePath);
+    }
+  };
+  await visit(".agent-rules");
+  return retained.sort();
+}
+
+async function pruneEmptyManagedDirectories(staging: string, relativePath: string): Promise<void> {
+  let directory = path.dirname(resolveInside(staging, relativePath));
+  while (directory !== staging) {
+    if ((await readdir(directory)).length) break;
+    await rmdir(directory);
+    directory = path.dirname(directory);
+  }
+}
+
+async function planUninstallInternal(root: string, adapter: TargetAdapter, ownsWriteLock = false): Promise<UninstallPlan> {
+  const resolvedRoot = path.resolve(root);
+  const validation = await validateProjectInternal(resolvedRoot, adapter, ownsWriteLock);
+  if (!validation.valid) return { changes: [], retainedPaths: [], conflicts: validation.issues };
+
+  const lock = await loadProjectLock(resolvedRoot);
+  const entryPath = path.join(resolvedRoot, adapter.entryFile);
+  const entryContent = await readFile(entryPath, "utf8");
+  const block = extractManagedBlock(entryContent, adapter);
+  if (!block) throw new Error(`${adapter.entryFile} 中没有完整的 AgentRuleKit 受控区块`);
+  const entryAfter = entryContent === `${block}\n` ? undefined : entryContent.replace(block, "");
+  const changes: ProjectChange[] = [];
+  for (const relativePath of Object.keys(lock.managedFiles).sort()) {
+    changes.push({ path: relativePath, action: "remove", before: await readFile(resolveInside(resolvedRoot, relativePath), "utf8") });
+  }
+  changes.push({ path: adapter.entryFile, action: entryAfter === undefined ? "remove" : "modify", before: entryContent, after: entryAfter });
+  for (const relativePath of ["agent-rules.yaml", ".agent-rules.lock.json"]) {
+    changes.push({ path: relativePath, action: "remove", before: await readFile(path.join(resolvedRoot, relativePath), "utf8") });
+  }
+  return { changes, retainedPaths: await listRetainedRulePaths(resolvedRoot, lock.managedFiles), conflicts: [] };
+}
+
+export async function planUninstall(root: string, adapter: TargetAdapter): Promise<UninstallPlan> {
+  return planUninstallInternal(root, adapter);
+}
+
+async function applyUninstallUnlocked(root: string, adapter: TargetAdapter, expectedPlan?: UninstallPlan): Promise<void> {
+  const resolvedRoot = path.resolve(root);
+  const plan = await planUninstallInternal(resolvedRoot, adapter, true);
+  if (plan.conflicts.length) throw new Error(plan.conflicts.map((issue) => `[${issue.code}] ${issue.message}`).join("\n"));
+  if (expectedPlan && !isDeepStrictEqual(plan, expectedPlan)) {
+    throw new Error("预览后项目文件发生变化；拒绝应用未经审查的卸载差异，请重新运行 uninstall");
+  }
+
+  const rulesDirectory = path.join(resolvedRoot, ".agent-rules");
+  const transaction = await mkdtemp(path.join(resolvedRoot, TRANSACTION_PREFIX));
+  const staging = path.join(transaction, "staging");
+  const backup = path.join(transaction, "backup");
+  const entryPath = path.join(resolvedRoot, adapter.entryFile);
+  const lockPath = path.join(resolvedRoot, ".agent-rules.lock.json");
+  const configPath = path.join(resolvedRoot, "agent-rules.yaml");
+  const snapshots = new Map<string, string>();
+  let journalWritten = false;
+  let movedRules = false;
+  let installedRules = false;
+  let completed = false;
+  try {
+    await cp(rulesDirectory, staging, { recursive: true });
+    for (const change of plan.changes) {
+      if (change.path.startsWith(".agent-rules/")) {
+        const relativePath = change.path.slice(".agent-rules/".length);
+        await rm(resolveInside(staging, relativePath));
+        await pruneEmptyManagedDirectories(staging, relativePath);
+      }
+    }
+    for (const filePath of [entryPath, lockPath, configPath]) snapshots.set(filePath, await readFile(filePath, "utf8"));
+    await writeFile(path.join(transaction, "journal.json"), JSON.stringify({
+      schemaVersion: 1,
+      hadRules: true,
+      snapshots: Object.fromEntries([...snapshots].map(([filePath, content]) => [path.basename(filePath), content])),
+    }), "utf8");
+    journalWritten = true;
+    await rename(rulesDirectory, backup);
+    movedRules = true;
+    await rename(staging, rulesDirectory);
+    installedRules = true;
+    const entryAfter = plan.changes.find((change) => change.path === adapter.entryFile)?.after;
+    if (entryAfter === undefined) await rm(entryPath);
+    else await writeFile(entryPath, entryAfter, "utf8");
+    await rm(lockPath);
+    await rm(configPath);
+    completed = true;
+  } catch (error) {
+    try {
+      for (const [filePath, content] of snapshots) await writeFile(filePath, content, "utf8");
+      if (installedRules) await rm(rulesDirectory, { recursive: true, force: true });
+      if (movedRules) await rename(backup, rulesDirectory);
+      completed = true;
+    } catch (rollbackError) {
+      throw new Error(`卸载失败且回滚未完成；恢复副本保留在 ${transaction}：${String(rollbackError)}`, { cause: error });
+    }
+    throw error;
+  } finally {
+    if (completed || !journalWritten) await rm(transaction, { recursive: true, force: true });
+  }
+}
+
+export async function applyUninstall(root: string, adapter: TargetAdapter, expectedPlan?: UninstallPlan): Promise<void> {
+  return withProjectWriteLock(root, () => applyUninstallUnlocked(root, adapter, expectedPlan));
+}
+
 export async function listInterruptedTransactions(root: string): Promise<string[]> {
   const resolvedRoot = path.resolve(root);
   let entries;
@@ -801,11 +916,11 @@ export async function initializeGithubProject(
   });
 }
 
-export async function validateProject(root: string, adapter: TargetAdapter): Promise<ValidationResult> {
+async function validateProjectInternal(root: string, adapter: TargetAdapter, ownsWriteLock = false): Promise<ValidationResult> {
   assertTargetAdapter(adapter);
   const resolvedRoot = path.resolve(root);
   const issues: ValidationIssue[] = [];
-  if (await exists(path.join(resolvedRoot, OPERATION_LOCK))) {
+  if (!ownsWriteLock && await exists(path.join(resolvedRoot, OPERATION_LOCK))) {
     issues.push({ code: "operation-in-progress", message: `检测到规则写入操作锁 ${OPERATION_LOCK}；请等待当前操作结束，或确认进程已停止后人工检查` });
   }
   const interrupted = await listInterruptedTransactions(resolvedRoot);
@@ -903,4 +1018,8 @@ export async function validateProject(root: string, adapter: TargetAdapter): Pro
   }
 
   return { valid: issues.length === 0, issues };
+}
+
+export async function validateProject(root: string, adapter: TargetAdapter): Promise<ValidationResult> {
+  return validateProjectInternal(root, adapter);
 }

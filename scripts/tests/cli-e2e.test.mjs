@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
+import { parse, stringify } from "yaml";
 
 const repository = fileURLToPath(new URL("../../", import.meta.url));
 const cli = path.join(repository, "packages", "cli", "dist", "index.js");
@@ -133,6 +134,53 @@ test("差异预览明确显示文件末尾换行的增删", async () => {
     expectExit(changedLineEnding, 0, "预览 CRLF 与 LF 的区别");
     const endingRule = changedLineEnding.stdout.split("diff --agent-rule .agent-rules/common/entry.md")[1]?.split("diff --agent-rule")[0];
     assert.match(endingRule, /-# Rule\n\+# Rule\\r/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("CLI 卸载先预览再应用，保留项目本地规则且无需联网", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "agentrulekit-uninstall-cli-"));
+  try {
+    const source = path.join(root, "source");
+    const target = path.join(root, "target");
+    await mkdir(source);
+    await mkdir(target);
+    await cp(path.join(repository, "rulepacks"), path.join(source, "rulepacks"), { recursive: true });
+    await writeFile(path.join(target, "go.mod"), "module example.com/demo\n");
+    expectExit(command("init", target, "--source-workspace", source), 0, "卸载测试初始化");
+    const lockPath = path.join(target, ".agent-rules.lock.json");
+    const configPath = path.join(target, "agent-rules.yaml");
+    const config = parse(await readFile(configPath, "utf8"));
+    config.source = { type: "github", repository: "yadan177/AgentRuleKit" };
+    await writeFile(configPath, stringify(config));
+    const githubLock = JSON.parse(await readFile(lockPath, "utf8"));
+    githubLock.sourceType = "github";
+    githubLock.source = "yadan177/AgentRuleKit";
+    githubLock.sourceVersion = "0.1.1";
+    githubLock.sourceDigest = `sha256:${"a".repeat(64)}`;
+    githubLock.sourceCommit = "a".repeat(40);
+    await writeFile(lockPath, `${JSON.stringify(githubLock, null, 2)}\n`);
+    const overridePath = path.join(target, ".agent-rules", "overrides.md");
+    await writeFile(overridePath, "# 本地规则\n");
+    const before = await readFile(lockPath, "utf8");
+    const preview = command("uninstall", target);
+    expectExit(preview, 0, "卸载预览");
+    assert.match(preview.stdout, /diff --agent-rule \.agent-rules\/go\//);
+    assert.match(preview.stdout, /保留项目本地文件：[\s\S]*\.agent-rules\/overrides\.md/);
+    assert.equal(await readFile(lockPath, "utf8"), before);
+    expectExit(command("uninstall", target, source, "--apply"), 1, "多个项目路径应被拒绝");
+    assert.equal(await readFile(lockPath, "utf8"), before);
+    const denyNetwork = path.join(root, "deny-network.mjs");
+    await writeFile(denyNetwork, "globalThis.fetch = () => { throw new Error('卸载不应联网'); };\n");
+    const applied = spawnSync(process.execPath, ["--import", denyNetwork, cli, "uninstall", "--apply", target], { encoding: "utf8" });
+    expectExit(applied, 0, "应用卸载");
+    assert.match(applied.stdout, /已在 .* 卸载 AgentRuleKit 项目规则/);
+    assert.equal(await readFile(overridePath, "utf8"), "# 本地规则\n");
+    await assert.rejects(readFile(lockPath, "utf8"), /ENOENT/);
+    await assert.rejects(readFile(path.join(target, "AGENTS.md"), "utf8"), /ENOENT/);
+    expectExit(command("init", target, "--source-workspace", source), 0, "卸载后重新安装");
+    expectExit(command("validate", target), 0, "重新安装后校验");
   } finally {
     await rm(root, { recursive: true, force: true });
   }

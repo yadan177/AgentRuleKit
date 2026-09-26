@@ -1,6 +1,6 @@
 # AI开发工具箱 CLI（AgentRuleKit）
 
-`agentrulekit` 为项目安装、检查和更新共享 AI 开发规则。规则正文固定在项目 Git 中；CLI 安装在个人电脑，Codex 插件可另行安装。当前首版适配 Codex，规则源本身不绑定编辑器。
+`agentrulekit` 为项目安装、检查、更新和卸载共享 AI 开发规则。规则正文固定在项目 Git 中；CLI 安装在个人电脑，Codex 插件可另行安装。当前首版适配 Codex，规则源本身不绑定编辑器。
 
 需要 Node.js 22 或更高版本，以及访问 GitHub Release 的网络。安装后先在测试工程试用：
 
@@ -23,5 +23,14 @@ agent-rule validate /absolute/path/to/project
 ```
 
 `check` 和 `diff` 不修改工程；`update` 默认只预览，只有加 `--apply` 才写入。项目本地覆盖规则放在 `.agent-rules/overrides.md`，更新时会保留。请先审查差异，再决定是否应用并提交 Git。
+
+卸载业务项目中的规则也需先预览，再显式应用；这不会卸载个人 CLI 或 Codex 插件：
+
+```bash
+agent-rule uninstall /absolute/path/to/project
+agent-rule uninstall /absolute/path/to/project --apply
+```
+
+卸载仅删除经锁文件确认的受管规则、项目配置和锁文件，并移除 `AGENTS.md` 的 AgentRuleKit 区块。项目本地覆盖规则及其他非受管文件原地保留；卸载无需联网。
 
 完整说明、Codex 插件安装方法及恢复流程见 [AgentRuleKit 安装与更新文档](https://github.com/yadan177/AgentRuleKit/blob/main/docs/installation.md)。源码与问题反馈：[AgentRuleKit](https://github.com/yadan177/AgentRuleKit)。
