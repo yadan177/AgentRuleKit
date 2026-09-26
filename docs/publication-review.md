@@ -1,6 +1,6 @@
 # 发布与后续审查记录
 
-当前决定：仓库所有者已在本次对话中确认 `rulepacks/`、迁移前的规则副本和 Git 历史可以公开；仓库已于 2026-09-25 改为 **Public**，`v0.1.0`、`v0.1.1`、`v0.1.2`、`v0.1.3` 的 GitHub Release 与 npm 包均已发布。迁移前的副本现已从当前工作树清理，但仍存在于 Git 历史。这是所有者的授权声明，不代表开发代理独立核实了每份材料的权属；剩余人工内容审查与 Codex 桌面端验收仍按下述清单处理。
+当前决定：仓库所有者已在本次对话中确认 `rulepacks/`、迁移前的规则副本和 Git 历史可以公开；仓库已于 2026-09-25 改为 **Public**，`v0.1.0`、`v0.1.1`、`v0.1.2`、`v0.1.3`、`v0.1.4` 的 GitHub Release 与 npm 包均已发布。迁移前的副本现已从当前工作树清理，但仍存在于 Git 历史。这是所有者的授权声明，不代表开发代理独立核实了每份材料的权属；剩余人工内容审查与 Codex 桌面端验收仍按下述清单处理。
 
 2026-09-24 至 25 日的自动筛查结果和限制汇总在下文；旧快照仍可从对应 Git 提交查阅。[逐文件来源索引](rulepack-provenance-inventory.md)与[内容权利复核表](content-rights-review.md)用于后续人工审查；机器筛查不代替人工授权确认。
 
@@ -40,6 +40,8 @@
 - [x] [`v0.1.2` npm 发布工作流](https://github.com/yadan177/AgentRuleKit/actions/runs/36221196693)从同一标签通过 Trusted Publisher/OIDC 发布 `agentrulekit@0.1.2`；npm 注册表返回命令入口、integrity 与 provenance attestation。独立从注册表安装的 CLI 在 Go、TypeScript、Unity 临时工程完成同版本联网验收。四个 Codex Skills 和插件另外通过本机官方校验脚本；这不等同于桌面端实际调用验收。
 - [x] [`v0.1.3` 标签 CI](https://github.com/yadan177/AgentRuleKit/actions/runs/36252189223)在 Linux、macOS、Windows 的 Node.js 22/24 上通过检查后发布 [GitHub Release](https://github.com/yadan177/AgentRuleKit/releases/tag/v0.1.3)；真实资产的摘要、来源提交与 `LICENSE` 已核对。
 - [x] [`v0.1.3` npm 发布工作流](https://github.com/yadan177/AgentRuleKit/actions/runs/36252319987)从同一标签通过 Trusted Publisher/OIDC 发布 `agentrulekit@0.1.3`；注册表返回 integrity 与 provenance attestation。独立安装的正式 CLI 在 Go、TypeScript、Unity 临时工程通过同版本验收，另在 Go 临时工程完成卸载预览、显式卸载、本地文件及原有 `AGENTS.md` 保留、重新安装的完整验收。四个 Codex Skills 和插件在发布前通过官方校验器；桌面端实际调用仍待验收。
+- [x] [`v0.1.4` 标签 CI](https://github.com/yadan177/AgentRuleKit/actions/runs/36253614689)在 Linux、macOS、Windows 的 Node.js 22/24 上通过检查后发布 [GitHub Release](https://github.com/yadan177/AgentRuleKit/releases/tag/v0.1.4)；真实资产的摘要、来源提交与 `LICENSE` 已核对，本地打包 CLI 的 Go、TypeScript、Unity 公开 Release 验收通过。
+- [x] [`v0.1.4` npm 发布工作流](https://github.com/yadan177/AgentRuleKit/actions/runs/36253740780)通过 Trusted Publisher/OIDC 发布 `agentrulekit@0.1.4`，注册表返回 integrity 与 provenance attestation。正式 npm 包在现有 Unity 项目完成安装、校验、卸载预览和显式卸载，项目文件及 Git 状态恢复至测试前；另验证特殊换行和空 `AGENTS.md` 逐字恢复。重复的 npm 烟测在 Go、TypeScript 阶段通过，在 Unity 阶段因 GitHub 匿名 API 限额返回 403，未完成该次完整烟测。
 - [ ] 按[Codex 桌面端验收记录](codex-desktop-acceptance.md)补齐四个 Skills 的逐项试用、Hook 信任选择及实际会话调度结果。用户的概括性确认与 CLI 隔离验收均不能替代这些细节。
 - [x] 仓库所有者明确确认公开范围并同意设为 Public；具体来源证据仍由内容提供方负责保存或后续补录。
 - [x] 从 npm 独立安装 `0.1.0` CLI 的 Go、TypeScript、Unity 临时工程，完成真实 `0.1.0 → 0.1.1` 的 `check`（退出码 3）、`diff`（显示通用规则正文且文件哈希不变）、`update --apply`、`validate/check/diff`（无待更新），重复应用后锁文件哈希不变。另在固定真实 `v0.1.0` Release 的临时工程手动运行 Hook：真实 GitHub 元数据触发提醒、缓存摘要与新 Release 一致，更新后不再提醒且 Hook 不改锁文件。此项不等同于 Codex 桌面端实际调度 Hook。
