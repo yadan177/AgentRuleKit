@@ -165,20 +165,43 @@ test("项目规则卸载先预览，再保留本地文件并允许重新安装",
   });
 });
 
-test("卸载只移除入口中的 AgentRuleKit 区块，保留其他内容", async () => {
+test("卸载逐字恢复已有入口，包括无末尾换行、CRLF 与空文件", async () => {
+  for (const originalEntry of ["# 项目原有指令\n", "# 项目原有指令", "# 项目原有指令\r\n\r\n说明\r\n", "# 项目原有指令  \n\n", ""]) {
+    await withTempProject(async (root) => {
+      const source = path.join(root, "source");
+      const target = path.join(root, "target");
+      await mkdir(target);
+      await writePack(source, "common", "entry.md");
+      await writeFile(path.join(target, testAdapter.entryFile), originalEntry);
+      await initializeProject(target, testAdapter, source);
+      const preview = await planUninstall(target, testAdapter);
+      assert.ok(preview.changes.some((change) => change.path === testAdapter.entryFile && change.action === "modify"));
+      await applyUninstall(target, testAdapter, preview);
+      assert.equal(await readFile(path.join(target, testAdapter.entryFile), "utf8"), originalEntry);
+    });
+  }
+});
+
+test("旧版锁文件仍按原有入口分隔方式卸载", async () => {
   await withTempProject(async (root) => {
     const source = path.join(root, "source");
     const target = path.join(root, "target");
     await mkdir(target);
     await writePack(source, "common", "entry.md");
-    const originalEntry = "# 项目原有指令\n";
-    await writeFile(path.join(target, testAdapter.entryFile), originalEntry);
+    const entryPath = path.join(target, testAdapter.entryFile);
+    const lockPath = path.join(target, ".agent-rules.lock.json");
+    await writeFile(entryPath, "# 项目原有指令\n");
     await initializeProject(target, testAdapter, source);
+    const lock = JSON.parse(await readFile(lockPath, "utf8"));
+    delete lock.entryOrigin;
+    await writeFile(lockPath, `${JSON.stringify(lock, null, 2)}\n`);
+    const entry = await readFile(entryPath, "utf8");
+    const blockStart = entry.indexOf(testAdapter.blockStart);
+    await writeFile(entryPath, `${entry.slice(0, blockStart - 1)}${entry.slice(blockStart)}`);
+    assert.deepEqual(await validateProject(target, testAdapter), { valid: true, issues: [] });
     const preview = await planUninstall(target, testAdapter);
-    assert.ok(preview.changes.some((change) => change.path === testAdapter.entryFile && change.action === "modify"));
     await applyUninstall(target, testAdapter, preview);
-    const entry = await readFile(path.join(target, testAdapter.entryFile), "utf8");
-    assert.equal(entry, originalEntry);
+    assert.equal(await readFile(entryPath, "utf8"), "# 项目原有指令\n");
   });
 });
 

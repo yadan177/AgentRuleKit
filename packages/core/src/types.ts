@@ -55,6 +55,7 @@ export interface ProjectLock {
   targets: Record<string, string>;
   managedFiles: Record<string, string>;
   managedBlockDigest: string;
+  entryOrigin?: "existing" | "generated";
 }
 
 export interface ProjectChange {
