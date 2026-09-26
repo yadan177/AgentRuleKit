@@ -41,7 +41,7 @@ function printHelp(): void {
   check       检查本地完整性及规则源是否有更新
   diff        展示待更新文件的可审查差异
   update      预览更新；加 --apply 才会应用
-  uninstall   预览项目规则卸载；加 --apply 才会卸载
+  uninstall   预览项目规则卸载摘要；加 --details 查看逐行差异，--apply 才会卸载
   recover     查看中断事务；加 --apply 才会恢复原版本
   generate    update 的兼容命令，同样需要 --apply
   validate    只验证已安装项目文件的完整性
@@ -50,6 +50,7 @@ function printHelp(): void {
 
 示例：agent-rule diff /path/to/project
       agent-rule update /path/to/project --apply
+      agent-rule uninstall /path/to/project --details
       agent-rule uninstall /path/to/project --apply
       agent-rule init /path/to/project --source-workspace /path/to/AgentRuleKit`);
 }
@@ -91,10 +92,20 @@ function printPlan(plan: ProjectPlan): void {
   for (const conflict of plan.conflicts) console.error(`[${conflict.code}] ${conflict.message}`);
 }
 
-function printUninstallPlan(plan: UninstallPlan): void {
-  for (const change of plan.changes) console.log(renderChange(change));
-  console.log(plan.retainedPaths.length ? `保留项目本地文件：\n${plan.retainedPaths.map((file) => `- ${file}`).join("\n")}` : "没有需要保留的项目本地文件。");
-  for (const conflict of plan.conflicts) console.error(`[${conflict.code}] ${conflict.message}`);
+function printUninstallSummary(plan: UninstallPlan, applied: boolean): void {
+  const verb = applied ? "已" : "将";
+  const managedCount = plan.changes.filter((change) => change.path.startsWith(".agent-rules/") && change.action === "remove").length;
+  const entryChange = plan.changes.find((change) => change.path === codexAdapter.entryFile);
+  console.log(`${verb}删除 ${managedCount} 个受管文件（.agent-rules/）。`);
+  if (entryChange) {
+    console.log(entryChange.action === "remove"
+      ? `${verb}删除工具生成的 ${codexAdapter.entryFile}。`
+      : `${verb}从 ${codexAdapter.entryFile} 移除 AgentRuleKit 入口，保留原有内容。`);
+  }
+  console.log(`${verb}删除 agent-rules.yaml 和 .agent-rules.lock.json。`);
+  console.log(plan.retainedPaths.length
+    ? `保留项目本地文件（不删除）：\n${plan.retainedPaths.map((file) => `- ${file}`).join("\n")}`
+    : "没有需要保留的项目本地文件。");
 }
 
 function printInitRecommendation(detection: DetectionResult, rulepacks: string[]): void {
@@ -211,22 +222,28 @@ async function run(): Promise<void> {
     }
     case "uninstall": {
       const args = process.argv.slice(3);
-      const unknownFlags = args.filter((arg) => arg.startsWith("--") && arg !== "--apply");
+      const unknownFlags = args.filter((arg) => arg.startsWith("--") && arg !== "--apply" && arg !== "--details");
       const directories = args.filter((arg) => !arg.startsWith("--"));
       if (unknownFlags.length || directories.length > 1) throw new Error(`uninstall 参数不合法：${args.join(" ")}`);
       const target = directories[0] ?? process.cwd();
       const plan = await planUninstall(target, codexAdapter);
-      printUninstallPlan(plan);
       if (plan.conflicts.length) {
+        for (const conflict of plan.conflicts) console.error(`[${conflict.code}] ${conflict.message}`);
         process.exitCode = 2;
         return;
       }
+      if (args.includes("--details")) {
+        for (const change of plan.changes) console.log(renderChange(change));
+      }
       if (!args.includes("--apply")) {
-        console.log("审查以上差异和保留文件后，运行 uninstall <project-directory> --apply 卸载项目规则。");
+        printUninstallSummary(plan, false);
+        if (!args.includes("--details")) console.log("如需查看逐行差异，运行 agent-rule uninstall <project-directory> --details。");
+        console.log("确认后运行 agent-rule uninstall <project-directory> --apply 卸载项目规则。");
         return;
       }
       await applyUninstall(target, codexAdapter, plan);
-      console.log(`已在 ${target} 卸载 AgentRuleKit 项目规则；保留 ${plan.retainedPaths.length} 个项目本地文件。`);
+      console.log(`已在 ${target} 卸载 AgentRuleKit 项目规则。`);
+      printUninstallSummary(plan, true);
       return;
     }
     case "validate": {

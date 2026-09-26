@@ -166,8 +166,16 @@ test("CLI 卸载先预览再应用，保留项目本地规则且无需联网", a
     const before = await readFile(lockPath, "utf8");
     const preview = command("uninstall", target);
     expectExit(preview, 0, "卸载预览");
-    assert.match(preview.stdout, /diff --agent-rule \.agent-rules\/go\//);
-    assert.match(preview.stdout, /保留项目本地文件：[\s\S]*\.agent-rules\/overrides\.md/);
+    assert.match(preview.stdout, /将删除 \d+ 个受管文件/);
+    assert.match(preview.stdout, /将删除工具生成的 AGENTS\.md/);
+    assert.match(preview.stdout, /保留项目本地文件（不删除）：[\s\S]*\.agent-rules\/overrides\.md/);
+    assert.match(preview.stdout, /--details/);
+    assert.doesNotMatch(preview.stdout, /diff --agent-rule/);
+    assert.equal(await readFile(lockPath, "utf8"), before);
+    const details = command("uninstall", target, "--details");
+    expectExit(details, 0, "逐行卸载预览");
+    assert.match(details.stdout, /diff --agent-rule \.agent-rules\/go\//);
+    assert.match(details.stdout, /将删除 \d+ 个受管文件/);
     assert.equal(await readFile(lockPath, "utf8"), before);
     expectExit(command("uninstall", target, source, "--apply"), 1, "多个项目路径应被拒绝");
     assert.equal(await readFile(lockPath, "utf8"), before);
@@ -176,6 +184,8 @@ test("CLI 卸载先预览再应用，保留项目本地规则且无需联网", a
     const applied = spawnSync(process.execPath, ["--import", pathToFileURL(denyNetwork).href, cli, "uninstall", "--apply", target], { encoding: "utf8" });
     expectExit(applied, 0, "应用卸载");
     assert.match(applied.stdout, /已在 .* 卸载 AgentRuleKit 项目规则/);
+    assert.match(applied.stdout, /已删除 \d+ 个受管文件/);
+    assert.doesNotMatch(applied.stdout, /diff --agent-rule/);
     assert.equal(await readFile(overridePath, "utf8"), "# 本地规则\n");
     await assert.rejects(readFile(lockPath, "utf8"), /ENOENT/);
     await assert.rejects(readFile(path.join(target, "AGENTS.md"), "utf8"), /ENOENT/);
