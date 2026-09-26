@@ -2,9 +2,9 @@
 
 ## 当前边界
 
-- `archive/legacy-rules/` 只用于历史查阅；不得把归档内容当作当前规则源直接安装。
+- 迁移前的规则目录已从当前工作树清理；历史内容仅从 Git 历史查阅，不得当作当前规则源直接安装。
 - 规则正文只从 `rulepacks/` 读取和维护；适配器入口只从 `adapters/` 读取和维护。
-- 新产品代码放在 `packages/`、`adapters/`、`plugins/`、`rulepacks/`、`workflows/`、`schemas/`、`templates/`、`docs/` 和 `examples/`。
+- 新产品代码放在 `packages/`、`adapters/`、`plugins/`、`rulepacks/`、`workflows/`、`schemas/` 和 `docs/`。
 
 ## 产品方向
 
