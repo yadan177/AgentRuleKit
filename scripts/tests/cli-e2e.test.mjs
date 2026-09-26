@@ -157,7 +157,7 @@ test("CLI 卸载先预览再应用，保留项目本地规则且无需联网", a
     const githubLock = JSON.parse(await readFile(lockPath, "utf8"));
     githubLock.sourceType = "github";
     githubLock.source = "yadan177/AgentRuleKit";
-    githubLock.sourceVersion = "0.1.1";
+    githubLock.sourceVersion = githubLock.toolkitVersion;
     githubLock.sourceDigest = `sha256:${"a".repeat(64)}`;
     githubLock.sourceCommit = "a".repeat(40);
     await writeFile(lockPath, `${JSON.stringify(githubLock, null, 2)}\n`);

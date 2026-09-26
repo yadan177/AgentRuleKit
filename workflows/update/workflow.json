@@ -1,6 +1,6 @@
 {
   "id": "update",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "status": "integrity-check-only",
   "intent": "检查已安装规则的完整性并为可审查更新做准备"
 }
