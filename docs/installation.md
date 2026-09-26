@@ -64,10 +64,13 @@ agent-rule validate /absolute/path/to/project
 
 ```bash
 agent-rule uninstall /absolute/path/to/project
+agent-rule uninstall /absolute/path/to/project --details
 agent-rule uninstall /absolute/path/to/project --apply
 ```
 
-第一条命令只预览删除差异，并列出保留在 `.agent-rules/` 中的项目本地文件；第二条命令重新核对并应用。卸载无需访问 GitHub，只删除锁文件登记且未被手工修改的规则文件、项目配置和锁文件。`AGENTS.md` 只移除 AgentRuleKit 受控区块；文件完全由该区块组成时才删除整个文件。`.agent-rules/overrides.md` 和其他非受管内容原地保留。配置、锁文件或受管文件异常时命令会停止，可先用 `recover` 处理已中断事务。此命令不会卸载个人电脑上的 CLI 或 Codex 插件。
+当前源码中，第一条命令只显示卸载摘要及保留文件清单；如需逐行审查所有删除内容，运行带 `--details` 的第二条命令。`--apply` 会重新核对计划后才写入，成功时只显示结果摘要。此项输出改进尚未发布，已发布的 `agentrulekit@0.1.4` 仍默认打印完整差异，也没有 `--details` 参数。
+
+卸载无需访问 GitHub，只删除锁文件登记且未被手工修改的规则文件、项目配置和锁文件。`AGENTS.md` 只移除 AgentRuleKit 受控区块；文件完全由该区块组成时才删除整个文件。`.agent-rules/overrides.md` 和其他非受管内容原地保留。配置、锁文件或受管文件异常时命令会停止，可先用 `recover` 处理已中断事务。此命令不会卸载个人电脑上的 CLI 或 Codex 插件。
 
 ## 本地开发与离线试用
 
