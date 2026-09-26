@@ -171,14 +171,14 @@ test("卸载只移除入口中的 AgentRuleKit 区块，保留其他内容", asy
     const target = path.join(root, "target");
     await mkdir(target);
     await writePack(source, "common", "entry.md");
-    await writeFile(path.join(target, testAdapter.entryFile), "# 项目原有指令\n");
+    const originalEntry = "# 项目原有指令\n";
+    await writeFile(path.join(target, testAdapter.entryFile), originalEntry);
     await initializeProject(target, testAdapter, source);
     const preview = await planUninstall(target, testAdapter);
     assert.ok(preview.changes.some((change) => change.path === testAdapter.entryFile && change.action === "modify"));
     await applyUninstall(target, testAdapter, preview);
     const entry = await readFile(path.join(target, testAdapter.entryFile), "utf8");
-    assert.match(entry, /项目原有指令/);
-    assert.doesNotMatch(entry, /test-rule:start|AgentRuleKit/);
+    assert.equal(entry, originalEntry);
   });
 });
 
