@@ -9,8 +9,18 @@ import { fileURLToPath } from "node:url";
 import { c } from "tar";
 import { parse } from "yaml";
 import { verifyPublishedRelease } from "../verify-published-release.mjs";
+import { requiresBundledLicense } from "../release-policy.mjs";
 
 const repository = fileURLToPath(new URL("../../", import.meta.url));
+
+test("许可文本门槛只豁免已发布的两个旧版", () => {
+  assert.equal(requiresBundledLicense("0.1.0"), false);
+  assert.equal(requiresBundledLicense("0.1.1"), false);
+  assert.equal(requiresBundledLicense("0.1.2"), true);
+  assert.equal(requiresBundledLicense("0.2.0"), true);
+  assert.equal(requiresBundledLicense("1.0.0"), true);
+  assert.throws(() => requiresBundledLicense("0.1.2-beta.1"), /stable/);
+});
 
 async function workflow(name) {
   const url = new URL(`.github/workflows/${name}`, `file://${repository}`);
@@ -81,6 +91,36 @@ test("npm 发布门禁验证 Release 标签、资产摘要与来源提交", asyn
     await assert.rejects(verifyPublishedRelease("yadan177/AgentRuleKit", "v0.1.0", commit, fetcher), /SHA-256/);
     const missing = async () => new Response("not found", { status: 404 });
     await assert.rejects(verifyPublishedRelease("yadan177/AgentRuleKit", "v0.1.0", commit, missing), /HTTP 404/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("下一版起 npm 发布门禁核对真实 Release 许可文本", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "agentrulekit-release-license-gate-"));
+  try {
+    await mkdir(path.join(root, "rulepacks", "common"), { recursive: true });
+    await writeFile(path.join(root, "rulepacks", "common", "pack.json"), "{}\n");
+    const commit = "b".repeat(40);
+    const version = "0.1.2";
+    await writeFile(path.join(root, "agentrulekit-release.json"), JSON.stringify({ schemaVersion: 1, version, sourceCommit: commit }));
+    const assetUrl = `https://github.com/yadan177/AgentRuleKit/releases/download/v${version}/agentrulekit-rulepacks.tar.gz`;
+    const verifyBundle = async (license) => {
+      const licensePath = path.join(root, "LICENSE");
+      if (license === undefined) await rm(licensePath, { force: true });
+      else await writeFile(licensePath, license);
+      const archive = path.join(root, "release.tar.gz");
+      await c({ gzip: true, file: archive, cwd: root }, ["agentrulekit-release.json", ...(license === undefined ? [] : ["LICENSE"]), "rulepacks"]);
+      const bytes = await readFile(archive);
+      const release = { tag_name: `v${version}`, assets: [{ name: "agentrulekit-rulepacks.tar.gz", browser_download_url: assetUrl, digest: `sha256:${createHash("sha256").update(bytes).digest("hex")}`, size: bytes.length }] };
+      const fetcher = async (input) => String(input).startsWith("https://api.github.com/")
+        ? new Response(JSON.stringify(release), { status: 200 })
+        : new Response(new Uint8Array(bytes), { status: 200 });
+      return verifyPublishedRelease("yadan177/AgentRuleKit", `v${version}`, commit, fetcher);
+    };
+    await assert.rejects(verifyBundle(undefined), /缺少 LICENSE/);
+    await assert.rejects(verifyBundle("错误的许可文本\n"), /LICENSE.*不一致/);
+    await verifyBundle(await readFile(path.join(repository, "LICENSE"), "utf8"));
   } finally {
     await rm(root, { recursive: true, force: true });
   }

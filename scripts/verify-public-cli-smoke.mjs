@@ -5,6 +5,8 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { requiresBundledLicense } from "./release-policy.mjs";
+
 const repository = fileURLToPath(new URL("../", import.meta.url));
 const packageInfo = JSON.parse(await readFile(path.join(repository, "packages/cli/package.json"), "utf8"));
 const fromNpm = process.argv.includes("--from-npm");
@@ -62,6 +64,10 @@ try {
     if (sourceIdentity) assert.deepEqual(identity, sourceIdentity, "工程应使用同一个正式 Release");
     sourceIdentity = identity;
     for (const pack of fixture.packs) assert.ok(lock.rulepacks[pack], `${fixture.name} 缺少规则包 ${pack}`);
+    if (requiresBundledLicense(expectedVersion)) {
+      assert.equal(await readFile(path.join(project, ".agent-rules", "LICENSE"), "utf8"), await readFile(path.join(repository, "LICENSE"), "utf8"), `${fixture.name} 未安装对应的规则源许可文本`);
+      assert.ok(Object.hasOwn(lock.managedFiles, ".agent-rules/LICENSE"), `${fixture.name} 锁文件未记录规则源许可文本`);
+    }
 
     assert.match(run(process.execPath, [cli, "validate", project]), /验证通过/);
     assert.match(run(process.execPath, [cli, "check", project]), /最新版本/);
