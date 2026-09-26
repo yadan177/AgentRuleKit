@@ -33,7 +33,7 @@ import type {
   ValidationResult,
 } from "./types.js";
 
-const TOOLKIT_VERSION = "0.1.3";
+const TOOLKIT_VERSION = "0.1.4";
 const PACK_ID_PATTERN = /^[a-z0-9][a-z0-9/-]*$/;
 const PACK_VERSION_PATTERN = /^\d+\.\d+\.\d+$/;
 const VERSION_PATTERN = /^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?$/;
@@ -71,14 +71,15 @@ export function parseProjectLock(content: string): ProjectLock {
     typeof value.managedBlockDigest !== "string" || !DIGEST_PATTERN.test(value.managedBlockDigest)) {
     throw new Error("锁文件缺少必需字段或字段类型不合法");
   }
-  const allowed = new Set(["$schema", "schemaVersion", "toolkitVersion", "sourceType", "source", "sourceVersion", "sourceDigest", "sourceCommit", "rulepacks", "targets", "managedFiles", "managedBlockDigest"]);
+  const allowed = new Set(["$schema", "schemaVersion", "toolkitVersion", "sourceType", "source", "sourceVersion", "sourceDigest", "sourceCommit", "rulepacks", "targets", "managedFiles", "managedBlockDigest", "entryOrigin"]);
   if (Object.keys(value).some((key) => !allowed.has(key)) ||
     Object.values(value.rulepacks).some((version) => !VERSION_PATTERN.test(version)) ||
     Object.values(value.targets).some((version) => !VERSION_PATTERN.test(version)) ||
     Object.values(value.managedFiles).some((hash) => !DIGEST_PATTERN.test(hash)) ||
     (value.sourceVersion !== undefined && (typeof value.sourceVersion !== "string" || !VERSION_PATTERN.test(value.sourceVersion))) ||
     (value.sourceDigest !== undefined && (typeof value.sourceDigest !== "string" || !DIGEST_PATTERN.test(value.sourceDigest))) ||
-    (value.sourceCommit !== undefined && (typeof value.sourceCommit !== "string" || !COMMIT_PATTERN.test(value.sourceCommit)))) {
+    (value.sourceCommit !== undefined && (typeof value.sourceCommit !== "string" || !COMMIT_PATTERN.test(value.sourceCommit))) ||
+    (value.entryOrigin !== undefined && !["existing", "generated"].includes(String(value.entryOrigin)))) {
     throw new Error("锁文件包含未知字段、非法版本或无效摘要");
   }
   return value as unknown as ProjectLock;
@@ -475,9 +476,11 @@ async function prepareProject(root: string, config: ProjectConfig, adapter: Targ
       conflicts.push({ code: "symlink-path", message: `控制文件是符号链接：${controlPath}` });
     }
   }
-  const oldEntry = !linkedControls.has(adapter.entryFile) && (await exists(entryPath)) ? await readFile(entryPath, "utf8") : "";
+  const entryExisted = !linkedControls.has(adapter.entryFile) && await exists(entryPath);
+  const oldEntry = entryExisted ? await readFile(entryPath, "utf8") : "";
   const oldLockContent = !linkedControls.has(".agent-rules.lock.json") && (await exists(lockPath)) ? await readFile(lockPath, "utf8") : undefined;
   const oldLock = oldLockContent ? parseProjectLock(oldLockContent) : undefined;
+  const entryOrigin = oldLock ? oldLock.entryOrigin : entryExisted ? "existing" : "generated";
   if (oldLock && snapshot) assertReleaseNotOlder(oldLock, snapshot);
   const entries = Object.fromEntries(packs.map(({ manifest }) => [manifest.id, manifest.entry as string]));
   const block = adapter.renderManagedBlock(config, entries);
@@ -517,6 +520,7 @@ async function prepareProject(root: string, config: ProjectConfig, adapter: Targ
     targets: Object.fromEntries(config.targets.map((target) => [target, TOOLKIT_VERSION])),
     managedFiles,
     managedBlockDigest: digest(block),
+    ...(entryOrigin ? { entryOrigin } : {}),
   };
   const changes: ProjectChange[] = [];
   const candidates = new Set([...Object.keys(oldLock?.managedFiles ?? {}), ...files.keys()]);
@@ -710,11 +714,17 @@ async function planUninstallInternal(root: string, adapter: TargetAdapter, ownsW
   const entryContent = await readFile(entryPath, "utf8");
   const block = extractManagedBlock(entryContent, adapter);
   if (!block) throw new Error(`${adapter.entryFile} 中没有完整的 AgentRuleKit 受控区块`);
+  const start = entryContent.indexOf(block);
+  const prefix = entryContent.slice(0, start);
+  const suffix = entryContent.slice(start + block.length);
   let entryAfter: string | undefined;
-  if (entryContent !== `${block}\n`) {
-    const start = entryContent.indexOf(block);
-    const prefix = entryContent.slice(0, start);
-    const suffix = entryContent.slice(start + block.length);
+  if (lock.entryOrigin === "existing") {
+    if (entryContent === `${block}\n`) entryAfter = "";
+    else if (prefix.endsWith("\n\n") && suffix.startsWith("\n")) entryAfter = `${prefix.slice(0, -2)}${suffix.slice(1)}`;
+    else entryAfter = `${prefix}${suffix}`;
+  } else if (lock.entryOrigin === "generated") {
+    entryAfter = `${prefix}${suffix.startsWith("\n") ? suffix.slice(1) : suffix}` || undefined;
+  } else if (entryContent !== `${block}\n`) {
     entryAfter = `${prefix.endsWith("\n\n") ? prefix.slice(0, -1) : prefix}${suffix.startsWith("\n") ? suffix.slice(1) : suffix}`;
   }
   const changes: ProjectChange[] = [];

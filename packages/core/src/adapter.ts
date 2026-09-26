@@ -50,6 +50,5 @@ export function mergeManagedBlock(existing: string, block: string, adapter: Targ
     const endOffset = end + adapter.blockEnd.length;
     return `${existing.slice(0, start)}${block}${existing.slice(endOffset)}`;
   }
-  const prefix = existing.trimEnd();
-  return prefix ? `${prefix}\n\n${block}\n` : `${block}\n`;
+  return existing ? `${existing}\n\n${block}\n` : `${block}\n`;
 }
