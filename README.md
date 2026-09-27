@@ -4,7 +4,7 @@ AgentRuleKit 是面向 AI 编程代理的平台无关工程规则与工作流分
 
 ## 当前状态
 
-`0.1.0` 已完成首次公开发布；最新正式版本为 `0.1.4`。当前代码包含：
+`0.1.0` 已完成首次公开发布；最新正式版本为 `0.1.5`。当前代码包含：
 
 - 基于证据检测技术栈的 TypeScript 核心包。
 - 支持 `detect`、`init`、`validate`、`check`、`diff`、`update` 和 `uninstall` 的 `agent-rule` CLI。
@@ -17,7 +17,7 @@ AgentRuleKit 是面向 AI 编程代理的平台无关工程规则与工作流分
 - GitHub Release 规则包下载与 SHA-256 验证、Codex 会话开始时每天至多一次的后台更新检查。
 - 独立 npm CLI 构建、仓库插件市场入口和跨平台 CI 配置。
 
-GitHub 仓库已公开；[`v0.1.4` GitHub Release](https://github.com/yadan177/AgentRuleKit/releases/tag/v0.1.4) 和 [npm CLI `agentrulekit@0.1.4`](https://www.npmjs.com/package/agentrulekit) 已发布。Go、TypeScript、Unity 临时工程已通过本版公开 Release 的同版本验收；正式 npm 包还在现有 Unity 项目完成安装、校验、卸载，并确认项目文件与 Git 状态恢复到测试前。Codex 桌面端插件交互与 Hook 实际调度仍待用户验收；非 Codex 自动生成器尚未实现。
+GitHub 仓库已公开；[`v0.1.5` GitHub Release](https://github.com/yadan177/AgentRuleKit/releases/tag/v0.1.5) 和 [npm CLI `agentrulekit@0.1.5`](https://www.npmjs.com/package/agentrulekit) 已发布。Go、TypeScript、Unity 临时工程已从正式 npm 包通过公开 Release 的同版本验收；另在临时项目验证卸载摘要、按需查看完整差异及原有 `AGENTS.md` 恢复。Codex 桌面端插件交互与 Hook 实际调度仍待用户验收；非 Codex 自动生成器尚未实现。
 
 ## 业务项目如何使用
 
@@ -34,7 +34,7 @@ agent-rule validate /absolute/path/to/project
 
 更新分成三步：`check` 发现新版本，`diff` 让人审查，`update --apply` 才修改项目文件。自动检查仅提醒，不会自动应用。项目本地覆盖规则和未知文件受保护。
 
-不再使用时，先运行 `agent-rule uninstall /absolute/path/to/project` 审查删除差异，再运行 `agent-rule uninstall /absolute/path/to/project --apply` 卸载项目规则；项目本地文件会保留。
+不再使用时，先运行 `agent-rule uninstall /absolute/path/to/project` 查看卸载摘要；如需逐行差异，加 `--details`。审查后运行 `agent-rule uninstall /absolute/path/to/project --apply` 卸载项目规则；项目本地文件会保留。
 
 ## 规则来源
 
