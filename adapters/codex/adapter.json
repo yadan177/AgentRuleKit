@@ -1,7 +1,7 @@
 {
   "$schema": "../../schemas/adapter.schema.json",
   "id": "codex",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "status": "implemented",
   "capabilities": {
     "rules": "native",

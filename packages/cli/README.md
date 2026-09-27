@@ -28,9 +28,10 @@ agent-rule validate /absolute/path/to/project
 
 ```bash
 agent-rule uninstall /absolute/path/to/project
+agent-rule uninstall /absolute/path/to/project --details
 agent-rule uninstall /absolute/path/to/project --apply
 ```
 
-卸载仅删除经锁文件确认的受管规则、项目配置和锁文件，并移除 `AGENTS.md` 的 AgentRuleKit 区块。项目本地覆盖规则及其他非受管文件原地保留；卸载无需联网。
+默认只显示待删除文件数量、`AGENTS.md` 的处理方式和保留文件清单；需要逐行差异时再加 `--details`。`--apply` 会重新核对计划后才卸载，成功时只显示简短结果。卸载仅删除经锁文件确认的受管规则、项目配置和锁文件，并移除 `AGENTS.md` 的 AgentRuleKit 区块。项目本地覆盖规则及其他非受管文件原地保留；卸载无需联网。
 
 完整说明、Codex 插件安装方法及恢复流程见 [AgentRuleKit 安装与更新文档](https://github.com/yadan177/AgentRuleKit/blob/main/docs/installation.md)。源码与问题反馈：[AgentRuleKit](https://github.com/yadan177/AgentRuleKit)。
