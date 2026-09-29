@@ -1,10 +1,10 @@
 # AgentRuleKit（AI开发工具箱）
 
-AgentRuleKit 是面向 AI 编程代理的平台无关工程规则与工作流分发系统。Codex 是第一个实现的适配器；本地开发版已让 Qoder、Cursor、WorkBuddy 共用 `AGENTS.md` 项目入口，仍待各客户端实际加载验收。
+AgentRuleKit 是面向 AI 编程代理的平台无关工程规则与工作流分发系统。Codex 是第一个实现的适配器；桌面版也可为 Qoder、Cursor、WorkBuddy 生成共享的 `AGENTS.md` 项目入口，仍待各客户端实际加载验收。
 
 ## 当前状态
 
-`0.1.0` 已完成首次公开发布；最新正式版本为 `0.1.5`。当前代码包含：
+CLI 和规则包的最新正式版本为 `0.1.5`；桌面应用的首个正式版本为 `1.0.0`。当前代码包含：
 
 - 基于证据检测技术栈的 TypeScript 核心包。
 - 支持 `detect`、`init`、`validate`、`check`、`diff`、`update` 和 `uninstall` 的 `agent-rule` CLI。
@@ -16,9 +16,9 @@ AgentRuleKit 是面向 AI 编程代理的平台无关工程规则与工作流分
 - 将规则真实安装到业务工程，预览差异后再应用更新；发生受管文件漂移或未知文件碰撞时拒绝覆盖。
 - GitHub Release 规则包下载与 SHA-256 验证、Codex 会话开始时每天至多一次的后台更新检查。
 - 独立 npm CLI 构建、仓库插件市场入口和跨平台 CI 配置。
-- 本机验证过的 macOS Apple Silicon 桌面试用版，可选择项目和技术栈，预览后安装、更新或卸载规则；Windows 安装包仍待制作和验收。
+- macOS Apple Silicon 与 Windows x64 桌面安装包，可选择项目、技术栈和目标平台，预览后安装、更新或卸载规则；Windows 安装包已由 CI 构建，真实桌面交互仍待验收。
 
-GitHub 仓库已公开；[`v0.1.5` GitHub Release](https://github.com/yadan177/AgentRuleKit/releases/tag/v0.1.5) 和 [npm CLI `agentrulekit@0.1.5`](https://www.npmjs.com/package/agentrulekit) 已发布。Go、TypeScript、Unity 临时工程已从正式 npm 包通过公开 Release 的同版本验收；另在临时项目验证卸载摘要、按需查看完整差异及原有 `AGENTS.md` 恢复。多平台选择是本地未发布开发内容，不能通过已发布的 `0.1.5` CLI 使用；Qoder、Cursor、WorkBuddy 的实际客户端加载仍待验收。Codex 桌面端插件交互与 Hook 实际调度仍待用户验收。
+GitHub 仓库已公开；[桌面版 `1.0.0`](https://github.com/yadan177/AgentRuleKit/releases/tag/desktop-v1.0.0)、[`v0.1.5` 规则包 Release](https://github.com/yadan177/AgentRuleKit/releases/tag/v0.1.5) 和 [npm CLI `agentrulekit@0.1.5`](https://www.npmjs.com/package/agentrulekit) 已分别发布。Go、TypeScript、Unity 临时工程已从正式 npm 包通过公开规则包的同版本验收。已发布的 CLI 不支持多平台配置；Qoder、Cursor、WorkBuddy 的实际客户端加载，以及 Codex 桌面端插件交互与 Hook 调度仍待验收。
 
 ## 业务项目如何使用
 
@@ -33,13 +33,13 @@ agent-rule validate /absolute/path/to/project
 
 `init` 只在没有 `agent-rules.yaml` 的项目执行。它检测技术栈，从官方 GitHub Release 下载并校验规则包；已有 `AGENTS.md` 的非受管内容会保留。完整步骤见 [安装与更新](docs/installation.md)。
 
-本地开发版可在桌面端多选 Codex、Qoder、Cursor、WorkBuddy；CLI 可用 `--targets codex,qoder,cursor,workbuddy` 指定。四个平台共用项目中的一套规则和一个 `AGENTS.md` 入口，选择记录在配置与锁文件中。此能力尚未发布到 npm。
+桌面版 `1.0.0` 可多选 Codex、Qoder、Cursor、WorkBuddy。四个平台共用项目中的一套规则和一个 `AGENTS.md` 入口，选择记录在配置与锁文件中。仓库源码中的 CLI 可用 `--targets codex,qoder,cursor,workbuddy` 指定；此能力尚未发布到 npm，正式 CLI `0.1.5` 不能管理桌面版创建的多平台配置。
 
 更新分成三步：`check` 发现新版本，`diff` 让人审查，`update --apply` 才修改项目文件。自动检查仅提醒，不会自动应用。项目本地覆盖规则和未知文件受保护。
 
 不再使用时，先运行 `agent-rule uninstall /absolute/path/to/project` 查看卸载摘要；如需逐行差异，加 `--details`。审查后运行 `agent-rule uninstall /absolute/path/to/project --apply` 卸载项目规则；项目本地文件会保留。
 
-图形界面源码和本机构建方式见 [桌面版说明](packages/desktop-app/README.md)。桌面版目前是未签名的本机测试构建，尚未作为正式安装包发布。
+图形界面安装包见[桌面版 `1.0.0` Release](https://github.com/yadan177/AgentRuleKit/releases/tag/desktop-v1.0.0)，源码和构建方式见[桌面版说明](packages/desktop-app/README.md)。安装包尚未签名，Mac 包尚未公证。
 
 ## 规则来源
 
