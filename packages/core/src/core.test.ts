@@ -130,6 +130,41 @@ test("initializeProject creates a valid generic adapter scaffold", async () => {
   });
 });
 
+test("多个兼容平台共用一份入口和规则，并可完整更新与卸载", async () => {
+  await withTempProject(async (root) => {
+    const source = path.join(root, "source");
+    const target = path.join(root, "target");
+    await mkdir(target);
+    await writePack(source, "common", "entry.md");
+    const adapter = { ...testAdapter, compatibleTargets: ["test", "qoder", "cursor", "workbuddy"] };
+    const targets = ["test", "qoder", "cursor", "workbuddy"];
+    const config = await initializeProject(target, adapter, source, targets);
+    assert.deepEqual(config.targets, targets);
+    assert.deepEqual(Object.keys(JSON.parse(await readFile(path.join(target, ".agent-rules.lock.json"), "utf8")).targets), targets);
+    assert.equal((await readFile(path.join(target, adapter.entryFile), "utf8")).split(adapter.blockStart).length - 1, 1);
+    assert.deepEqual(await validateProject(target, adapter), { valid: true, issues: [] });
+    assert.deepEqual((await planProject(target, config, adapter)).changes, []);
+    const reduced = { ...config, targets: ["test", "qoder"] };
+    const configPath = path.join(target, "agent-rules.yaml");
+    const originalConfig = await readFile(configPath, "utf8");
+    const targetPlan = await planProject(target, reduced, adapter);
+    await writeFile(configPath, `${originalConfig}\n# changed after preview\n`);
+    await assert.rejects(applyProject(target, reduced, adapter, stringify(reduced), undefined, targetPlan, originalConfig), /项目配置在预览后发生变化/);
+    await writeFile(configPath, originalConfig);
+    await applyProject(target, reduced, adapter, stringify(reduced), undefined, targetPlan, originalConfig);
+    assert.deepEqual((await loadProjectConfig(target)).targets, reduced.targets);
+    await writeFile(path.join(source, "rulepacks", "common", "entry.md"), "# common\n更新\n");
+    const update = await planProject(target, reduced, adapter);
+    assert.ok(update.changes.some((change) => change.path === ".agent-rules/common/entry.md"));
+    await applyProject(target, reduced, adapter, undefined, undefined, update);
+    assert.deepEqual(await validateProject(target, adapter), { valid: true, issues: [] });
+    await assert.rejects(planProject(target, { ...reduced, targets: ["unknown"] }, adapter), /不支持的目标工具/);
+    const uninstall = await planUninstall(target, adapter);
+    await applyUninstall(target, adapter, uninstall);
+    await assert.rejects(readFile(path.join(target, adapter.entryFile), "utf8"), /ENOENT/);
+  });
+});
+
 test("项目规则卸载先预览，再保留本地文件并允许重新安装", async () => {
   await withTempProject(async (root) => {
     const source = path.join(root, "source");

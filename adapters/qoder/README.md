@@ -1,5 +1,7 @@
-# Qoder 适配器
+# Qoder 项目规则入口
 
-Qoder 适配器尚未正式实现。`templates/` 保存从现有规则库迁移的项目规则入口，作为后续实现 `.qoder/rules/` 生成器和兼容性测试的输入资料。
+Qoder 官方支持自动读取项目根目录的 `AGENTS.md`。安装时选择 Qoder，会将 Qoder 记入项目配置和锁文件，并在共享的 `AGENTS.md` 受控区块中指向 `.agent-rules/` 规则包。不生成第二份规则正文。
 
-这些模板已改为 AgentRuleKit 的 `.agent-rules/` 安装路径，但在生成器和目标版本验证完成前，不会由 CLI 自动写入业务工程，也不代表当前 Qoder 版本一定会自动加载。
+`templates/` 是迁移时保留的参考入口，不参与安装。若项目另有 `.qoder/rules/`，Qoder 官方说明该目录的规则与 `AGENTS.md` 冲突时优先；AgentRuleKit 不改动这些现有规则。
+
+依据：[Qoder 官方规则文档](https://docs.qoder.com/user-guide/rules)。

@@ -3,6 +3,8 @@ import type { ProjectConfig } from "./types.js";
 /** 目标工具负责描述自己的项目入口；核心只处理文件生命周期。 */
 export interface TargetAdapter {
   id: string;
+  /** Several tools can read the same project entry without duplicating rule files. */
+  compatibleTargets?: readonly string[];
   entryFile: string;
   blockStart: string;
   blockEnd: string;
@@ -12,6 +14,11 @@ export interface TargetAdapter {
 export function assertTargetAdapter(adapter: TargetAdapter): void {
   if (!/^[a-z0-9][a-z0-9-]*$/.test(adapter.id)) {
     throw new Error(`目标工具 ID 不合法：${adapter.id}`);
+  }
+  if (adapter.compatibleTargets && (!adapter.compatibleTargets.includes(adapter.id) ||
+    new Set(adapter.compatibleTargets).size !== adapter.compatibleTargets.length ||
+    adapter.compatibleTargets.some((target) => !/^[a-z0-9][a-z0-9-]*$/.test(target)))) {
+    throw new Error("目标工具兼容列表不合法");
   }
   if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(adapter.entryFile)) {
     throw new Error(`目标工具入口必须是工程根目录中的普通文件：${adapter.entryFile}`);

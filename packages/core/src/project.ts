@@ -67,7 +67,7 @@ export function parseProjectLock(content: string): ProjectLock {
   if (!isRecord(value) || value.schemaVersion !== 1 || typeof value.toolkitVersion !== "string" || !VERSION_PATTERN.test(value.toolkitVersion) ||
     !["workspace", "github"].includes(String(value.sourceType)) || typeof value.source !== "string" || !value.source ||
     !isStringMap(value.rulepacks) || !isStringMap(value.targets) || !isStringMap(value.managedFiles) ||
-    Object.keys(value.rulepacks).length === 0 || Object.keys(value.targets).length !== 1 || Object.keys(value.managedFiles).length > 5000 ||
+    Object.keys(value.rulepacks).length === 0 || Object.keys(value.targets).length === 0 || Object.keys(value.targets).length > 16 || Object.keys(value.managedFiles).length > 5000 ||
     typeof value.managedBlockDigest !== "string" || !DIGEST_PATTERN.test(value.managedBlockDigest)) {
     throw new Error("锁文件缺少必需字段或字段类型不合法");
   }
@@ -75,6 +75,7 @@ export function parseProjectLock(content: string): ProjectLock {
   if (Object.keys(value).some((key) => !allowed.has(key)) ||
     Object.values(value.rulepacks).some((version) => !VERSION_PATTERN.test(version)) ||
     Object.values(value.targets).some((version) => !VERSION_PATTERN.test(version)) ||
+    Object.keys(value.targets).some((target) => !/^[a-z0-9][a-z0-9-]*$/.test(target)) ||
     Object.values(value.managedFiles).some((hash) => !DIGEST_PATTERN.test(hash)) ||
     (value.sourceVersion !== undefined && (typeof value.sourceVersion !== "string" || !VERSION_PATTERN.test(value.sourceVersion))) ||
     (value.sourceDigest !== undefined && (typeof value.sourceDigest !== "string" || !DIGEST_PATTERN.test(value.sourceDigest))) ||
@@ -299,11 +300,13 @@ function assertSupportedConfig(config: ProjectConfig, adapter?: TargetAdapter): 
   if (config.updates.channel !== "stable" || config.updates.strategy !== "manual") {
     throw new Error("当前版本仅支持 stable 通道与人工批准更新；不会静默忽略其他策略");
   }
-  if (!Array.isArray(config.targets) || config.targets.length !== 1 || typeof config.targets[0] !== "string" || !config.targets[0]) {
-    throw new Error("当前版本仅支持一个目标工具");
+  if (!Array.isArray(config.targets) || config.targets.length === 0 || config.targets.length > 16 ||
+    config.targets.some((target) => typeof target !== "string" || !/^[a-z0-9][a-z0-9-]*$/.test(target)) ||
+    new Set(config.targets).size !== config.targets.length) {
+    throw new Error("项目配置的目标工具列表无效");
   }
-  if (adapter && config.targets[0] !== adapter.id) {
-    throw new Error(`项目配置的目标工具不是 ${adapter.id}`);
+  if (adapter && config.targets.some((target) => !(adapter.compatibleTargets ?? [adapter.id]).includes(target))) {
+    throw new Error(`项目配置包含 ${adapter.id} 入口不支持的目标工具`);
   }
   if (!Array.isArray(config.rulepacks) || config.rulepacks.length === 0 || config.rulepacks.some((id) => typeof id !== "string" || !PACK_ID_PATTERN.test(id) || id.includes("//") || id.endsWith("/")) ||
     new Set(config.rulepacks).size !== config.rulepacks.length || !isRecord(config.project) || typeof config.project.overrides !== "string" || !isManagedPath(config.project.overrides) || !config.project.overrides.endsWith(".md")) {
@@ -577,8 +580,14 @@ export async function planProject(root: string, config: ProjectConfig, adapter: 
   return (await prepareProject(root, config, adapter, snapshot)).plan;
 }
 
-async function applyProjectUnlocked(root: string, config: ProjectConfig, adapter: TargetAdapter, configContent?: string, snapshot?: SourceSnapshot, expectedPlan?: ProjectPlan): Promise<ProjectLock> {
+async function applyProjectUnlocked(root: string, config: ProjectConfig, adapter: TargetAdapter, configContent?: string, snapshot?: SourceSnapshot, expectedPlan?: ProjectPlan, expectedOriginalConfigContent?: string): Promise<ProjectLock> {
   const resolvedRoot = path.resolve(root);
+  if (expectedOriginalConfigContent !== undefined && await readFile(path.join(resolvedRoot, "agent-rules.yaml"), "utf8") !== expectedOriginalConfigContent) {
+    throw new Error("项目配置在预览后发生变化；请重新预览差异");
+  }
+  if (configContent === undefined && !isDeepStrictEqual(await loadProjectConfig(resolvedRoot), config)) {
+    throw new Error("项目配置在预览后发生变化；请重新预览差异");
+  }
   const prepared = await prepareProject(resolvedRoot, config, adapter, snapshot, true);
   if (prepared.plan.conflicts.length) {
     throw new Error(prepared.plan.conflicts.map((issue) => `[${issue.code}] ${issue.message}`).join("\n"));
@@ -678,11 +687,11 @@ async function withProjectWriteLock<T>(root: string, operation: () => Promise<T>
   }
 }
 
-export async function applyProject(root: string, config: ProjectConfig, adapter: TargetAdapter, configContent?: string, snapshot?: SourceSnapshot, expectedPlan?: ProjectPlan): Promise<ProjectLock> {
-  return withProjectWriteLock(root, () => applyProjectUnlocked(root, config, adapter, configContent, snapshot, expectedPlan));
+export async function applyProject(root: string, config: ProjectConfig, adapter: TargetAdapter, configContent?: string, snapshot?: SourceSnapshot, expectedPlan?: ProjectPlan, expectedOriginalConfigContent?: string): Promise<ProjectLock> {
+  return withProjectWriteLock(root, () => applyProjectUnlocked(root, config, adapter, configContent, snapshot, expectedPlan, expectedOriginalConfigContent));
 }
 
-async function listRetainedRulePaths(root: string, managedFiles: Record<string, string>): Promise<string[]> {
+export async function listRetainedRulePaths(root: string, managedFiles: Record<string, string>): Promise<string[]> {
   const retained: string[] = [];
   const visit = async (directory: string): Promise<void> => {
     for (const entry of await readdir(path.join(root, directory), { withFileTypes: true })) {
@@ -902,6 +911,7 @@ export async function initializeProject(
   root: string,
   adapter: TargetAdapter,
   sourceRoot: string = root,
+  selectedTargets?: string[],
 ): Promise<ProjectConfig> {
   const resolvedRoot = path.resolve(root);
   return withProjectWriteLock(resolvedRoot, async () => {
@@ -909,6 +919,7 @@ export async function initializeProject(
       throw new Error("agent-rules.yaml 已存在；请运行 generate，不要再次运行 init");
     }
     const config = await createDefaultConfig(resolvedRoot, adapter, sourceRoot);
+    if (selectedTargets) config.targets = selectedTargets;
     await applyProjectUnlocked(resolvedRoot, config, adapter, stringify(config));
     return config;
   });
@@ -919,6 +930,9 @@ export async function initializeGithubProject(
   adapter: TargetAdapter,
   snapshot: SourceSnapshot,
   repository: string,
+  selectedRulepacks?: string[],
+  expectedPlan?: ProjectPlan,
+  selectedTargets?: string[],
 ): Promise<ProjectConfig> {
   const resolvedRoot = path.resolve(root);
   return withProjectWriteLock(resolvedRoot, async () => {
@@ -927,7 +941,9 @@ export async function initializeGithubProject(
     }
     const config = await createDefaultConfig(resolvedRoot, adapter, snapshot.root);
     config.source = { type: "github", repository };
-    await applyProjectUnlocked(resolvedRoot, config, adapter, stringify(config), snapshot);
+    if (selectedRulepacks) config.rulepacks = selectedRulepacks;
+    if (selectedTargets) config.targets = selectedTargets;
+    await applyProjectUnlocked(resolvedRoot, config, adapter, stringify(config), snapshot, expectedPlan);
     return config;
   });
 }
@@ -964,6 +980,7 @@ async function validateProjectInternal(root: string, adapter: TargetAdapter, own
     let lock: ProjectLock;
     try {
       config = await loadProjectConfig(resolvedRoot);
+      assertSupportedConfig(config, adapter);
     } catch (error) {
       return { valid: false, issues: [{ code: "invalid-config", message: `项目配置无效：${error instanceof Error ? error.message : String(error)}` }] };
     }
@@ -979,8 +996,8 @@ async function validateProjectInternal(root: string, adapter: TargetAdapter, own
     } else if (!(await lstat(resolveInside(resolvedRoot, config.project.overrides))).isFile()) {
       issues.push({ code: "invalid-overrides-type", message: `项目覆盖规则不是普通文件：${config.project.overrides}` });
     }
-    if (!config.targets.includes(adapter.id)) {
-      issues.push({ code: "missing-target", message: `尚未将 ${adapter.id} 配置为目标工具` });
+    if (Object.keys(lock.targets).sort().join("\0") !== [...config.targets].sort().join("\0")) {
+      issues.push({ code: "target-mismatch", message: "配置与锁文件的目标工具不一致" });
     }
 
     const entry = await readFile(path.join(resolvedRoot, adapter.entryFile), "utf8");
@@ -998,7 +1015,6 @@ async function validateProjectInternal(root: string, adapter: TargetAdapter, own
     const configuredSource = config.source.type === "workspace" ? config.source.path ?? "." : config.source.repository ?? "";
     if (lock.sourceType !== config.source.type) issues.push({ code: "source-type-mismatch", message: "配置与锁文件的规则源类型不一致" });
     if (lock.source !== configuredSource) issues.push({ code: "source-mismatch", message: "配置与锁文件的规则源不一致" });
-    if (!Object.hasOwn(lock.targets, adapter.id)) issues.push({ code: "target-mismatch", message: `锁文件缺少目标工具 ${adapter.id}` });
     if (config.source.type === "github" && (!lock.sourceVersion || !/^sha256:[a-f0-9]{64}$/.test(lock.sourceDigest ?? "") || !/^[a-f0-9]{40}(?:[a-f0-9]{24})?$/.test(lock.sourceCommit ?? ""))) {
       issues.push({ code: "source-provenance-missing", message: "GitHub 规则源缺少版本、资产摘要或来源提交；请运行 diff/update 核查并迁移" });
     }

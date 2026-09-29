@@ -18,6 +18,33 @@ function expectExit(result, code, context) {
   assert.equal(result.status, code, `${context}\n${result.stdout}\n${result.stderr}`);
 }
 
+test("CLI 可选择四个平台，共用 AGENTS.md 并安全更新、卸载", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "agentrulekit-cli-platforms-"));
+  try {
+    const source = path.join(root, "source");
+    const project = path.join(root, "project");
+    await mkdir(project);
+    await cp(path.join(repository, "rulepacks"), path.join(source, "rulepacks"), { recursive: true });
+    await writeFile(path.join(project, "go.mod"), "module example.com/platforms\n");
+    await writeFile(path.join(project, "AGENTS.md"), "# 已有项目说明\n");
+    const targets = ["codex", "qoder", "cursor", "workbuddy"];
+    expectExit(command("init", project, "--source-workspace", source, "--targets", targets.join(",")), 0, "多平台安装");
+    expectExit(command("validate", project), 0, "多平台校验");
+    const config = parse(await readFile(path.join(project, "agent-rules.yaml"), "utf8"));
+    const lock = JSON.parse(await readFile(path.join(project, ".agent-rules.lock.json"), "utf8"));
+    assert.deepEqual(config.targets, targets);
+    assert.deepEqual(Object.keys(lock.targets), targets);
+    assert.equal((await readFile(path.join(project, "AGENTS.md"), "utf8")).split("<!-- agent-rule:start -->").length - 1, 1);
+    const rule = path.join(source, "rulepacks", "common", "entry.md");
+    await writeFile(rule, `${await readFile(rule, "utf8")}\n多平台测试更新。\n`);
+    expectExit(command("update", project, "--apply"), 0, "多平台更新");
+    expectExit(command("validate", project), 0, "更新后校验");
+    expectExit(command("uninstall", project, "--apply"), 0, "多平台卸载");
+    assert.equal(await readFile(path.join(project, "AGENTS.md"), "utf8"), "# 已有项目说明\n");
+    assert.equal(command("init", project, "--source-workspace", source, "--targets", "unknown").status, 1);
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
 test("Python、TypeScript、Unity 工程完成安装与安全更新闭环", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "agentrulekit-cli-e2e-"));
   try {

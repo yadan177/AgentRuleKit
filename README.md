@@ -1,6 +1,6 @@
 # AgentRuleKit（AI开发工具箱）
 
-AgentRuleKit 是面向 AI 编程代理的平台无关工程规则与工作流分发系统。Codex 是第一个实现的适配器；Cursor、Qoder 等工具后续通过相同的适配器边界接入。
+AgentRuleKit 是面向 AI 编程代理的平台无关工程规则与工作流分发系统。Codex 是第一个实现的适配器；本地开发版已让 Qoder、Cursor、WorkBuddy 共用 `AGENTS.md` 项目入口，仍待各客户端实际加载验收。
 
 ## 当前状态
 
@@ -8,16 +8,17 @@ AgentRuleKit 是面向 AI 编程代理的平台无关工程规则与工作流分
 
 - 基于证据检测技术栈的 TypeScript 核心包。
 - 支持 `detect`、`init`、`validate`、`check`、`diff`、`update` 和 `uninstall` 的 `agent-rule` CLI。
-- 管理 `AGENTS.md` 受控区块的 Codex 适配器。
+- 管理共享 `AGENTS.md` 受控区块的 Codex、Qoder、Cursor 和 WorkBuddy 项目入口（后面三项仍待真实客户端验收）。
 - 包含四个初始 Skills 的 Codex 插件。
 - 规则包、项目配置、锁文件和适配器 Schema。
 - 已迁移的 14 个规则包，共 116 份开发与技术文档规则。
-- 在 `adapters/` 保留 Codex 与 Qoder 入口模板。
+- 在 `adapters/` 维护平台入口资料；规则正文仍只在 `rulepacks/`。
 - 将规则真实安装到业务工程，预览差异后再应用更新；发生受管文件漂移或未知文件碰撞时拒绝覆盖。
 - GitHub Release 规则包下载与 SHA-256 验证、Codex 会话开始时每天至多一次的后台更新检查。
 - 独立 npm CLI 构建、仓库插件市场入口和跨平台 CI 配置。
+- 本机验证过的 macOS Apple Silicon 桌面试用版，可选择项目和技术栈，预览后安装、更新或卸载规则；Windows 安装包仍待制作和验收。
 
-GitHub 仓库已公开；[`v0.1.5` GitHub Release](https://github.com/yadan177/AgentRuleKit/releases/tag/v0.1.5) 和 [npm CLI `agentrulekit@0.1.5`](https://www.npmjs.com/package/agentrulekit) 已发布。Go、TypeScript、Unity 临时工程已从正式 npm 包通过公开 Release 的同版本验收；另在临时项目验证卸载摘要、按需查看完整差异及原有 `AGENTS.md` 恢复。Codex 桌面端插件交互与 Hook 实际调度仍待用户验收；非 Codex 自动生成器尚未实现。
+GitHub 仓库已公开；[`v0.1.5` GitHub Release](https://github.com/yadan177/AgentRuleKit/releases/tag/v0.1.5) 和 [npm CLI `agentrulekit@0.1.5`](https://www.npmjs.com/package/agentrulekit) 已发布。Go、TypeScript、Unity 临时工程已从正式 npm 包通过公开 Release 的同版本验收；另在临时项目验证卸载摘要、按需查看完整差异及原有 `AGENTS.md` 恢复。多平台选择是本地未发布开发内容，不能通过已发布的 `0.1.5` CLI 使用；Qoder、Cursor、WorkBuddy 的实际客户端加载仍待验收。Codex 桌面端插件交互与 Hook 实际调度仍待用户验收。
 
 ## 业务项目如何使用
 
@@ -32,9 +33,13 @@ agent-rule validate /absolute/path/to/project
 
 `init` 只在没有 `agent-rules.yaml` 的项目执行。它检测技术栈，从官方 GitHub Release 下载并校验规则包；已有 `AGENTS.md` 的非受管内容会保留。完整步骤见 [安装与更新](docs/installation.md)。
 
+本地开发版可在桌面端多选 Codex、Qoder、Cursor、WorkBuddy；CLI 可用 `--targets codex,qoder,cursor,workbuddy` 指定。四个平台共用项目中的一套规则和一个 `AGENTS.md` 入口，选择记录在配置与锁文件中。此能力尚未发布到 npm。
+
 更新分成三步：`check` 发现新版本，`diff` 让人审查，`update --apply` 才修改项目文件。自动检查仅提醒，不会自动应用。项目本地覆盖规则和未知文件受保护。
 
 不再使用时，先运行 `agent-rule uninstall /absolute/path/to/project` 查看卸载摘要；如需逐行差异，加 `--details`。审查后运行 `agent-rule uninstall /absolute/path/to/project --apply` 卸载项目规则；项目本地文件会保留。
+
+图形界面源码和本机构建方式见 [桌面版说明](packages/desktop-app/README.md)。桌面版目前是未签名的本机测试构建，尚未作为正式安装包发布。
 
 ## 规则来源
 
@@ -64,7 +69,8 @@ node packages/cli/dist/index.js validate /absolute/path/to/project
 ```text
 packages/core/             平台无关核心逻辑
 packages/cli/              agent-rule 命令行工具
-adapters/codex/            首个目标适配器
+packages/desktop-app/      桌面图形界面（本机测试版）
+adapters/                  平台入口与兼容性说明
 plugins/agent-rule-kit/    Codex 插件与 Skills
 rulepacks/                 权威规则包目标目录
 schemas/                   版本化数据契约

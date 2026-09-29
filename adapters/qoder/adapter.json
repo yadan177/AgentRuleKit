@@ -2,15 +2,16 @@
   "$schema": "../../schemas/adapter.schema.json",
   "id": "qoder",
   "version": "0.1.5",
-  "status": "planned",
+  "status": "implemented",
   "capabilities": {
-    "rules": "legacy-template",
+    "rules": "AGENTS.md compatibility",
     "skills": "unverified",
     "commands": "unverified",
     "mcp": "unverified",
     "hooks": "unverified"
   },
   "outputs": {
+    "projectEntry": "AGENTS.md",
     "templates": "adapters/qoder/templates"
   }
 }

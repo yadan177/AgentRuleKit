@@ -4,7 +4,7 @@ import process from "node:process";
 import { lstat } from "node:fs/promises";
 import path from "node:path";
 
-import { codexAdapter } from "@agentrulekit/adapter-codex";
+import { AGENTS_MD_TARGETS, codexAdapter } from "@agentrulekit/adapter-codex";
 import {
   detectProject,
   createDefaultConfig,
@@ -37,7 +37,7 @@ function printHelp(): void {
 
 命令：
   detect      检测支持的技术栈并展示证据
-  init        展示技术栈依据与建议规则包，再为 Codex 工程安装规则
+  init        展示技术栈依据与建议规则包，再为所选平台安装规则
   check       检查本地完整性及规则源是否有更新
   diff        展示待更新文件的可审查差异
   update      预览更新；加 --apply 才会应用
@@ -52,7 +52,20 @@ function printHelp(): void {
       agent-rule update /path/to/project --apply
       agent-rule uninstall /path/to/project --details
       agent-rule uninstall /path/to/project --apply
+      agent-rule init /path/to/project --targets codex,qoder,cursor,workbuddy
       agent-rule init /path/to/project --source-workspace /path/to/AgentRuleKit`);
+}
+
+function requestedTargets(): string[] {
+  const index = process.argv.indexOf("--targets");
+  if (index < 0) return ["codex"];
+  const value = process.argv[index + 1];
+  const targets = value?.split(",") ?? [];
+  if (!value || value.startsWith("--") || targets.length === 0 ||
+    new Set(targets).size !== targets.length || targets.some((target) => !AGENTS_MD_TARGETS.includes(target as typeof AGENTS_MD_TARGETS[number]))) {
+    throw new Error(`--targets 只能填写不重复的平台：${AGENTS_MD_TARGETS.join(",")}`);
+  }
+  return targets;
 }
 
 function renderChange(change: ProjectChange): string {
@@ -142,12 +155,13 @@ async function run(): Promise<void> {
       const sourceArg = process.argv.indexOf("--source-workspace");
       const sourceRoot = sourceArg >= 0 ? process.argv[sourceArg + 1] : undefined;
       if (sourceArg >= 0 && !sourceRoot) throw new Error("--source-workspace 需要规则源目录");
+      const targets = requestedTargets();
       const detection = await detectProject(root);
       const recommendation = await createDefaultConfig(root, codexAdapter);
       printInitRecommendation(detection, recommendation.rulepacks);
       let config;
       if (sourceArg >= 0) {
-        config = await initializeProject(root, codexAdapter, sourceRoot!);
+        config = await initializeProject(root, codexAdapter, sourceRoot!, targets);
       } else {
         const release = await findLatestRelease(DEFAULT_REPOSITORY);
         const downloaded = await downloadRulepacks(release);
@@ -157,13 +171,14 @@ async function run(): Promise<void> {
             version: downloaded.version,
             digest: release.digest,
             commit: downloaded.sourceCommit,
-          }, DEFAULT_REPOSITORY);
+          }, DEFAULT_REPOSITORY, undefined, undefined, targets);
         } finally {
           await downloaded.cleanup();
         }
       }
       console.log(`已在 ${root} 初始化 AgentRuleKit`);
       console.log(`规则包：${config.rulepacks.join(", ")}`);
+      console.log(`目标平台：${config.targets.join(", ")}`);
       return;
     }
     case "generate":

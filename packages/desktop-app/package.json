@@ -1,0 +1,70 @@
+{
+  "name": "agentrulekit-desktop",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AI 开发工具箱桌面版",
+  "main": "build/main.cjs",
+  "scripts": {
+    "dev": "npm run build && electron .",
+    "build": "vite build && node scripts/build-electron.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run build && node --test tests/*.test.mjs",
+    "pack:mac": "npm run build && electron-builder --mac dmg --arm64",
+    "pack:win": "npm run build && electron-builder --win nsis --x64"
+  },
+  "dependencies": {
+    "@phosphor-icons/react": "^2.1.10",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "react-icons": "^5.7.0",
+    "tar": "^7.5.22",
+    "yaml": "^2.8.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "5.0.4",
+    "electron": "44.4.5",
+    "electron-builder": "26.15.3",
+    "esbuild": "^0.28.2",
+    "typescript": "^5.9.3",
+    "vite": "^6.4.3"
+  },
+  "build": {
+    "appId": "cn.agentrulekit.desktop",
+    "productName": "AI 开发工具箱",
+    "buildVersion": "1.0.0",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "build/main.cjs",
+      "build/preload.cjs",
+      "package.json"
+    ],
+    "asar": true,
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.developer-tools",
+      "icon": "assets/icon.icns",
+      "identity": null
+    },
+    "win": {
+      "target": ["nsis"],
+      "icon": "assets/icon.png",
+      "artifactName": "AI开发工具箱-${version}-windows-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": false
+    },
+    "dmg": {
+      "artifactName": "AI开发工具箱-${version}-${arch}.dmg"
+    }
+  }
+}

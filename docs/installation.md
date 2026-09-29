@@ -25,6 +25,8 @@ agent-rule validate /absolute/path/to/project
 
 `agentrulekit@0.1.5` 已在 npm 公开发布；上面的安装命令已在隔离环境从 npm 注册表验证。`v0.1.5` GitHub Release 也已可用；Go、TypeScript、Unity 临时工程通过本版同版本验收，正式 npm 包另在临时项目通过卸载摘要、详细预览和应用验收。请仍先在临时工程试用，再决定是否安装到现有业务项目。
 
+本地未发布开发版还支持选择多个读取 `AGENTS.md` 的平台。在源码构建后可运行 `node packages/cli/dist/index.js init /absolute/path/to/project --targets codex,qoder,cursor,workbuddy`，或在桌面应用中多选平台。规则正文在 `.agent-rules/` 只安装一份，`AGENTS.md` 只有一个受控入口；配置与锁文件记录所选平台。已发布的 `agentrulekit@0.1.5` 不支持此参数或多目标配置。其他平台现有的原生规则文件不会被修改。
+
 `init` 会先打印检测到的技术栈依据和建议规则包，然后尝试安装；它不会等待二次确认。若希望先判断技术栈而不写入项目，只运行 `detect`。规则更新与首次初始化不同，始终先用 `diff` 审查，再显式执行 `update --apply`。
 
 TypeScript 工程即使没有 `package.json`，只要项目根目录有 `tsconfig.json`，也会识别为 TypeScript 并安装其 JavaScript 基线依赖；技术栈检测仍以目标工程的实际文件为准。
