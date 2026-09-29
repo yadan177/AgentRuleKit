@@ -14,7 +14,7 @@
     "sourceDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
     "sourceCommit": { "type": "string", "pattern": "^[a-f0-9]{40}([a-f0-9]{24})?$" },
     "rulepacks": { "type": "object", "minProperties": 1, "additionalProperties": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+([-+][A-Za-z0-9.-]+)?$" } },
-    "targets": { "type": "object", "minProperties": 1, "maxProperties": 1, "additionalProperties": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+([-+][A-Za-z0-9.-]+)?$" } },
+    "targets": { "type": "object", "minProperties": 1, "maxProperties": 16, "propertyNames": { "pattern": "^[a-z0-9][a-z0-9-]*$" }, "additionalProperties": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+([-+][A-Za-z0-9.-]+)?$" } },
     "managedFiles": { "type": "object", "maxProperties": 5000, "additionalProperties": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" } },
     "managedBlockDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
     "entryOrigin": { "enum": ["existing", "generated"] }

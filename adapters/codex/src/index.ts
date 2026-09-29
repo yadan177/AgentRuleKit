@@ -2,6 +2,7 @@ import type { ProjectConfig, TargetAdapter } from "@agentrulekit/core";
 
 export const CODEX_BLOCK_START = "<!-- agent-rule:start -->";
 export const CODEX_BLOCK_END = "<!-- agent-rule:end -->";
+export const AGENTS_MD_TARGETS = ["codex", "qoder", "cursor", "workbuddy"] as const;
 
 export function renderCodexBlock(
   config: ProjectConfig,
@@ -27,6 +28,7 @@ ${CODEX_BLOCK_END}`;
 
 export const codexAdapter: TargetAdapter = {
   id: "codex",
+  compatibleTargets: AGENTS_MD_TARGETS,
   entryFile: "AGENTS.md",
   blockStart: CODEX_BLOCK_START,
   blockEnd: CODEX_BLOCK_END,

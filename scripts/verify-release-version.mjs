@@ -16,6 +16,8 @@ for (const file of [
   "packages/cli/package.json",
   "adapters/codex/adapter.json",
   "adapters/qoder/adapter.json",
+  "adapters/cursor/adapter.json",
+  "adapters/workbuddy/adapter.json",
   "plugins/agent-rule-kit/.codex-plugin/plugin.json",
   "workflows/bootstrap/workflow.json",
   "workflows/review/workflow.json",
