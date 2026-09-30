@@ -75,6 +75,10 @@ export class SoftwareUpdateService {
         return this.setState({ phase: "manual", currentVersion: app.getVersion(), availableVersion: release.version,
           message: "下载 DMG 后打开安装包，将应用拖入“应用程序”并替换旧版。" });
       }
+      if (!release.feedUrl) {
+        return this.setState({ phase: "manual", currentVersion: app.getVersion(), availableVersion: release.version,
+          message: "下载 Windows 安装包后关闭旧版，再运行安装包完成更新。" });
+      }
       if (!canInstallAutomatically()) {
         return this.setState({ phase: "manual", currentVersion: app.getVersion(), availableVersion: release.version, message: "当前 Windows 安装包未通过签名校验，请手动安装新版。" });
       }
@@ -106,6 +110,6 @@ export class SoftwareUpdateService {
 
   async openDownloadPage(): Promise<void> {
     if (this.state.phase !== "manual" || !this.release) throw new Error("当前没有可手动安装的软件更新");
-    await shell.openExternal(process.platform === "darwin" ? this.release.downloadUrl : this.release.pageUrl);
+    await shell.openExternal(this.release.downloadUrl);
   }
 }

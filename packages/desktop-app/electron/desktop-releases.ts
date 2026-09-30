@@ -3,7 +3,7 @@ export type DesktopRelease = {
   tag: string;
   pageUrl: string;
   downloadUrl: string;
-  feedUrl: string;
+  feedUrl?: string;
 };
 
 type GithubAsset = { name?: unknown };
@@ -41,9 +41,9 @@ export function matchesUpdateInfo(info: { version?: unknown; files?: { url?: unk
   return names.every((name) => name === expected);
 }
 
-function requiredAssets(version: string, platform: NodeJS.Platform, arch: string): string[] | undefined {
-  if (platform === "darwin" && arch === "arm64") return [`AgentRuleKit-Desktop-${version}-macOS-arm64.dmg`];
-  if (platform === "win32" && arch === "x64") return ["latest.yml", `AgentRuleKit-Desktop-${version}-Windows-x64.exe`];
+function installerName(version: string, platform: NodeJS.Platform, arch: string): string | undefined {
+  if (platform === "darwin" && arch === "arm64") return `AgentRuleKit-Desktop-${version}-macOS-arm64.dmg`;
+  if (platform === "win32" && arch === "x64") return `AgentRuleKit-Desktop-${version}-Windows-x64.exe`;
   return undefined;
 }
 
@@ -56,18 +56,18 @@ export function selectDesktopRelease(data: unknown, platform: NodeJS.Platform, a
     if (!matched) continue;
     const version = matched.slice(1).join(".");
     if (!parts(version)?.every(Number.isSafeInteger)) continue;
-    const required = requiredAssets(version, platform, arch);
-    if (!required || !Array.isArray(item.assets)) continue;
+    const installer = installerName(version, platform, arch);
+    if (!installer || !Array.isArray(item.assets)) continue;
     const names = new Set((item.assets as GithubAsset[]).map((asset) => asset?.name).filter((name): name is string => typeof name === "string"));
-    if (!required.every((name) => names.has(name))) continue;
+    if (!names.has(installer)) continue;
     if (selected && compareDesktopVersions(version, selected.version) <= 0) continue;
     const tag = item.tag_name;
     selected = {
       version,
       tag,
       pageUrl: `https://github.com/${repository}/releases/tag/${tag}`,
-      downloadUrl: `https://github.com/${repository}/releases/download/${tag}/${required.at(-1)}`,
-      feedUrl: `https://github.com/${repository}/releases/download/${tag}/`,
+      downloadUrl: `https://github.com/${repository}/releases/download/${tag}/${installer}`,
+      ...(platform === "win32" && names.has("latest.yml") ? { feedUrl: `https://github.com/${repository}/releases/download/${tag}/` } : {}),
     };
   }
   return selected;

@@ -53,36 +53,22 @@ jobs:
     needs: verify
     runs-on: windows-latest
     env:
-      AGENTRULEKIT_SIGNED_WINDOWS_RELEASE: '1'
-      WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
-      WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
-      - name: 检查签名凭据
-        shell: pwsh
-        run: |
-          if (-not $env:WIN_CSC_LINK -or -not $env:WIN_CSC_KEY_PASSWORD) { throw '缺少 Windows 签名凭据' }
       - run: npm ci
       - run: npm run pack:win --workspace agentrulekit-desktop
-      - name: 验证安装包签名和更新清单
-        shell: pwsh
-        run: |
-          $installer = Get-ChildItem packages/desktop-app/release/AgentRuleKit-Desktop-*-Windows-x64.exe | Select-Object -First 1
-          if ((Get-AuthenticodeSignature -LiteralPath $installer.FullName).Status -ne 'Valid') { throw 'Windows 安装包签名无效' }
-          $appExe = Get-ChildItem packages/desktop-app/release/win-unpacked -Filter '*.exe' | Select-Object -First 1
-          if ((Get-AuthenticodeSignature -LiteralPath $appExe.FullName).Status -ne 'Valid') { throw 'Windows 应用签名无效' }
-          if (-not (Test-Path packages/desktop-app/release/latest.yml)) { throw '缺少 Windows 更新清单' }
-          if (-not (Select-String -Path packages/desktop-app/release/win-unpacked/resources/app-update.yml -Pattern '^publisherName:')) { throw '缺少更新签名发布者' }
+      - name: 核对手动安装包
+        run: node packages/desktop-app/scripts/verify-update-assets.mjs --manual
       - uses: actions/upload-artifact@v4
         with:
-          name: signed-windows
+          name: manual-windows
           path: |
             packages/desktop-app/release/*.exe
-            packages/desktop-app/release/latest.yml
           if-no-files-found: error
 
   publish:
@@ -103,5 +89,8 @@ jobs:
           version="${GITHUB_REF_NAME#desktop-v}"
           notes="packages/desktop-app/RELEASE-${version}.md"
           test -f "$notes"
+          test -f "release-assets/AgentRuleKit-Desktop-${version}-macOS-arm64.dmg"
+          test -f "release-assets/AgentRuleKit-Desktop-${version}-Windows-x64.exe"
+          test ! -f release-assets/latest.yml
           gh release create "$GITHUB_REF_NAME" release-assets/* --repo "$GITHUB_REPOSITORY" --verify-tag --draft --latest=false --title "AI 开发工具箱 $version" --notes-file "$notes"
           gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft=false --latest=false
