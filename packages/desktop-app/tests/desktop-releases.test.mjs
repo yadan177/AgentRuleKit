@@ -5,13 +5,13 @@ import test from "node:test";
 const require = createRequire(import.meta.url);
 const { compareDesktopVersions, fetchDesktopRelease, matchesUpdateInfo, selectDesktopRelease } = require("../build/desktop-releases.cjs");
 
-function desktop(version, { draft = false, complete = true, platform = "darwin" } = {}) {
+function desktop(version, { draft = false, complete = true, platform = "darwin", signedFeed = false } = {}) {
   return {
     tag_name: `desktop-v${version}`, draft, prerelease: false,
     assets: complete ? platform === "darwin"
       ? [{ name: `AgentRuleKit-Desktop-${version}-macOS-arm64.dmg` }]
-      : [{ name: "latest.yml" }, { name: `AgentRuleKit-Desktop-${version}-Windows-x64.exe` }]
-      : [{ name: platform === "darwin" ? `AgentRuleKit-Desktop-${version}-macOS-arm64.zip` : `AgentRuleKit-Desktop-${version}-Windows-x64.exe` }],
+      : [...(signedFeed ? [{ name: "latest.yml" }] : []), { name: `AgentRuleKit-Desktop-${version}-Windows-x64.exe` }]
+      : [{ name: platform === "darwin" ? `AgentRuleKit-Desktop-${version}-macOS-arm64.zip` : "latest.yml" }],
   };
 }
 
@@ -32,13 +32,18 @@ test("软件版本只从完整的 desktop Release 选取，忽略规则包、草
   assert.throws(() => compareDesktopVersions("1.2", "1.2.0"));
 });
 
-test("Windows 下载前校验更新清单；Mac 手动安装不使用更新清单", () => {
+test("Windows 无更新清单时手动安装，有清单时仍核验自动更新资产", () => {
   const exe = "AgentRuleKit-Desktop-1.2.0-Windows-x64.exe";
   assert.equal(matchesUpdateInfo({ version: "1.2.0", files: [{ url: exe }] }, "1.2.0", "win32", "x64"), true);
   assert.equal(matchesUpdateInfo({ version: "1.2.0", files: [{ url: exe }, { url: "https://example.test/other.exe" }] }, "1.2.0", "win32", "x64"), false);
   assert.equal(matchesUpdateInfo({ version: "1.2.0", files: [{ url: exe }] }, "1.2.0", "darwin", "arm64"), false);
   assert.equal(matchesUpdateInfo({ version: "1.3.0", files: [{ url: exe }] }, "1.2.0", "win32", "x64"), false);
   assert.equal(selectDesktopRelease([desktop("1.2.0", { platform: "win32", complete: false })], "win32", "x64"), undefined);
+  const manual = selectDesktopRelease([desktop("1.2.0", { platform: "win32" })], "win32", "x64");
+  assert.equal(manual?.feedUrl, undefined);
+  assert.equal(manual?.downloadUrl, "https://github.com/yadan177/AgentRuleKit/releases/download/desktop-v1.2.0/AgentRuleKit-Desktop-1.2.0-Windows-x64.exe");
+  const automatic = selectDesktopRelease([desktop("1.2.0", { platform: "win32", signedFeed: true })], "win32", "x64");
+  assert.equal(automatic?.feedUrl, "https://github.com/yadan177/AgentRuleKit/releases/download/desktop-v1.2.0/");
 });
 
 test("软件版本检查固定访问公开 GitHub Release 列表，不使用规则包的 latest 接口", async () => {
@@ -49,7 +54,7 @@ test("软件版本检查固定访问公开 GitHub Release 列表，不使用规�
     return new Response(JSON.stringify([release]), { status: 200 });
   });
   assert.match(requested, /\/releases\?per_page=100$/);
-  assert.equal(selected?.feedUrl, "https://github.com/yadan177/AgentRuleKit/releases/download/desktop-v1.2.0/");
+  assert.equal(selected?.feedUrl, undefined);
   assert.equal(selected?.pageUrl, "https://github.com/yadan177/AgentRuleKit/releases/tag/desktop-v1.2.0");
   await assert.rejects(fetchDesktopRelease("win32", "x64", async () => new Response("unavailable", { status: 503 })), /HTTP 503/);
 });
