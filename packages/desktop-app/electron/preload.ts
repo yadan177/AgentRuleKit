@@ -11,4 +11,14 @@ contextBridge.exposeInMainWorld("agentRuleKit", {
   previewUninstall: () => ipcRenderer.invoke("rules:preview-uninstall"),
   applyUninstall: () => ipcRenderer.invoke("rules:apply-uninstall"),
   clearPreview: () => ipcRenderer.invoke("rules:clear-preview"),
+  getSoftwareUpdate: () => ipcRenderer.invoke("software-update:state"),
+  checkSoftwareUpdate: () => ipcRenderer.invoke("software-update:check"),
+  downloadSoftwareUpdate: () => ipcRenderer.invoke("software-update:download"),
+  installSoftwareUpdate: () => ipcRenderer.invoke("software-update:install"),
+  openSoftwareDownload: () => ipcRenderer.invoke("software-update:open-download"),
+  onSoftwareUpdate: (listener: (state: unknown) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, state: unknown) => listener(state);
+    ipcRenderer.on("software-update:state", handler);
+    return () => ipcRenderer.removeListener("software-update:state", handler);
+  },
 });

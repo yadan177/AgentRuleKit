@@ -20,12 +20,17 @@ jobs:
           - os: macos-latest
             script: pack:mac
             artifact: desktop-macos-arm64
-            files: packages/desktop-app/release/*.dmg
+            files: |
+              packages/desktop-app/release/*.dmg
           - os: windows-latest
             script: pack:win
             artifact: desktop-windows-x64
-            files: packages/desktop-app/release/*.exe
+            files: |
+              packages/desktop-app/release/*.exe
+              packages/desktop-app/release/latest.yml
     runs-on: ${{ matrix.os }}
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -36,6 +41,8 @@ jobs:
       - run: npm run check
       - run: npm run typecheck --workspace agentrulekit-desktop
       - run: npm run ${{ matrix.script }} --workspace agentrulekit-desktop
+      - name: 核对更新清单和安装资产
+        run: node packages/desktop-app/scripts/verify-update-assets.mjs
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
