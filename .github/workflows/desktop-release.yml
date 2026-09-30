@@ -1,0 +1,107 @@
+name: 发布桌面应用
+
+on:
+  push:
+    tags:
+      - 'desktop-v*'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: 确认发布标签来自 main
+        run: git merge-base --is-ancestor HEAD origin/main
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: 核对桌面标签和源码版本
+        run: node -e 'const p=require("./packages/desktop-app/package.json"); if (process.env.GITHUB_REF_NAME !== `desktop-v${p.version}`) process.exit(1)'
+      - run: npm run check
+      - run: npm run typecheck --workspace agentrulekit-desktop
+
+  macos:
+    needs: verify
+    runs-on: macos-latest
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run pack:mac --workspace agentrulekit-desktop
+      - name: 核对手动安装包
+        run: node packages/desktop-app/scripts/verify-update-assets.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: manual-macos
+          path: |
+            packages/desktop-app/release/*.dmg
+          if-no-files-found: error
+
+  windows:
+    needs: verify
+    runs-on: windows-latest
+    env:
+      AGENTRULEKIT_SIGNED_WINDOWS_RELEASE: '1'
+      WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+      WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - name: 检查签名凭据
+        shell: pwsh
+        run: |
+          if (-not $env:WIN_CSC_LINK -or -not $env:WIN_CSC_KEY_PASSWORD) { throw '缺少 Windows 签名凭据' }
+      - run: npm ci
+      - run: npm run pack:win --workspace agentrulekit-desktop
+      - name: 验证安装包签名和更新清单
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem packages/desktop-app/release/AgentRuleKit-Desktop-*-Windows-x64.exe | Select-Object -First 1
+          if ((Get-AuthenticodeSignature -LiteralPath $installer.FullName).Status -ne 'Valid') { throw 'Windows 安装包签名无效' }
+          $appExe = Get-ChildItem packages/desktop-app/release/win-unpacked -Filter '*.exe' | Select-Object -First 1
+          if ((Get-AuthenticodeSignature -LiteralPath $appExe.FullName).Status -ne 'Valid') { throw 'Windows 应用签名无效' }
+          if (-not (Test-Path packages/desktop-app/release/latest.yml)) { throw '缺少 Windows 更新清单' }
+          if (-not (Select-String -Path packages/desktop-app/release/win-unpacked/resources/app-update.yml -Pattern '^publisherName:')) { throw '缺少更新签名发布者' }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: signed-windows
+          path: |
+            packages/desktop-app/release/*.exe
+            packages/desktop-app/release/latest.yml
+          if-no-files-found: error
+
+  publish:
+    needs: [macos, windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+      - name: 发布独立的桌面应用 Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${GITHUB_REF_NAME#desktop-v}"
+          notes="packages/desktop-app/RELEASE-${version}.md"
+          test -f "$notes"
+          gh release create "$GITHUB_REF_NAME" release-assets/* --repo "$GITHUB_REPOSITORY" --verify-tag --draft --latest=false --title "AI 开发工具箱 $version" --notes-file "$notes"
+          gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft=false --latest=false

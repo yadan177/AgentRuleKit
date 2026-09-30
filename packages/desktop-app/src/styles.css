@@ -16,6 +16,12 @@ button:focus-visible, input:focus-visible { outline: 3px solid #80aeff; outline-
 .app-header { height: 104px; flex: none; display: flex; align-items: center; padding: 0 40px; border-bottom: 1px solid #e9edf2; position: relative; }
 .brand { font-size: 26px; font-weight: 760; letter-spacing: -0.03em; }
 .mode-switch { margin-left: auto; display: flex; gap: 4px; padding: 4px; border-radius: 10px; background: #f0f3f7; }
+.software-tip + .mode-switch { margin-left: 0; }
+.software-tip { margin-left: auto; margin-right: 18px; display: inline-flex; align-items: center; gap: 7px; border: 0; border-radius: 7px; padding: 9px 12px; background: transparent; color: #617084; font-size: 15px; font-weight: 600; white-space: nowrap; }
+.software-tip:hover { background: #f1f5fb; color: #125dcc; }
+.software-tip.has-update { color: #125dcc; background: #eaf2ff; }
+.software-tip:disabled { cursor: progress; opacity: .8; }
+.software-error { position: fixed; top: 92px; right: 40px; z-index: 9; max-width: min(420px, calc(100vw - 40px)); border: 1px solid #efcaca; border-radius: 8px; background: #fff7f7; color: #a12e2e; padding: 10px 14px; box-shadow: 0 4px 15px #172e4d1a; font-size: 14px; }
 .mode-switch button { min-width: 84px; padding: 9px 16px; border: 0; border-radius: 7px; background: transparent; color: #596579; font-size: 17px; font-weight: 650; }
 .mode-switch button.active { background: #fff; color: #115ecb; box-shadow: 0 1px 4px #172e4d20; }
 .mode-switch button:disabled { opacity: .5; cursor: wait; }
@@ -153,6 +159,8 @@ h2 { margin: 0 0 20px; font-size: 30px; line-height: 1.25; letter-spacing: -0.02
 @media (max-width: 760px) {
   .app-header { height: 76px; padding: 0 20px; }
   .brand { font-size: 20px; }
+  .software-tip { margin-right: 8px; padding: 8px; font-size: 0; }
+  .software-tip svg { width: 20px; height: 20px; }
   .mode-switch button { min-width: 64px; font-size: 15px; padding: 8px 10px; }
   .settings-button { font-size: 0; }
   .main-content { padding: 32px 20px; }

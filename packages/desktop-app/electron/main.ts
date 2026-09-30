@@ -2,10 +2,15 @@ import { app, BrowserWindow, dialog, ipcMain } from "electron";
 import path from "node:path";
 import { DesktopOperations, STACK_PACKS } from "./operations.ts";
 import type { PlatformChoice, StackChoice } from "./operations.ts";
+import { SoftwareUpdateService } from "./software-update.ts";
 
 const operations = new DesktopOperations();
 let window: BrowserWindow | undefined;
 let selectedProject: string | undefined;
+let activeRuleTasks = 0;
+const softwareUpdate = new SoftwareUpdateService((state) => {
+  if (window && !window.isDestroyed()) window.webContents.send("software-update:state", state);
+});
 
 function requireProject(): string {
   if (!selectedProject) throw new Error("请先选择项目文件夹");
@@ -16,7 +21,9 @@ function registerHandlers(): void {
   const guarded = <T extends unknown[]>(channel: string, action: (...args: T) => Promise<unknown>): void => {
     ipcMain.handle(channel, async (event, ...args) => {
       if (!window || event.sender !== window.webContents) throw new Error("请求来源不正确");
-      return action(...args as T);
+      if (channel.startsWith("rules:")) activeRuleTasks++;
+      try { return await action(...args as T); }
+      finally { if (channel.startsWith("rules:")) activeRuleTasks--; }
     });
   };
 
@@ -43,6 +50,14 @@ function registerHandlers(): void {
   guarded("rules:preview-uninstall", () => operations.previewUninstall(requireProject()));
   guarded("rules:apply-uninstall", () => operations.applyUninstall(requireProject()));
   guarded("rules:clear-preview", () => operations.clearPreview());
+  guarded("software-update:state", async () => softwareUpdate.getState());
+  guarded("software-update:check", () => softwareUpdate.check());
+  guarded("software-update:download", () => softwareUpdate.download());
+  guarded("software-update:install", async () => {
+    if (activeRuleTasks > 0) throw new Error("规则操作仍在进行，请完成后再重启更新软件");
+    softwareUpdate.install();
+  });
+  guarded("software-update:open-download", () => softwareUpdate.openDownloadPage());
 }
 
 function createWindow(): void {
@@ -62,7 +77,10 @@ function createWindow(): void {
   });
   window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
   window.webContents.on("will-navigate", (event) => event.preventDefault());
-  window.once("ready-to-show", () => window?.show());
+  window.once("ready-to-show", () => {
+    window?.show();
+    void softwareUpdate.check();
+  });
   void window.loadFile(path.join(__dirname, "../dist/index.html"));
   window.on("closed", () => { window = undefined; });
 }

@@ -1,5 +1,5 @@
-import { useState, type ReactNode } from "react";
-import { CheckCircle, Cube, FolderSimple, Info, UsersThree, WarningCircle, X } from "@phosphor-icons/react";
+import { useEffect, useState, type ReactNode } from "react";
+import { ArrowClockwise, CheckCircle, Cube, FolderSimple, Info, UsersThree, WarningCircle, X } from "@phosphor-icons/react";
 import { FaJava } from "react-icons/fa";
 import { SiCursor, SiGo, SiJavascript, SiPython, SiUnity } from "react-icons/si";
 import { TbBrandOpenai } from "react-icons/tb";
@@ -12,6 +12,7 @@ type Issue = { code: string; message: string };
 type ProjectStatus = { root: string; installed: boolean; valid: boolean; rulepacks: string[]; targets: PlatformChoice[]; version?: string; issues: Issue[] };
 type UpdateCheck = { root: string; currentVersion: string; latestVersion: string; available: boolean; targetsChanged: boolean };
 type Preview = { kind: Mode; root: string; changes: Change[]; retainedPaths: string[]; conflicts: Issue[]; version?: string; targets: PlatformChoice[] };
+type SoftwareUpdateState = { phase: "idle" | "checking" | "current" | "available" | "downloading" | "ready" | "manual" | "error"; currentVersion: string; availableVersion?: string; percent?: number; message?: string };
 type DesktopApi = {
   chooseProject(): Promise<ProjectStatus | undefined>;
   previewInstall(stack: StackChoice, platforms: PlatformChoice[]): Promise<Preview>;
@@ -22,6 +23,12 @@ type DesktopApi = {
   previewUninstall(): Promise<Preview>;
   applyUninstall(): Promise<ProjectStatus>;
   clearPreview(): Promise<void>;
+  getSoftwareUpdate(): Promise<SoftwareUpdateState>;
+  checkSoftwareUpdate(): Promise<SoftwareUpdateState>;
+  downloadSoftwareUpdate(): Promise<SoftwareUpdateState>;
+  installSoftwareUpdate(): Promise<void>;
+  openSoftwareDownload(): Promise<void>;
+  onSoftwareUpdate(listener: (state: SoftwareUpdateState) => void): () => void;
 };
 declare global { interface Window { agentRuleKit?: DesktopApi } }
 
@@ -103,8 +110,44 @@ export function App() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [softwareState, setSoftwareState] = useState<SoftwareUpdateState>();
+  const [softwareBusy, setSoftwareBusy] = useState(false);
+  const [softwareError, setSoftwareError] = useState("");
   const stack = stacks.find((item) => item.id === stackId)!;
   const unavailable = !window.agentRuleKit;
+
+  useEffect(() => {
+    const desktop = window.agentRuleKit;
+    if (!desktop) return;
+    const unsubscribe = desktop.onSoftwareUpdate(setSoftwareState);
+    void desktop.getSoftwareUpdate().then(setSoftwareState).catch(() => {});
+    return unsubscribe;
+  }, []);
+
+  function softwareAction(): void {
+    const desktop = window.agentRuleKit;
+    if (!desktop || !softwareState || softwareBusy) return;
+    setSoftwareBusy(true); setSoftwareError("");
+    void (async () => {
+      try {
+        if (softwareState.phase === "manual") return await desktop.openSoftwareDownload();
+        if (softwareState.phase === "ready") return await desktop.installSoftwareUpdate();
+        let state = softwareState;
+        if (state.phase === "error") state = await desktop.checkSoftwareUpdate();
+        if (state.phase === "manual") return await desktop.openSoftwareDownload();
+        if (state.phase === "error") { setSoftwareError(state.message ?? "检查软件版本失败"); return; }
+        if (state.phase !== "available") return;
+        state = await desktop.downloadSoftwareUpdate();
+        if (state.phase === "ready") await desktop.installSoftwareUpdate();
+        else if (state.phase === "error") setSoftwareError(state.message ?? "下载软件更新失败");
+      } catch (problem) { setSoftwareError(message(problem)); }
+      finally { setSoftwareBusy(false); }
+    })();
+  }
+
+  const softwareTip = softwareState?.phase === "available" || softwareState?.phase === "manual" || softwareState?.phase === "downloading" || softwareState?.phase === "ready" || (softwareState?.phase === "error" && !!softwareState.availableVersion);
+  const softwareLabel = softwareState?.phase === "ready" ? "重启完成更新" : softwareState?.phase === "downloading" ? `正在下载 ${softwareState.percent ?? 0}%`
+    : softwareState?.phase === "error" ? "更新失败 · 重试" : softwareState?.phase === "manual" ? "发现新版 · 下载后安装" : "发现新版 · 点击更新";
 
   async function run(action: () => Promise<void>): Promise<void> {
     setBusy(true); setError("");
@@ -156,7 +199,9 @@ export function App() {
   }
   const cannotPreview = busy || !status || (mode === "install" ? status.installed || platformIds.length === 0 : mode === "update" ? !status.installed || !status.valid || platformIds.length === 0 : !status.installed);
   return <div className="app-shell">
-    <header className="app-header"><span className="brand">AI 开发工具箱</span><nav className="mode-switch" aria-label="规则操作">
+    <header className="app-header"><span className="brand">AI 开发工具箱</span>
+      {!unavailable && softwareTip && <button type="button" className="software-tip has-update" onClick={softwareAction} disabled={softwareBusy || softwareState?.phase === "downloading"} title={softwareError || softwareState?.message || undefined} aria-label={`软件更新：${softwareLabel}`}><ArrowClockwise size={18} aria-hidden="true" />{softwareLabel}</button>}
+      <nav className="mode-switch" aria-label="规则操作">
       <button type="button" className={mode === "install" ? "active" : ""} disabled={busy} onClick={() => { setMode("install"); clearPreview(); setError(""); }}>安装</button>
       <button type="button" className={mode === "update" ? "active" : ""} disabled={busy} onClick={() => { setMode("update"); clearPreview(); setError(""); }}>更新</button>
       <button type="button" className={mode === "uninstall" ? "active" : ""} disabled={busy} onClick={() => { setMode("uninstall"); clearPreview(); setError(""); }}>卸载</button>
@@ -194,5 +239,6 @@ export function App() {
         {busy ? "处理中…" : mode === "install" ? "安装" : mode === "update" ? updateCheck?.available ? "查看变更" : "检查更新" : "卸载"}
       </button></footer>
     {preview && <PreviewDialog preview={preview} busy={busy} onClose={() => { if (!busy) clearPreview(); }} onApply={apply} />}
+    {softwareError && <div className="software-error" role="alert">{softwareError}</div>}
   </div>;
 }

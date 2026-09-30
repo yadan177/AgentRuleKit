@@ -8,7 +8,7 @@ await Promise.all([
     platform: "node",
     format: "cjs",
     target: "node22",
-    external: ["electron", "tar", "yaml"],
+    external: ["electron", "electron-updater", "tar", "yaml"],
   }),
   build({
     entryPoints: ["electron/preload.ts"],
@@ -27,5 +27,13 @@ await Promise.all([
     format: "cjs",
     target: "node22",
     external: ["tar", "yaml"],
+  }),
+  build({
+    entryPoints: ["electron/desktop-releases.ts"],
+    outfile: "build/desktop-releases.cjs",
+    bundle: true,
+    platform: "node",
+    format: "cjs",
+    target: "node22",
   }),
 ]);
