@@ -3,7 +3,7 @@
   "version": "0.1.5",
   "private": true,
   "license": "Apache-2.0",
-  "description": "面向 AI 编程代理的跨工具工程规则与工作流分发系统",
+  "description": "独立多项目 AI 开发工具箱，规划以场景插件组合规则、Skills 与跨 IDE 能力",
   "type": "module",
   "workspaces": [
     "packages/*",
