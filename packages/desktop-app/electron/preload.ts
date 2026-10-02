@@ -2,6 +2,9 @@ import { contextBridge, ipcRenderer } from "electron";
 
 contextBridge.exposeInMainWorld("agentRuleKit", {
   chooseProject: () => ipcRenderer.invoke("project:choose"),
+  listProjects: () => ipcRenderer.invoke("project:list"),
+  selectProject: (root: string) => ipcRenderer.invoke("project:select", root),
+  forgetProject: (root: string) => ipcRenderer.invoke("project:forget", root),
   inspectProject: () => ipcRenderer.invoke("project:inspect"),
   previewInstall: (stack: string, platforms: string[]) => ipcRenderer.invoke("rules:preview-install", stack, platforms),
   applyInstall: () => ipcRenderer.invoke("rules:apply-install"),

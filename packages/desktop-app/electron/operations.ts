@@ -94,6 +94,22 @@ export interface ProjectStatus {
   issues: ValidationIssue[];
 }
 
+export async function inspectProjectRoot(root: string): Promise<ProjectStatus> {
+  const resolved = await checkedRoot(root);
+  if (!(await isPresent(path.join(resolved, "agent-rules.yaml")))) {
+    return { root: resolved, installed: false, valid: false, rulepacks: [], targets: [], issues: [] };
+  }
+  const validation = await validateProject(resolved, codexAdapter);
+  let rulepacks: string[] = [];
+  let targets: string[] = [];
+  let version: string | undefined;
+  try { const config = await loadProjectConfig(resolved); rulepacks = config.rulepacks; targets = config.targets; }
+  catch (error) { validation.issues.push({ code: "invalid-config", message: String(error) }); }
+  try { version = (await loadProjectLock(resolved)).sourceVersion; }
+  catch { /* validateProject reports invalid lock */ }
+  return { root: resolved, installed: true, valid: validation.valid && !validation.issues.length, rulepacks, targets, version, issues: validation.issues };
+}
+
 export interface UpdateCheck {
   root: string;
   currentVersion: string;
@@ -144,21 +160,7 @@ export class DesktopOperations {
     return this.exclusive(async () => {
       await this.discardPending();
       this.checked = undefined;
-      const resolved = await checkedRoot(root);
-      if (!(await isPresent(path.join(resolved, "agent-rules.yaml")))) {
-        return { root: resolved, installed: false, valid: false, rulepacks: [], targets: [], issues: [] };
-      }
-      const validation = await validateProject(resolved, codexAdapter);
-      let rulepacks: string[] = [];
-      let targets: string[] = [];
-      let version: string | undefined;
-      try { const config = await loadProjectConfig(resolved); rulepacks = config.rulepacks; targets = config.targets; }
-      catch (error) {
-        validation.issues.push({ code: "invalid-config", message: String(error) });
-      }
-      try { version = (await loadProjectLock(resolved)).sourceVersion; }
-      catch { /* validateProject reports invalid lock */ }
-      return { root: resolved, installed: true, valid: validation.valid && !validation.issues.length, rulepacks, targets, version, issues: validation.issues };
+      return inspectProjectRoot(root);
     });
   }
 

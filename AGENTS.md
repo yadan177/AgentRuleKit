@@ -19,4 +19,4 @@
 
 ## 验证
 
-运行 `npm run check` 完成 TypeScript 构建与测试。发布前使用官方校验器验证 Codex Skills 和插件。
+运行 `npm run check` 完成 TypeScript 构建与测试；桌面改动另运行桌面端 typecheck 与测试。未来发布实际 Codex Skills 或插件时，再使用官方校验器验证对应资产。
