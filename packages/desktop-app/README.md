@@ -5,6 +5,7 @@
 桌面版 1.1.0 面向 macOS 和 Windows，提供安装、更新和卸载项目规则。选择项目文件夹后，安装时选 Unity、JS + TS、Java、Go 或 Python，并可多选 Codex、Qoder、Cursor、WorkBuddy。一次安装会包括该技术栈的开发规则及对应文档规则；所选平台共用 `.agent-rules/` 和 `AGENTS.md`，不会复制多套正文。Qoder、Cursor、WorkBuddy 的真实客户端加载仍待验收。
 
 当前未发布源码增加了独立项目列表：工具箱把项目路径保存在个人应用数据目录中；选择已有项目时只读取它的规则状态，不重新初始化或改写项目。列表中的「移出列表」仅删除工具箱记录，项目规则继续保留。IDE 页面如实区分已实现的项目规则入口和尚未实现的个人环境 Skill／能力插件安装。当前代码仍处于开发验证阶段，不属于已发布的 1.1.0 功能。
+桌面应用只保留一个运行实例，避免两个窗口进程同时修改项目列表造成记录丢失。
 
 [下载桌面版 1.1.0](https://github.com/yadan177/AgentRuleKit/releases/tag/desktop-v1.1.0)：macOS Apple Silicon 使用 DMG，Windows x64 使用 EXE。已发布的 npm CLI `0.1.5` 不支持多平台配置；桌面版创建的多平台项目目前请继续用桌面版管理。
 

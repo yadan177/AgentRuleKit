@@ -29,4 +29,7 @@ test("资产清单拒绝自身依赖与重复 IDE", () => {
   assert.doesNotThrow(() => assertAssetManifest(manifest));
   assert.throws(() => assertAssetManifest({ ...manifest, dependencies: [manifest.id] }), /格式/);
   assert.throws(() => assertAssetManifest({ ...manifest, supportedIdes: ["codex", "codex"] }), /格式/);
+  assert.throws(() => assertAssetManifest({ ...manifest, extra: "unexpected" }), /格式/);
+  assert.throws(() => assertAssetManifest({ ...manifest, requiredTools: [42] }), /格式/);
+  assert.throws(() => assertAssetManifest(null), /格式/);
 });

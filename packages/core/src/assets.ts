@@ -69,19 +69,23 @@ export interface IdeAssetAdapter {
 
 const ID = /^[a-z0-9][a-z0-9-]*$/;
 
-export function assertAssetManifest(manifest: AssetManifest): void {
-  if (manifest.schemaVersion !== 1 || !ID.test(manifest.id) ||
-    !["skill", "capability-plugin"].includes(manifest.kind) ||
-    !/^\d+\.\d+\.\d+(?:-[a-z0-9.-]+)?$/.test(manifest.version) ||
-    typeof manifest.title !== "string" || !manifest.title.trim() || !Array.isArray(manifest.supportedIdes) ||
-    manifest.supportedIdes.length === 0 || manifest.supportedIdes.some((id) => !ID.test(id)) ||
-    !Array.isArray(manifest.dependencies) || manifest.dependencies.some((id) => !ID.test(id)) ||
-    !Array.isArray(manifest.requiredTools) || manifest.requiredTools.some((id) => !ID.test(id)) ||
-    !Array.isArray(manifest.ruleCategories) || manifest.ruleCategories.some((id) => !ID.test(id)) ||
-    new Set(manifest.supportedIdes).size !== manifest.supportedIdes.length ||
-    new Set(manifest.dependencies).size !== manifest.dependencies.length ||
-    new Set(manifest.requiredTools).size !== manifest.requiredTools.length ||
-    new Set(manifest.ruleCategories).size !== manifest.ruleCategories.length ||
+function isIdList(value: unknown, required = false): value is string[] {
+  return Array.isArray(value) && (!required || value.length > 0) &&
+    value.every((id) => typeof id === "string" && ID.test(id)) && new Set(value).size === value.length;
+}
+
+export function assertAssetManifest(value: unknown): asserts value is AssetManifest {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("资产清单格式不正确");
+  const manifest = value as Partial<AssetManifest>;
+  if (Object.keys(manifest).some((key) => ![
+    "schemaVersion", "id", "kind", "version", "title", "supportedIdes", "dependencies", "requiredTools", "ruleCategories",
+  ].includes(key)) ||
+    manifest.schemaVersion !== 1 || typeof manifest.id !== "string" || !ID.test(manifest.id) ||
+    (manifest.kind !== "skill" && manifest.kind !== "capability-plugin") ||
+    typeof manifest.version !== "string" || !/^\d+\.\d+\.\d+(?:-[a-z0-9.-]+)?$/.test(manifest.version) ||
+    typeof manifest.title !== "string" || !manifest.title.trim() ||
+    !isIdList(manifest.supportedIdes, true) || !isIdList(manifest.dependencies) ||
+    !isIdList(manifest.requiredTools) || !isIdList(manifest.ruleCategories) ||
     manifest.dependencies.includes(manifest.id)) {
     throw new Error("资产清单格式不正确");
   }

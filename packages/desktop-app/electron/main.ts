@@ -106,12 +106,23 @@ function createWindow(): void {
   window.on("closed", () => { window = undefined; });
 }
 
-app.whenReady().then(() => {
-  app.setName("AI 开发工具箱");
-  registry = new ProjectRegistry(path.join(app.getPath("userData"), "projects.json"));
-  registerHandlers();
-  createWindow();
-  app.on("activate", () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
-});
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+} else {
+  app.on("second-instance", () => {
+    if (!window || window.isDestroyed()) return;
+    if (window.isMinimized()) window.restore();
+    window.show();
+    window.focus();
+  });
 
-app.on("window-all-closed", () => { if (process.platform !== "darwin") app.quit(); });
+  app.whenReady().then(() => {
+    app.setName("AI 开发工具箱");
+    registry = new ProjectRegistry(path.join(app.getPath("userData"), "projects.json"));
+    registerHandlers();
+    createWindow();
+    app.on("activate", () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
+  });
+
+  app.on("window-all-closed", () => { if (process.platform !== "darwin") app.quit(); });
+}
