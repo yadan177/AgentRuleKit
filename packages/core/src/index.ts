@@ -1,4 +1,5 @@
 export * from "./adapter.js";
+export * from "./assets.js";
 export * from "./detect.js";
 export * from "./project.js";
 export * from "./release.js";

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentrulekit.dev/schemas/asset.schema.json",
+  "title": "AI 开发工具箱资产清单",
+  "type": "object",
+  "required": ["schemaVersion", "id", "kind", "version", "title", "supportedIdes", "dependencies", "requiredTools", "ruleCategories"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "kind": { "enum": ["skill", "capability-plugin"] },
+    "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+(?:-[a-z0-9.-]+)?$" },
+    "title": { "type": "string", "pattern": "\\S" },
+    "supportedIdes": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" } },
+    "dependencies": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" } },
+    "requiredTools": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" } },
+    "ruleCategories": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" } }
+  },
+  "additionalProperties": false
+}

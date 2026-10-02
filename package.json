@@ -3,7 +3,7 @@
   "version": "0.1.5",
   "private": true,
   "license": "Apache-2.0",
-  "description": "面向 AI 编程代理的跨工具工程规则与工作流分发系统",
+  "description": "独立多项目 AI 开发工具箱，规划以场景插件组合规则、Skills 与跨 IDE 能力",
   "type": "module",
   "workspaces": [
     "packages/*",
@@ -14,15 +14,14 @@
   },
   "scripts": {
     "build": "npm run build --workspace @agentrulekit/core && npm run build --workspace @agentrulekit/adapter-codex && npm run build --workspace agentrulekit",
-    "check": "npm run check:rulepacks && npm run check:plugin && npm run build && npm run test",
+    "check": "npm run check:rulepacks && npm run build && npm run test",
     "check:rulepacks": "node scripts/validate-rulepacks.mjs && node scripts/generate-provenance-inventory.mjs --check",
-    "check:plugin": "node scripts/validate-codex-plugin.mjs && node --check plugins/agent-rule-kit/hooks/session_start.mjs",
     "clean": "npm run clean --workspaces --if-present",
     "dev": "npm run dev --workspace agentrulekit --",
     "smoke:public": "npm run build && node scripts/verify-public-cli-smoke.mjs",
     "smoke:npm": "node scripts/verify-public-cli-smoke.mjs --from-npm",
     "manifests": "node scripts/generate-rulepack-manifests.mjs",
-    "test": "npm run test --workspaces --if-present && node --test scripts/tests/session-start.test.mjs scripts/tests/cli-e2e.test.mjs scripts/tests/remote-cli-e2e.test.mjs scripts/tests/package-install.test.mjs scripts/tests/rulepacks-validation.test.mjs scripts/tests/release-manifest.test.mjs scripts/tests/codex-plugin-validation.test.mjs scripts/tests/publication-gates.test.mjs",
+    "test": "npm run test --workspaces --if-present && node --test scripts/tests/cli-e2e.test.mjs scripts/tests/remote-cli-e2e.test.mjs scripts/tests/package-install.test.mjs scripts/tests/rulepacks-validation.test.mjs scripts/tests/release-manifest.test.mjs scripts/tests/publication-gates.test.mjs",
     "typecheck": "npm run typecheck --workspace @agentrulekit/core && npm run build --workspace @agentrulekit/core && npm run typecheck --workspace @agentrulekit/adapter-codex && npm run build --workspace @agentrulekit/adapter-codex && npm run typecheck --workspace agentrulekit",
     "validate": "npm run check"
   },

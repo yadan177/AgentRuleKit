@@ -4,14 +4,13 @@
   "version": "0.1.5",
   "status": "implemented",
   "capabilities": {
-    "rules": "native",
-    "skills": "native",
-    "commands": "supported",
-    "mcp": "supported",
-    "hooks": "supported"
+    "rules": "project-entry-implemented",
+    "skills": "ide-user-delivery-not-implemented",
+    "commands": "delivery-not-implemented",
+    "mcp": "delivery-not-implemented",
+    "hooks": "delivery-not-implemented"
   },
   "outputs": {
-    "projectEntry": "AGENTS.md",
-    "pluginRoot": "plugins/agent-rule-kit"
+    "projectEntry": "AGENTS.md"
   }
 }

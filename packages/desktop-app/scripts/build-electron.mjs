@@ -36,4 +36,12 @@ await Promise.all([
     format: "cjs",
     target: "node22",
   }),
+  build({
+    entryPoints: ["electron/project-registry.ts"],
+    outfile: "build/project-registry.cjs",
+    bundle: true,
+    platform: "node",
+    format: "cjs",
+    target: "node22",
+  }),
 ]);

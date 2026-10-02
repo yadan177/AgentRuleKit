@@ -1,13 +1,15 @@
 import { app, BrowserWindow, dialog, ipcMain } from "electron";
 import path from "node:path";
-import { DesktopOperations, STACK_PACKS } from "./operations.ts";
+import { DesktopOperations, STACK_PACKS, inspectProjectRoot } from "./operations.ts";
 import type { PlatformChoice, StackChoice } from "./operations.ts";
+import { ProjectRegistry } from "./project-registry.ts";
 import { SoftwareUpdateService } from "./software-update.ts";
 
 const operations = new DesktopOperations();
 let window: BrowserWindow | undefined;
 let selectedProject: string | undefined;
 let activeRuleTasks = 0;
+let registry: ProjectRegistry;
 const softwareUpdate = new SoftwareUpdateService((state) => {
   if (window && !window.isDestroyed()) window.webContents.send("software-update:state", state);
 });
@@ -34,9 +36,28 @@ function registerHandlers(): void {
       properties: ["openDirectory"],
     });
     if (result.canceled || !result.filePaths[0]) return undefined;
-    await operations.clearPreview();
-    selectedProject = result.filePaths[0];
-    return operations.inspect(selectedProject);
+    const status = await operations.inspect(result.filePaths[0]);
+    await registry.add(status.root);
+    selectedProject = status.root;
+    return status;
+  });
+  guarded("project:list", async () => Promise.all((await registry.list()).map(async (item) => {
+    try { return { ...item, status: await inspectProjectRoot(item.root) }; }
+    catch (error) { return { ...item, error: error instanceof Error ? error.message : String(error) }; }
+  })));
+  guarded("project:select", async (root: string) => {
+    if (typeof root !== "string" || !await registry.contains(root)) throw new Error("项目不在工具箱列表中");
+    const status = await operations.inspect(root);
+    selectedProject = status.root;
+    return status;
+  });
+  guarded("project:forget", async (root: string) => {
+    if (typeof root !== "string") throw new Error("项目路径无效");
+    if (root === selectedProject) {
+      await operations.clearPreview();
+    }
+    await registry.remove(root);
+    if (root === selectedProject) selectedProject = undefined;
   });
   guarded("project:inspect", () => operations.inspect(requireProject()));
   guarded("rules:preview-install", async (stack: string, platforms: string[]) => {
@@ -85,11 +106,23 @@ function createWindow(): void {
   window.on("closed", () => { window = undefined; });
 }
 
-app.whenReady().then(() => {
-  app.setName("AI 开发工具箱");
-  registerHandlers();
-  createWindow();
-  app.on("activate", () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
-});
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+} else {
+  app.on("second-instance", () => {
+    if (!window || window.isDestroyed()) return;
+    if (window.isMinimized()) window.restore();
+    window.show();
+    window.focus();
+  });
 
-app.on("window-all-closed", () => { if (process.platform !== "darwin") app.quit(); });
+  app.whenReady().then(() => {
+    app.setName("AI 开发工具箱");
+    registry = new ProjectRegistry(path.join(app.getPath("userData"), "projects.json"));
+    registerHandlers();
+    createWindow();
+    app.on("activate", () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
+  });
+
+  app.on("window-all-closed", () => { if (process.platform !== "darwin") app.quit(); });
+}
