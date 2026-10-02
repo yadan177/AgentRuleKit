@@ -1,4 +1,4 @@
-import type { ProjectChange, ValidationIssue } from "./types.js";
+import type { ValidationIssue } from "./types.js";
 import path from "node:path";
 
 /** Toolbox catalog entry. An IDE plugin bundle is an adapter output, not this asset. */
@@ -33,15 +33,25 @@ export interface InstalledAsset {
   managedFiles: Record<string, string>;
 }
 
-export interface AssetPlan {
-  kind: "install" | "update" | "uninstall";
-  manifest: AssetManifest;
+export interface AssetFileChange {
+  path: string;
+  action: "add" | "modify" | "remove";
+  before?: string;
+  after?: string;
+}
+
+interface AssetPlanBase {
   target: AssetTarget;
-  previous?: InstalledAsset;
-  changes: ProjectChange[];
+  changes: AssetFileChange[];
   conflicts: ValidationIssue[];
   retainedPaths: string[];
 }
+
+export type AssetPlan = AssetPlanBase & (
+  | { kind: "install"; manifest: AssetManifest; previous?: never }
+  | { kind: "update"; manifest: AssetManifest; previous: InstalledAsset }
+  | { kind: "uninstall"; manifest?: never; previous: InstalledAsset }
+);
 
 /** IDE-specific delivery is implemented only when a real asset is shipped. */
 export interface IdeAssetAdapter {
