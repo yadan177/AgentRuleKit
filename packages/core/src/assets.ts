@@ -34,8 +34,10 @@ export interface InstalledAsset {
 }
 
 export interface AssetPlan {
+  kind: "install" | "update" | "uninstall";
   manifest: AssetManifest;
   target: AssetTarget;
+  previous?: InstalledAsset;
   changes: ProjectChange[];
   conflicts: ValidationIssue[];
   retainedPaths: string[];
@@ -46,8 +48,10 @@ export interface IdeAssetAdapter {
   id: string;
   supportedScopes: readonly AssetScope[];
   inspect(target: AssetTarget): Promise<{ available: boolean; reason?: string }>;
-  planInstall(manifest: AssetManifest, target: AssetTarget, previous?: InstalledAsset): Promise<AssetPlan>;
+  planInstall(manifest: AssetManifest, target: AssetTarget): Promise<AssetPlan>;
   applyInstall(plan: AssetPlan): Promise<InstalledAsset>;
+  planUpdate(manifest: AssetManifest, receipt: InstalledAsset): Promise<AssetPlan>;
+  applyUpdate(plan: AssetPlan): Promise<InstalledAsset>;
   planUninstall(receipt: InstalledAsset): Promise<AssetPlan>;
   applyUninstall(plan: AssetPlan): Promise<void>;
   validate(receipt: InstalledAsset): Promise<ValidationIssue[]>;
