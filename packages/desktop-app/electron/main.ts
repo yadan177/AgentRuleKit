@@ -77,7 +77,7 @@ function registerHandlers(): void {
   guarded("plugins:list", () => pluginLibrary.list());
   guarded("plugins:inspect", async () => {
     pluginInspection = undefined;
-    const result = await dialog.showOpenDialog({ title: "选择插件或独立 Skill 包根目录", buttonLabel: "选择文件夹", properties: ["openDirectory", "noResolveAliases"] });
+    const result = await dialog.showOpenDialog({ title: "选择插件或技能文件夹", buttonLabel: "选择文件夹", properties: ["openDirectory", "noResolveAliases"] });
     if (result.canceled || !result.filePaths[0]) return undefined;
     pluginInspection = await pluginLibrary.inspect(result.filePaths[0]);
     return pluginInspection;

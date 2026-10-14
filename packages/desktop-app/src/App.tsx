@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { AssetsPage, type AssetsApi } from "./AssetsPage";
-import { ArrowClockwise, CheckCircle, Cube, FolderSimple, Info, UsersThree, WarningCircle, X } from "@phosphor-icons/react";
+import { ArrowClockwise, CheckCircle, Cube, FolderSimple, UsersThree, WarningCircle, X } from "@phosphor-icons/react";
 import { FaJava } from "react-icons/fa";
 import { SiCursor, SiGo, SiJavascript, SiPython, SiUnity } from "react-icons/si";
 import { TbBrandOpenai } from "react-icons/tb";
@@ -8,7 +8,7 @@ import { TbBrandOpenai } from "react-icons/tb";
 type StackChoice = "unity" | "js-ts" | "java" | "go" | "python";
 type PlatformChoice = "codex" | "qoder" | "cursor" | "workbuddy";
 type Mode = "install" | "update" | "uninstall";
-type Page = "projects" | "ides";
+type Page = "projects" | "rules" | "assets";
 type Change = { path: string; action: "add" | "modify" | "remove"; before?: string; after?: string };
 type Issue = { code: string; message: string };
 type ProjectStatus = { root: string; installed: boolean; valid: boolean; rulepacks: string[]; targets: PlatformChoice[]; version?: string; issues: Issue[] };
@@ -103,7 +103,6 @@ function PreviewDialog({ preview, busy, onClose, onApply }: { preview: Preview; 
       {current.after !== undefined && <div><span>变更后</span><pre>{current.after}</pre></div>}
     </div></div>}
     {preview.retainedPaths.length > 0 && <div className="preview-section"><h3>保留项目文件</h3><ul className="retained-list">{preview.retainedPaths.map((item) => <li key={item}>{item}</li>)}</ul></div>}
-    <div className="demo-note"><Info size={18} />{preview.kind === "install" ? "确认后才会写入项目。" : preview.kind === "update" ? "确认后才会更新规则；项目本地文件会保留。" : "仅删除内容未漂移的受管文件；上方列出的项目文件会保留。"}</div>
     <div className="modal-actions"><button type="button" className="secondary-button" onClick={onClose} disabled={busy}>返回</button>
       <button type="button" className={`primary-button${preview.kind === "uninstall" ? " danger-button" : ""}`} onClick={onApply} disabled={busy || preview.conflicts.length > 0 || preview.changes.length === 0}>
         {busy ? "处理中…" : preview.kind === "install" ? "确认安装" : preview.kind === "update" ? "确认更新" : "确认卸载"}
@@ -126,7 +125,6 @@ export function App() {
   const [softwareState, setSoftwareState] = useState<SoftwareUpdateState>();
   const [softwareBusy, setSoftwareBusy] = useState(false);
   const [softwareError, setSoftwareError] = useState("");
-  const stack = stacks.find((item) => item.id === stackId)!;
   const unavailable = !window.agentRuleKit;
 
   useEffect(() => {
@@ -160,8 +158,8 @@ export function App() {
   }
 
   const softwareTip = softwareState?.phase === "available" || softwareState?.phase === "manual" || softwareState?.phase === "downloading" || softwareState?.phase === "ready" || (softwareState?.phase === "error" && !!softwareState.availableVersion);
-  const softwareLabel = softwareState?.phase === "ready" ? "重启完成更新" : softwareState?.phase === "downloading" ? `正在下载 ${softwareState.percent ?? 0}%`
-    : softwareState?.phase === "error" ? "更新失败 · 重试" : softwareState?.phase === "manual" ? "发现新版 · 下载后安装" : "发现新版 · 点击更新";
+  const softwareLabel = softwareState?.phase === "ready" ? "重启更新" : softwareState?.phase === "downloading" ? `下载 ${softwareState.percent ?? 0}%`
+    : softwareState?.phase === "error" ? "重试更新" : "下载新版";
 
   async function run(action: () => Promise<void>): Promise<void> {
     setBusy(true); setError("");
@@ -172,19 +170,20 @@ export function App() {
     if (!window.agentRuleKit) throw new Error("请在桌面应用中使用工具箱");
     return window.agentRuleKit;
   }
-  function showProject(selected: ProjectStatus): void {
+  function showProject(selected: ProjectStatus, openRules = true): void {
     setStatus(selected); setMode(selected.installed ? "update" : "install");
     setPlatformIds(selected.installed ? selected.targets : ["codex"]);
-    setUpdateCheck(undefined); setPreview(undefined); setNotice(""); setPage("projects");
+    setUpdateCheck(undefined); setPreview(undefined); setNotice("");
+    if (openRules) setPage("rules");
   }
   function clearPreview(): void {
     setPreview(undefined);
     if (window.agentRuleKit) void window.agentRuleKit.clearPreview().catch((problem) => setError(message(problem)));
   }
-  function chooseProject(): void {
+  function chooseProject(openRules = true): void {
     void run(async () => {
       const selected = await api().chooseProject();
-      if (selected) { showProject(selected); setProjects(await api().listProjects()); }
+      if (selected) { showProject(selected, openRules); setProjects(await api().listProjects()); }
     });
   }
   function selectProject(root: string): void {
@@ -195,7 +194,7 @@ export function App() {
       await api().forgetProject(root);
       if (status?.root === root) { setStatus(undefined); setPreview(undefined); setUpdateCheck(undefined); }
       setProjects(await api().listProjects());
-      setNotice("已从工具箱列表移除；项目规则文件没有变化。");
+      setNotice("已移出列表");
     });
   }
   function openPreview(): void {
@@ -209,7 +208,7 @@ export function App() {
       if (!status) throw new Error("请先选择项目文件夹");
       const result = await api().checkUpdate(platformIds);
       setUpdateCheck(result);
-      setNotice(result.targetsChanged ? `平台选择有变更，可查看变更。规则版本 ${result.latestVersion}。` : result.available ? `发现规则版本 ${result.latestVersion}，可查看变更。` : `已是最新规则版本 ${result.latestVersion}。`);
+      setNotice(result.targetsChanged ? "平台已变更" : result.available ? `新版本 ${result.latestVersion}` : "已是最新版本");
     });
   }
   function apply(): void {
@@ -219,7 +218,7 @@ export function App() {
       setStatus(result); setPlatformIds(result.installed ? result.targets : ["codex"]); setPreview(undefined);
       setUpdateCheck(undefined);
       setProjects(await api().listProjects());
-      setNotice(preview.kind === "install" ? "安装完成，项目规则校验通过。" : preview.kind === "update" ? `更新完成，当前规则版本 ${result.version}。` : "卸载完成，项目本地文件已保留。");
+      setNotice(preview.kind === "install" ? "安装完成" : preview.kind === "update" ? "更新完成" : "卸载完成");
       if (!result.valid && result.installed) setError(result.issues.map((item) => item.message).join("；"));
     });
   }
@@ -233,30 +232,36 @@ export function App() {
     <header className="app-header"><span className="brand">AI 开发工具箱</span>
       {!unavailable && softwareTip && <button type="button" className="software-tip has-update" onClick={softwareAction} disabled={softwareBusy || softwareState?.phase === "downloading"} title={softwareError || softwareState?.message || undefined} aria-label={`软件更新：${softwareLabel}`}><ArrowClockwise size={18} aria-hidden="true" />{softwareLabel}</button>}
       <nav className="mode-switch" aria-label="工具箱页面">
-      <button type="button" className={page === "projects" ? "active" : ""} disabled={busy} onClick={() => setPage("projects")}>项目</button>
-      <button type="button" className={page === "ides" ? "active" : ""} disabled={busy} onClick={() => { clearPreview(); setPage("ides"); }}>插件与 Skills</button>
+      <button type="button" className={page === "projects" ? "active" : ""} disabled={busy} onClick={() => { clearPreview(); setError(""); setNotice(""); setPage("projects"); }}>我的项目</button>
+      <button type="button" className={page === "rules" ? "active" : ""} disabled={busy} onClick={() => { clearPreview(); setError(""); setNotice(""); setPage("rules"); }}>项目规则</button>
+      <button type="button" className={page === "assets" ? "active" : ""} disabled={busy} onClick={() => { clearPreview(); setPage("assets"); }}>插件与技能</button>
     </nav></header>
-    {page === "ides" ? <AssetsPage api={window.agentRuleKit} /> : <>
-    <main className="main-content"><h1>项目</h1>
-      <p className="section-intro">一个工具箱管理多个项目；每个项目分别安装和更新自己的规则。</p>
-      <section className="registered-projects" aria-label="已登记项目"><div className="section-heading"><h2>我的项目</h2><button type="button" className="secondary-button" onClick={chooseProject} disabled={busy || unavailable}><FolderSimple size={18} aria-hidden="true" />添加项目</button></div>
-        {projects.length === 0 ? <p className="empty-projects">尚未添加项目。选择已有工程后，可以查看其规则状态或安装规则。</p> :
+    {page === "assets" ? <AssetsPage api={window.agentRuleKit} /> : page === "projects" ?
+    <main className="main-content projects-page">
+      <div className="page-heading"><h1>我的项目</h1><button type="button" className="secondary-button" onClick={() => chooseProject(false)} disabled={busy || unavailable}><FolderSimple size={18} aria-hidden="true" />添加项目</button></div>
+      <section className="registered-projects" aria-label="我的项目">
+        {projects.length === 0 ? <p className="empty-projects">暂无项目</p> :
           <div className="project-list">{projects.map((item) => <div className={`project-list-item${status?.root === item.root ? " current" : ""}`} key={item.root}>
             <button type="button" className="project-list-select" onClick={() => selectProject(item.root)} disabled={busy || !!item.error} title={item.root}>
               <strong>{item.root.split(/[\\/]/).filter(Boolean).at(-1) ?? item.root}</strong><span>{item.root}</span>
             </button>
             <span className="project-list-state">{item.error ? "路径不可用" : item.status?.installed ? item.status.valid ? `规则 ${item.status.version ?? "已安装"}` : "规则需处理" : "未安装规则"}</span>
-            <button type="button" className="text-button" onClick={() => forgetProject(item.root)} disabled={busy} title="仅从工具箱列表移除，不卸载项目规则">移出列表</button>
+            <button type="button" className="text-button" onClick={() => selectProject(item.root)} disabled={busy || !!item.error}>管理规则</button>
+            <button type="button" className="text-button" onClick={() => forgetProject(item.root)} disabled={busy}>移出列表</button>
           </div>)}</div>}
       </section>
+      {error && <div className="error" role="alert"><WarningCircle size={20} />{error}</div>}
+      {notice && <div className="notice" role="status"><CheckCircle size={20} />{notice}</div>}
+    </main> : <>
+    <main className="main-content rules-page"><h1>项目规则</h1>
       <nav className="mode-switch rule-mode-switch" aria-label="规则操作">
       <button type="button" className={mode === "install" ? "active" : ""} disabled={busy} onClick={() => { setMode("install"); clearPreview(); setError(""); }}>安装</button>
       <button type="button" className={mode === "update" ? "active" : ""} disabled={busy} onClick={() => { setMode("update"); clearPreview(); setError(""); }}>更新</button>
       <button type="button" className={mode === "uninstall" ? "active" : ""} disabled={busy} onClick={() => { setMode("uninstall"); clearPreview(); setError(""); }}>卸载</button>
-    </nav><h2 className="rule-heading">{mode === "install" ? "安装规则" : mode === "update" ? "更新规则" : "卸载规则"}</h2>
+    </nav>
       <div className="project-row"><span className="section-inline-label">项目</span><div className="project-field">
         <span className={`project-path${status ? "" : " placeholder"}`} title={status?.root}>{status?.root ?? "请选择项目文件夹"}</span>
-        <button type="button" className="project-button" onClick={chooseProject} disabled={busy || unavailable}><FolderSimple size={26} aria-hidden="true" />选择</button>
+        <button type="button" className="project-button" onClick={() => chooseProject()} disabled={busy || unavailable}><FolderSimple size={26} aria-hidden="true" />选择</button>
       </div></div>
       {status && <div className={`project-status ${status.installed ? status.valid ? "installed" : "invalid" : "empty"}`}>
         {status.installed ? status.valid ? `已安装 · ${platformLabel(status.targets)}${status.version ? ` · ${status.version}` : ""}` : "规则状态需处理" : "未安装规则"}
@@ -281,7 +286,7 @@ export function App() {
       {notice && <div className="notice" role="status"><CheckCircle size={20} />{notice}</div>}
       {unavailable && <div className="error" role="alert">请在桌面应用中打开此页面。</div>}
     </main>
-    <footer className="app-footer"><div className="summary">{mode === "install" ? `本次安装：${stack.packs.join(" · ")}${platformIds.length ? ` · ${platformLabel(platformIds)}` : " · 请选择平台"}` : mode === "update" ? "更新前可逐文件查看变更" : "卸载后保留项目本地文件"}</div>
+    <footer className="app-footer">
       <button type="button" className={`primary-button${mode === "uninstall" ? " danger-button" : ""}`} onClick={mode === "update" && !updateCheck?.available ? checkForUpdate : openPreview} disabled={cannotPreview}>
         {busy ? "处理中…" : mode === "install" ? "安装" : mode === "update" ? updateCheck?.available ? "查看变更" : "检查更新" : "卸载"}
       </button></footer>
