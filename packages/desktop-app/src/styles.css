@@ -29,7 +29,11 @@ button:focus-visible, input:focus-visible { outline: 3px solid #80aeff; outline-
 .settings-button:hover { color: #0961e6; }
 
 .main-content { flex: 1; min-width: 0; padding: 38px 40px 32px; }
-.section-intro { margin: 10px 0 28px; color: #5f6d7f; font-size: 17px; line-height: 1.5; }
+.page-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.page-heading .secondary-button { display: inline-flex; align-items: center; gap: 8px; }
+.projects-page .registered-projects { margin-top: 24px; }
+.projects-page .project-list { max-height: none; margin-top: 0; }
+.projects-page .empty-projects { margin: 0; }
 .registered-projects { border: 1px solid #e1e6ed; border-radius: 10px; padding: 22px; background: #fafbfd; }
 .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .section-heading h2 { font-size: 24px; margin: 0; }
@@ -45,7 +49,6 @@ button:focus-visible, input:focus-visible { outline: 3px solid #80aeff; outline-
 .text-button { border: 0; background: transparent; color: #286ac2; font-size: 14px; white-space: nowrap; }
 .text-button:hover { text-decoration: underline; }
 .rule-mode-switch { margin: 26px 0 18px; width: fit-content; }
-.rule-heading { margin: 0; }
 .ide-status-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; }
 .ide-status-card { display: flex; flex-direction: column; gap: 12px; min-height: 150px; border: 1px solid #dce4ec; border-radius: 9px; padding: 20px; }
 .ide-status-card strong { font-size: 22px; }
@@ -85,8 +88,7 @@ h2 { margin: 0 0 20px; font-size: 30px; line-height: 1.25; letter-spacing: -0.02
 .choice:disabled { cursor: not-allowed; opacity: .7; }
 
 .notice { margin-top: 24px; display: inline-flex; gap: 9px; align-items: center; color: #126a40; font-size: 16px; }
-.app-footer { min-height: 92px; flex: none; padding: 16px 40px; border-top: 1px solid #e7ebef; display: flex; align-items: center; gap: 30px; justify-content: space-between; }
-.summary { font-size: 18px; line-height: 1.5; min-width: 0; }
+.app-footer { min-height: 92px; flex: none; padding: 16px 40px; border-top: 1px solid #e7ebef; display: flex; align-items: center; gap: 30px; justify-content: flex-end; }
 .primary-button { flex: none; border: 1px solid #0762ed; border-radius: 8px; color: #fff; background: #0867f5; min-width: 168px; min-height: 59px; padding: 10px 24px; font-size: 19px; font-weight: 680; box-shadow: 0 2px 5px #0b62e526; }
 .primary-button:hover:not(:disabled) { background: #075bda; }
 .primary-button:disabled { opacity: .45; cursor: not-allowed; }
@@ -116,7 +118,6 @@ h2 { margin: 0 0 20px; font-size: 30px; line-height: 1.25; letter-spacing: -0.02
 .preview-section li svg { color: #188552; }
 .file-list { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 .file-list li { padding-left: 2px; }
-.demo-note { margin-top: 20px; display: flex; gap: 8px; align-items: flex-start; padding: 12px 14px; border-radius: 7px; color: #56667a; background: #f2f6fb; font-size: 14px; }
 .setting-row { display: flex; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid #e7ebef; font-size: 16px; }
 .setting-row strong { font-weight: 550; }
 .uninstall-section { max-width: 900px; }
@@ -197,7 +198,6 @@ h2 { margin: 0 0 20px; font-size: 30px; line-height: 1.25; letter-spacing: -0.02
   .stack-grid, .platform-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .choice { height: 76px; }
   .app-footer { padding: 16px 20px; flex-direction: column; align-items: stretch; gap: 16px; }
-  .summary { font-size: 15px; }
   .primary-button { width: 100%; min-height: 52px; }
 }
 @media (max-width: 430px) {
@@ -207,6 +207,7 @@ h2 { margin: 0 0 20px; font-size: 30px; line-height: 1.25; letter-spacing: -0.02
 .imported-plugin span, .imported-plugin small { color: #606573; }
 .asset-toolbar, .asset-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
 .asset-toolbar { margin: 24px 0; }
+.assets-page .registered-projects + .registered-projects { margin-top: 16px; }
 .asset-actions .primary-button { min-height: 42px; padding: 8px 18px; font-size: 16px; }
 .assets-page select { margin-left: 8px; padding: 9px 12px; border: 1px solid #d5d7df; border-radius: 8px; background: white; color: #242633; font: inherit; }
 .asset-destination { overflow-wrap: anywhere; font-size: 14px; color: #606573; }
