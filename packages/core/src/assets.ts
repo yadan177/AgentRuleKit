@@ -1,9 +1,9 @@
 import type { ValidationIssue } from "./types.js";
-import path from "node:path";
 
 /** Toolbox catalog entry. An IDE plugin bundle is an adapter output, not this asset. */
 export type AssetKind = "skill" | "capability-plugin";
-export type AssetScope = "ide-user" | "project";
+/** Skills and capability plugins are installed in the selected IDE's user environment. */
+export type AssetScope = "ide-user";
 
 export interface AssetManifest {
   schemaVersion: 1;
@@ -20,7 +20,6 @@ export interface AssetManifest {
 export interface AssetTarget {
   ideId: string;
   scope: AssetScope;
-  projectRoot?: string;
 }
 
 export interface InstalledAsset {
@@ -93,9 +92,9 @@ export function assertAssetManifest(value: unknown): asserts value is AssetManif
 
 export function assertAssetTarget(manifest: AssetManifest, adapter: IdeAssetAdapter, target: AssetTarget): void {
   assertAssetManifest(manifest);
-  if (target.ideId !== adapter.id || !manifest.supportedIdes.includes(target.ideId) ||
-    !adapter.supportedScopes.includes(target.scope) ||
-    (target.scope === "project" ? !target.projectRoot || !path.isAbsolute(target.projectRoot) : !!target.projectRoot)) {
+  if (Object.keys(target).some((key) => !["ideId", "scope"].includes(key)) ||
+    target.scope !== "ide-user" || target.ideId !== adapter.id ||
+    !manifest.supportedIdes.includes(target.ideId) || !adapter.supportedScopes.includes(target.scope)) {
     throw new Error("资产不支持所选 IDE 或安装范围");
   }
 }

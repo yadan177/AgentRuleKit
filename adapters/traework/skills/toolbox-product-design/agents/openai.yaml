@@ -1,0 +1,4 @@
+interface:
+  display_name: "Product Design · TraeWork"
+  short_description: "Adapt Product Design workflows to TraeWork local tasks"
+  default_prompt: "Use $toolbox-product-design to audit this product flow."

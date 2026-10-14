@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { AssetsPage, type AssetsApi } from "./AssetsPage";
 import { ArrowClockwise, CheckCircle, Cube, FolderSimple, Info, UsersThree, WarningCircle, X } from "@phosphor-icons/react";
 import { FaJava } from "react-icons/fa";
 import { SiCursor, SiGo, SiJavascript, SiPython, SiUnity } from "react-icons/si";
@@ -15,7 +16,12 @@ type RegisteredProject = { root: string; addedAt: string; status?: ProjectStatus
 type UpdateCheck = { root: string; currentVersion: string; latestVersion: string; available: boolean; targetsChanged: boolean };
 type Preview = { kind: Mode; root: string; changes: Change[]; retainedPaths: string[]; conflicts: Issue[]; version?: string; targets: PlatformChoice[] };
 type SoftwareUpdateState = { phase: "idle" | "checking" | "current" | "available" | "downloading" | "ready" | "manual" | "error"; currentVersion: string; availableVersion?: string; percent?: number; message?: string };
-type DesktopApi = {
+type PluginSource = { kind: "skill" | "capability-plugin"; key: string; name: string; version: string; title: string; author: string; license: string; sourceRoot: string; skills: string[]; files: { path: string; bytes: number; sha256: string }[]; sourceDigest: string; runtimeDependencies: string[]; delivery: "traework-skill" | "unsupported" };
+type DesktopApi = AssetsApi & {
+  listPluginImports(): Promise<PluginSource[]>;
+  inspectPluginSource(): Promise<PluginSource | undefined>;
+  importPluginSource(): Promise<PluginSource>;
+  exportTraeWorkSkill(key: string): Promise<{ path: string; sha256: string } | undefined>;
   chooseProject(): Promise<ProjectStatus | undefined>;
   listProjects(): Promise<RegisteredProject[]>;
   selectProject(root: string): Promise<ProjectStatus>;
@@ -228,19 +234,9 @@ export function App() {
       {!unavailable && softwareTip && <button type="button" className="software-tip has-update" onClick={softwareAction} disabled={softwareBusy || softwareState?.phase === "downloading"} title={softwareError || softwareState?.message || undefined} aria-label={`软件更新：${softwareLabel}`}><ArrowClockwise size={18} aria-hidden="true" />{softwareLabel}</button>}
       <nav className="mode-switch" aria-label="工具箱页面">
       <button type="button" className={page === "projects" ? "active" : ""} disabled={busy} onClick={() => setPage("projects")}>项目</button>
-      <button type="button" className={page === "ides" ? "active" : ""} disabled={busy} onClick={() => { clearPreview(); setPage("ides"); }}>IDE</button>
+      <button type="button" className={page === "ides" ? "active" : ""} disabled={busy} onClick={() => { clearPreview(); setPage("ides"); }}>插件与 Skills</button>
     </nav></header>
-    {page === "ides" ? <main className="main-content"><h1>IDE 交付</h1>
-      <p className="section-intro">工具箱独立运行；以后选择的 Skill 和能力插件会安装到对应 IDE 的个人环境。当前只提供项目规则交付。</p>
-      <div className="ide-status-grid">
-        {platforms.map((item) => <section className="ide-status-card" key={item.id}><strong>{item.name}</strong>
-          <span>{item.id === "codex" ? "项目规则入口已实现" : "共享 AGENTS.md 项目规则入口已生成；客户端加载待验收"}</span>
-          <small>个人环境 Skill／能力插件安装：尚未实现</small>
-        </section>)}
-        <section className="ide-status-card"><strong>Trae</strong><span>适配器尚未实现</span><small>个人环境 Skill／能力插件安装：尚未实现</small></section>
-      </div>
-      {error && <div className="error" role="alert"><WarningCircle size={20} />{error}</div>}
-    </main> : <>
+    {page === "ides" ? <AssetsPage api={window.agentRuleKit} /> : <>
     <main className="main-content"><h1>项目</h1>
       <p className="section-intro">一个工具箱管理多个项目；每个项目分别安装和更新自己的规则。</p>
       <section className="registered-projects" aria-label="已登记项目"><div className="section-heading"><h2>我的项目</h2><button type="button" className="secondary-button" onClick={chooseProject} disabled={busy || unavailable}><FolderSimple size={18} aria-hidden="true" />添加项目</button></div>
