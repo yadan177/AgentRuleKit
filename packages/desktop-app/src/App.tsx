@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { AssetsPage, type AssetsApi } from "./AssetsPage";
+import { Dropdown } from "./Dropdown";
 import { ArrowClockwise, CheckCircle, Cube, FolderSimple, UsersThree, WarningCircle, X } from "@phosphor-icons/react";
 import { FaJava } from "react-icons/fa";
 import { SiCursor, SiGo, SiJavascript, SiPython, SiUnity } from "react-icons/si";
@@ -259,10 +260,12 @@ export function App() {
       <button type="button" className={mode === "update" ? "active" : ""} disabled={busy} onClick={() => { setMode("update"); clearPreview(); setError(""); }}>更新</button>
       <button type="button" className={mode === "uninstall" ? "active" : ""} disabled={busy} onClick={() => { setMode("uninstall"); clearPreview(); setError(""); }}>卸载</button>
     </nav>
-      <div className="project-row"><span className="section-inline-label">项目</span><div className="project-field">
-        <span className={`project-path${status ? "" : " placeholder"}`} title={status?.root}>{status?.root ?? "请选择项目文件夹"}</span>
-        <button type="button" className="project-button" onClick={() => chooseProject()} disabled={busy || unavailable}><FolderSimple size={26} aria-hidden="true" />选择</button>
-      </div></div>
+      <div className="project-row"><span className="section-inline-label">项目</span>
+        <Dropdown label="项目" className="project-dropdown" value={status?.root} onChange={selectProject} disabled={busy || unavailable}
+          placeholder={projects.length ? "请选择项目" : "请先添加项目"} emptyLabel="暂无项目"
+          options={projects.map((item) => ({ value: item.root, label: item.root.split(/[\\/]/).filter(Boolean).at(-1) ?? item.root,
+            description: item.error ? `${item.root} · 路径不可用` : item.root, disabled: !!item.error }))} />
+      </div>
       {status && <div className={`project-status ${status.installed ? status.valid ? "installed" : "invalid" : "empty"}`}>
         {status.installed ? status.valid ? `已安装 · ${platformLabel(status.targets)}${status.version ? ` · ${status.version}` : ""}` : "规则状态需处理" : "未安装规则"}
       </div>}
