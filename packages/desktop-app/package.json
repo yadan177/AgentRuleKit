@@ -1,6 +1,6 @@
 {
   "name": "agentrulekit-desktop",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": true,
   "description": "AI 开发工具箱桌面版",
   "main": "build/main.cjs",
@@ -14,12 +14,13 @@
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",
+    "electron-updater": "^6.8.9",
+    "fflate": "0.8.3",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "react-icons": "^5.7.0",
     "tar": "^7.5.22",
-    "yaml": "^2.8.1",
-    "electron-updater": "^6.8.9"
+    "yaml": "^2.8.1"
   },
   "devDependencies": {
     "@types/node": "^24.10.1",
@@ -35,7 +36,7 @@
   "build": {
     "appId": "cn.agentrulekit.desktop",
     "productName": "AI 开发工具箱",
-    "buildVersion": "1.1.0",
+    "buildVersion": "1.2.0",
     "directories": {
       "output": "release"
     },

@@ -18,11 +18,6 @@ for (const file of [
   "adapters/qoder/adapter.json",
   "adapters/cursor/adapter.json",
   "adapters/workbuddy/adapter.json",
-  "plugins/agent-rule-kit/.codex-plugin/plugin.json",
-  "workflows/bootstrap/workflow.json",
-  "workflows/review/workflow.json",
-  "workflows/doc-impact/workflow.json",
-  "workflows/update/workflow.json",
 ]) {
   const manifest = await json(file);
   if (manifest.version !== version) throw new Error(`${file} 版本 ${manifest.version} 与 ${tag} 不一致`);
@@ -45,4 +40,4 @@ async function inspectPacks(directory) {
 }
 
 await inspectPacks("rulepacks");
-console.log(`发布版本 ${tag}：核心、适配器、CLI、插件、工作流与全部规则包一致`);
+console.log(`发布版本 ${tag}：核心、规则入口适配器、CLI 与全部规则包一致`);

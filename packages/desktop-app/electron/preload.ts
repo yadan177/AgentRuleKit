@@ -1,7 +1,17 @@
 import { contextBridge, ipcRenderer } from "electron";
 
 contextBridge.exposeInMainWorld("agentRuleKit", {
+  listUserAssets: () => ipcRenderer.invoke("assets:list"),
+  previewUserAsset: (action: string, key: string, ide: string, id?: string) => ipcRenderer.invoke("assets:preview", action, key, ide, id),
+  applyUserAsset: (token: string) => ipcRenderer.invoke("assets:apply", token),
+  listPluginImports: () => ipcRenderer.invoke("plugins:list"),
+  inspectPluginSource: () => ipcRenderer.invoke("plugins:inspect"),
+  importPluginSource: () => ipcRenderer.invoke("plugins:import"),
+  exportTraeWorkSkill: (key: string) => ipcRenderer.invoke("plugins:export-traework", key),
   chooseProject: () => ipcRenderer.invoke("project:choose"),
+  listProjects: () => ipcRenderer.invoke("project:list"),
+  selectProject: (root: string) => ipcRenderer.invoke("project:select", root),
+  forgetProject: (root: string) => ipcRenderer.invoke("project:forget", root),
   inspectProject: () => ipcRenderer.invoke("project:inspect"),
   previewInstall: (stack: string, platforms: string[]) => ipcRenderer.invoke("rules:preview-install", stack, platforms),
   applyInstall: () => ipcRenderer.invoke("rules:apply-install"),

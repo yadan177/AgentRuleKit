@@ -1,6 +1,6 @@
 # AI开发工具箱 CLI（AgentRuleKit）
 
-`agentrulekit` 为项目安装、检查、更新和卸载共享 AI 开发规则。规则正文固定在项目 Git 中；CLI 安装在个人电脑，Codex 插件可另行安装。当前首版适配 Codex，规则源本身不绑定编辑器。
+`agentrulekit` 是独立 AI 开发工具箱当前的**规则管理 CLI**，为指定项目安装、检查、更新和卸载共享 AI 开发规则。它尚不提供规划中的场景插件库或统一多项目界面。规则正文固定在各项目 Git 中；CLI 安装在个人电脑，Codex 交付包可另行安装。已发布的 `0.1.5` 首版适配 Codex；仓库源码虽支持多个共享 `AGENTS.md` 目标，正式 npm CLI 尚未发布该能力。规则源本身不绑定编辑器。完整产品定位见[产品架构](../../docs/product-architecture.md)。
 
 需要 Node.js 22 或更高版本，以及访问 GitHub Release 的网络。安装后先在测试工程试用：
 
