@@ -1,6 +1,6 @@
 {
   "name": "agentrulekit-desktop",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "private": true,
   "description": "AI 开发工具箱桌面版",
   "main": "build/main.cjs",
@@ -36,7 +36,7 @@
   "build": {
     "appId": "cn.agentrulekit.desktop",
     "productName": "AI 开发工具箱",
-    "buildVersion": "1.2.1",
+    "buildVersion": "1.2.2",
     "directories": {
       "output": "release"
     },

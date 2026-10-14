@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { CheckCircle, WarningCircle, X } from "@phosphor-icons/react";
+import { Dropdown } from "./Dropdown";
 
 type Ide = "codex" | "traework";
 type Source = { kind: "skill" | "capability-plugin"; key: string; name: string; version: string; title: string; author: string; license: string;
@@ -48,8 +49,9 @@ export function AssetsPage({ api }: { api?: AssetsApi }) {
   }
   const change = plan?.changes[selected];
   return <main className="main-content assets-page"><h1>插件与技能</h1>
-    <div className="asset-toolbar"><label>安装到 <select value={ide} disabled={busy} onChange={(event) => setIde(event.target.value as Ide)}>
-      <option value="codex">Codex</option><option value="traework">TraeWork（实验）</option></select></label>
+    <div className="asset-toolbar"><div className="dropdown-field"><span>安装到</span>
+      <Dropdown<Ide> label="安装到" value={ide} disabled={busy} onChange={setIde}
+        options={[{ value: "codex", label: "Codex" }, { value: "traework", label: "TraeWork（实验）" }]} /></div>
       <button className="secondary-button" disabled={busy || !api} onClick={() => { if (api) void run(async () => setSource(await api.inspectPluginSource())); }}>导入</button>
       <button className="secondary-button" disabled={busy || !api} onClick={() => { if (api) void run(async () => setInstalled(await api.listUserAssets())); }}>检查状态</button>
     </div>
@@ -74,13 +76,15 @@ export function AssetsPage({ api }: { api?: AssetsApi }) {
         const sourceName = item.sourceKey.split("@")[0].replace(/^skill\./, "");
         const candidates = sources.filter((candidate) => candidate.name === sourceName && candidate.kind === (item.sourceKey.startsWith("skill.") ? "skill" : "capability-plugin"));
         const row = `${item.target.ideId}:${item.id}`;
-        const key = updateKeys[row] ?? candidates.at(-1)?.key ?? item.sourceKey;
+        const key = candidates.find((candidate) => candidate.key === updateKeys[row])?.key ?? candidates.at(-1)?.key ?? item.sourceKey;
         return <article className="imported-plugin" key={row}><strong>{item.title} · {item.version}</strong>
           <span>{ideNames[item.target.ideId]} · {item.issues.length ? "需处理" : item.recognition === "host-verified" ? "已识别" : "文件正常"}</span>
           {item.recognitionNote && <span>已停用</span>}
           {item.issues.map((issue) => <p className="inline-issue" key={issue}>{issue}</p>)}
-          <div className="asset-actions"><label>更新来源 <select value={key} disabled={busy || !candidates.length} onChange={(event) => setUpdateKeys((current) => ({ ...current, [row]: event.target.value }))}>
-            {candidates.length ? candidates.map((candidate) => <option key={candidate.key} value={candidate.key}>{candidate.version}</option>) : <option value={key}>未导入来源</option>}</select></label>
+          <div className="asset-actions"><div className="dropdown-field"><span>更新来源</span>
+            <Dropdown label={`更新来源：${item.title}`} value={key} disabled={busy || !candidates.length} placeholder="未导入来源"
+              onChange={(value) => setUpdateKeys((current) => ({ ...current, [row]: value }))}
+              options={candidates.map((candidate) => ({ value: candidate.key, label: candidate.version }))} /></div>
             <button className="secondary-button" disabled={busy || !api || !candidates.length || !!item.issues.length} onClick={() => preview("update", key, item.target.ideId as Ide, item.id)}>预览更新</button>
             <button className="secondary-button" disabled={busy || !api || !!item.issues.length} onClick={() => preview("uninstall", "", item.target.ideId as Ide, item.id)}>预览卸载</button></div>
         </article>;

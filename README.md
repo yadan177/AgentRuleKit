@@ -13,7 +13,7 @@ AI 开发工具箱定位为独立于任何 AI 编程 IDE 的多项目产品：�
 
 ## 当前状态
 
-CLI 和规则包的最新正式版本为 `0.1.5`；桌面应用版本为 `1.2.1`。当前代码包含：
+CLI 和规则包的最新正式版本为 `0.1.5`；桌面应用版本为 `1.2.2`。当前代码包含：
 
 - 基于证据检测技术栈的 TypeScript 核心包。
 - 支持 `detect`、`init`、`validate`、`check`、`diff`、`update` 和 `uninstall` 的 `agent-rule` CLI。
@@ -30,7 +30,7 @@ CLI 和规则包的最新正式版本为 `0.1.5`；桌面应用版本为 `1.2.1`
 
 桌面版 1.2.0 包含统一项目列表、本机导入库和“插件与技能”模块：选择已导入内容与目标软件，预览后安装、更新或卸载，并检查文件和 Codex 宿主安装记录。软件识别与实际任务调用分别验收；自有开发 Skill 库、场景能力插件库和工具依赖组合仍待实现。TraeWork 目前为本地 Skill 实验支持，原生插件、云端运行及新 TRAE 兼容尚未验收。旧的 `agent-rule-kit` Codex 插件包已从仓库退役；此前安装到个人 Codex 环境的副本需要在 Codex 中单独卸载。详见[用户环境安装器](docs/user-asset-installation.md)。
 
-GitHub 仓库已公开；[桌面版 `1.2.1`](https://github.com/yadan177/AgentRuleKit/releases/tag/desktop-v1.2.1)、[`v0.1.5` 规则包 Release](https://github.com/yadan177/AgentRuleKit/releases/tag/v0.1.5) 和 [npm CLI `agentrulekit@0.1.5`](https://www.npmjs.com/package/agentrulekit) 已分别发布。Go、TypeScript、Unity 临时工程已从正式 npm 包通过公开规则包的同版本验收。已发布的 CLI 不支持多平台配置；Qoder、Cursor、WorkBuddy 的实际客户端加载，以及 Codex 桌面端插件交互与 Hook 调度仍待验收。
+GitHub 仓库已公开；[桌面版 `1.2.2`](https://github.com/yadan177/AgentRuleKit/releases/tag/desktop-v1.2.2)、[`v0.1.5` 规则包 Release](https://github.com/yadan177/AgentRuleKit/releases/tag/v0.1.5) 和 [npm CLI `agentrulekit@0.1.5`](https://www.npmjs.com/package/agentrulekit) 已分别发布。Go、TypeScript、Unity 临时工程已从正式 npm 包通过公开规则包的同版本验收。已发布的 CLI 不支持多平台配置；Qoder、Cursor、WorkBuddy 的实际客户端加载，以及 Codex 桌面端插件交互与 Hook 调度仍待验收。
 
 ## 业务项目如何使用
 
@@ -45,13 +45,13 @@ agent-rule validate /absolute/path/to/project
 
 `init` 只在没有 `agent-rules.yaml` 的项目执行。它检测技术栈，从官方 GitHub Release 下载并校验规则包；已有 `AGENTS.md` 的非受管内容会保留。完整步骤见 [安装与更新](docs/installation.md)。
 
-桌面版 `1.2.1` 可多选 Codex、Qoder、Cursor、WorkBuddy。四个平台共用项目中的一套规则和一个 `AGENTS.md` 入口，选择记录在配置与锁文件中。仓库源码中的 CLI 可用 `--targets codex,qoder,cursor,workbuddy` 指定；此能力尚未发布到 npm，正式 CLI `0.1.5` 不能管理桌面版创建的多平台配置。
+桌面版 `1.2.2` 先在“我的项目”添加项目，再到“项目规则”通过下拉框选择项目，可多选 Codex、Qoder、Cursor、WorkBuddy。四个平台共用项目中的一套规则和一个 `AGENTS.md` 入口，选择记录在配置与锁文件中。仓库源码中的 CLI 可用 `--targets codex,qoder,cursor,workbuddy` 指定；此能力尚未发布到 npm，正式 CLI `0.1.5` 不能管理桌面版创建的多平台配置。
 
 更新分成三步：`check` 发现新版本，`diff` 展示变更供人审查，`update --apply` 才修改项目文件。桌面版使用对应按钮完成这些操作；项目本地覆盖规则和未知文件受保护。
 
 不再使用时，先运行 `agent-rule uninstall /absolute/path/to/project` 查看卸载摘要；如需逐行差异，加 `--details`。审查后运行 `agent-rule uninstall /absolute/path/to/project --apply` 卸载项目规则；项目本地文件会保留。
 
-图形界面安装包见[桌面版 `1.2.1` Release](https://github.com/yadan177/AgentRuleKit/releases/tag/desktop-v1.2.1)，1.2.1 的验收见[验收记录](docs/desktop-1.2.1-acceptance.md)，源码和构建方式见[桌面版说明](packages/desktop-app/README.md)。两个平台均需手动安装；安装包尚未签名，Mac 包尚未公证。
+图形界面安装包见[桌面版 `1.2.2` Release](https://github.com/yadan177/AgentRuleKit/releases/tag/desktop-v1.2.2)，1.2.2 的验收见[验收记录](docs/desktop-1.2.2-acceptance.md)，源码和构建方式见[桌面版说明](packages/desktop-app/README.md)。两个平台均需手动安装；安装包尚未签名，Mac 包尚未公证。
 
 ## 规则来源
 
