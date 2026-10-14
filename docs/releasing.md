@@ -1,5 +1,12 @@
 # 发布说明
 
+## 桌面版 1.2.0
+
+- [正式 Release](https://github.com/yadan177/AgentRuleKit/releases/tag/desktop-v1.2.0) 已发布 macOS Apple Silicon DMG 和 Windows x64 EXE；来源提交为 `63dfa0b326638af5b8d8d85e78b10a5a62a4d717`，桌面标签来自 main。
+- [发布流水线](https://github.com/yadan177/AgentRuleKit/actions/runs/38509653436) 的验证、双平台构建及发布均通过；实际下载的两份安装包与 GitHub API 摘要一致。
+- 新增项目列表和软件用户环境的“插件与 Skills”安装器。92 项本机测试、真实 Codex CLI 生命周期、Mac 打包应用的独立 Skill 安装、更新和卸载通过；详见[验收记录](desktop-1.2.0-acceptance.md)。
+- TraeWork 仍为本地 Skill 实验支持。Windows 真实桌面交互、第三方插件实际任务、签名与公证仍未完成；软件更新继续下载后手动安装。CLI 和规则包正式版本仍为 0.1.5。
+
 > 下文的 Codex 插件验收内容属于旧版本历史记录。当前源码不再包含 `agent-rule-kit` 插件包、四个规则管理 Skills 和 Hook；新的开发资产发布时须另行建立验收。
 
 公开的 `v0.1.0`、`v0.1.1`、`v0.1.2`、`v0.1.3`、`v0.1.4`、`v0.1.5` GitHub Release 和 npm CLI 均已发布；以下流程及剩余门槛用于复核已发布版本与准备后续版本，不能把“工作流已存在”等同于已发布。

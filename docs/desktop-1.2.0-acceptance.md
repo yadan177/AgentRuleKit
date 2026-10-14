@@ -16,8 +16,15 @@
 - [x] 打包应用通过独立 Skill 的导入预览、安装、跨版本更新和卸载。使用无脚本的临时 Skill，从 1.0.0 更新到 1.1.0；Codex 用户级识别在界面显示为“软件已确认安装”，卸载后安装列表为空。第二份更新来源通过同一后端导入 API 导入，随后在正式包界面预览并确认更新。原生文件夹对话框关闭后自动化曾超时，用户确认导入预览后连接恢复，后续结果由开发代理实际观察。
 - [x] 安装器提交 `4d98663` 在 Linux、macOS、Windows 的 Node.js 22/24 [CI](https://github.com/yadan177/AgentRuleKit/actions/runs/38508522023) 通过。CI 未配置本机 Codex CLI，真实宿主测试显式跳过；本机该项已通过。
 - [x] 安装器提交 `4d98663` 的 macOS 与 Windows [安装包 CI](https://github.com/yadan177/AgentRuleKit/actions/runs/38508522024) 构建和资产核对通过。
-- [ ] 从主分支创建版本标签，发布后核对两份安装资产及版本信息。
+- [x] 从主分支提交 `63dfa0b326638af5b8d8d85e78b10a5a62a4d717` 创建 `desktop-v1.2.0`；[发布流水线](https://github.com/yadan177/AgentRuleKit/actions/runs/38509653436) 全部通过，[正式 Release](https://github.com/yadan177/AgentRuleKit/releases/tag/desktop-v1.2.0) 公开且不是预发布。两份安装包实际下载后的 SHA-256 均与 GitHub API 一致；版本发现函数在 Mac 和 Windows 平台参数下均识别 1.2.0。
 
 ## 明确保留的限制
 
 TraeWork 本地 Skill 为实验支持；客户端识别与实际任务效果未完成验收。Codex 的第三方插件工具连接、Hook 信任和模型实际任务效果仍由目标软件验证。Windows 真实桌面交互、签名、公证、自动中断恢复和新 TRAE 兼容不在本版已验收范围内。
+
+## 正式安装资产
+
+| 平台 | SHA-256 |
+| --- | --- |
+| macOS Apple Silicon DMG | `c6ffc1b8f31d82283bd7d4c515c3fdac967adbc209d83a9b61579c3e924ce243` |
+| Windows x64 EXE | `f142919e5805aafdc7a10b19eb5a267f995d6102920ba7f55c395f5b39deaf03` |
