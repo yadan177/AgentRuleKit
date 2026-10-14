@@ -1,6 +1,6 @@
 # TraeWork 交付实验
 
-桌面版 1.2.0 发布候选支持把独立 Skill 安装到 TraeWork 的本地用户环境，标为实验支持。客户端识别和实际任务仍待验收。本机导入的 Product Design `0.1.56` 可适配为入口 Skill，支持预览安装和 ZIP 导出；不输出通用原生插件，也不接管 TraeCode。
+桌面版 1.2.0 支持把独立 Skill 安装到 TraeWork 的本地用户环境，标为实验支持。客户端识别和实际任务仍待验收。本机导入的 Product Design `0.1.56` 可适配为入口 Skill，支持预览安装和 ZIP 导出；不输出通用原生插件，也不接管 TraeCode。
 
 `skills/toolbox-product-design/` 是生成交付包时的入口模板，不能单独安装：它引用的 `source/` 必须来自用户本机的完整源包。`product-design.ts` 检查已知源版本、10 个工作流与共享引用；桌面导入库保留来源、许可和完整快照，导出时嵌入模板。第三方专有原文不保存在仓库。
 

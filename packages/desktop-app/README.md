@@ -1,6 +1,6 @@
 # AI 开发工具箱桌面版
 
-当前源码为 1.2.0 发布候选，验收见[验收记录](../../docs/desktop-1.2.0-acceptance.md)。最新正式版是 [1.1.0](https://github.com/yadan177/AgentRuleKit/releases/tag/desktop-v1.1.0)。Mac 和 Windows 均在启动时检查新版，发现后显示提示，并由用户下载、手动安装。桌面版和规则包分别发布，npm CLI 与规则包仍是 `0.1.5`。
+本次桌面版本是 [1.2.0](https://github.com/yadan177/AgentRuleKit/releases/tag/desktop-v1.2.0)，验收见[验收记录](../../docs/desktop-1.2.0-acceptance.md)。Mac 和 Windows 均在启动时检查新版，发现后显示提示，并由用户下载、手动安装。桌面版和规则包分别发布，npm CLI 与规则包仍是 `0.1.5`。
 
 桌面版 1.1.0 面向 macOS 和 Windows，提供安装、更新和卸载项目规则。选择项目文件夹后，安装时选 Unity、JS + TS、Java、Go 或 Python，并可多选 Codex、Qoder、Cursor、WorkBuddy。一次安装会包括该技术栈的开发规则及对应文档规则；所选平台共用 `.agent-rules/` 和 `AGENTS.md`，不会复制多套正文。Qoder、Cursor、WorkBuddy 的真实客户端加载仍待验收。
 
@@ -13,7 +13,7 @@
 
 当前仅为 Product Design `0.1.56` 提供 TraeWork 适配。点击「导出 TraeWork 技能包」生成根级 `SKILL.md` 的 ZIP，再在 TraeWork「插件市场 → 技能 → 上传技能」安装。TraeWork 识别一个入口 Skill，按任务读取保留的 10 个源 Skills；导出不等于安装或验证完成。MCP/Hook 等声明不能被静默忽略；其他包可保存来源，暂不提供交付。原包为专有许可，本次不将原文放入公开仓库。完整边界与验收见[迁移实验](../../docs/product-design-traework-experiment.md)。
 
-[下载正式桌面版 1.1.0](https://github.com/yadan177/AgentRuleKit/releases/tag/desktop-v1.1.0)：macOS Apple Silicon 使用 DMG，Windows x64 使用 EXE。已发布的 npm CLI `0.1.5` 不支持多平台配置；桌面版创建的多平台项目目前请继续用桌面版管理。
+[下载桌面版 1.2.0](https://github.com/yadan177/AgentRuleKit/releases/tag/desktop-v1.2.0)：macOS Apple Silicon 使用 DMG，Windows x64 使用 EXE。已发布的 npm CLI `0.1.5` 不支持多平台配置；桌面版创建的多平台项目目前请继续用桌面版管理。
 
 安装和卸载都会先显示文件预览，再由用户点击确认。更新已有规则时，选择已安装项目，也可直接调整所选平台；点击「检查更新」后，若有规则新版本或平台选择变化，再点击「查看变更」，逐文件审查并确认更新。检查更新只读取 GitHub Release 信息；查看变更才下载规则包并校验摘要。更新与卸载都会保留 `.agent-rules/overrides.md` 和其他项目自有文件。若文件已漂移、配置变化或存在冲突，应用会停止写入。
 
