@@ -166,6 +166,93 @@ test("差异预览明确显示文件末尾换行的增删", async () => {
   }
 });
 
+test("UI 规则按需选装文档依赖，预览、更新与移除保留项目内容", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "agentrulekit-ui-rules-"));
+  try {
+    const source = path.join(root, "source");
+    await cp(path.join(repository, "rulepacks"), path.join(source, "rulepacks"), { recursive: true });
+    for (const fixture of ["design-only", "typescript"]) {
+      const project = path.join(root, fixture);
+      await mkdir(project);
+      if (fixture === "typescript") await writeFile(path.join(project, "tsconfig.json"), "{}\n");
+      await writeFile(path.join(project, "AGENTS.md"), "# 项目已有要求\n");
+      expectExit(command("init", project, "--source-workspace", source), 0, `${fixture} 初始化`);
+      const configPath = path.join(project, "agent-rules.yaml");
+      const config = parse(await readFile(configPath, "utf8"));
+      const originalPacks = [...config.rulepacks];
+      const originalLock = JSON.parse(await readFile(path.join(project, ".agent-rules.lock.json"), "utf8"));
+      const originalInstalled = Object.keys(originalLock.rulepacks);
+      assert.ok(!config.rulepacks.includes("ui-design"), "语言检测不能自动加入 UI 规则");
+      assert.ok(!originalInstalled.some((id) => id === "ui-design" || id === "project-docs/ui-design"));
+      const agentsPath = path.join(project, "AGENTS.md");
+      const initialAgents = await readFile(agentsPath, "utf8");
+      assert.doesNotMatch(initialAgents, /UI 设计、交互、视觉、组件或资源交付：/);
+      const overrides = path.join(project, ".agent-rules", "overrides.md");
+      await writeFile(overrides, "# 项目 UI 约定\n保留现有品牌与状态。\n");
+
+      config.rulepacks.push("ui-design");
+      await writeFile(configPath, stringify(config));
+      const preview = command("update", project);
+      expectExit(preview, 0, `${fixture} 预览可选 UI 包`);
+      assert.match(preview.stdout, /\.agent-rules\/ui-design\//);
+      assert.match(preview.stdout, /\.agent-rules\/project-docs\/ui-design\//);
+      await assert.rejects(readFile(path.join(project, ".agent-rules/ui-design/pack.json")), /ENOENT/);
+      assert.equal(await readFile(agentsPath, "utf8"), initialAgents, "预览不能修改项目入口");
+      expectExit(command("update", project, "--apply"), 0, `${fixture} 应用 UI 包`);
+      expectExit(command("validate", project), 0, `${fixture} UI 安装校验`);
+      const lock = JSON.parse(await readFile(path.join(project, ".agent-rules.lock.json"), "utf8"));
+      assert.deepEqual(Object.keys(lock.rulepacks).sort(), [...originalInstalled, "ui-design", "project-docs/ui-design"].sort());
+      const entry = await readFile(agentsPath, "utf8");
+      for (const id of ["ui-design", "project-docs/ui-design"]) {
+        const manifest = JSON.parse(await readFile(path.join(source, "rulepacks", id, "pack.json"), "utf8"));
+        assert.ok(entry.includes(`.agent-rules/${id}/${manifest.entry}`), `入口缺少 ${id}`);
+        for (const rule of manifest.rules) {
+          assert.equal(await readFile(path.join(project, ".agent-rules", id, rule), "utf8"),
+            await readFile(path.join(source, "rulepacks", id, rule), "utf8"), `${id}/${rule} 未完整安装`);
+        }
+      }
+      assert.match(entry, /UI 设计说明、页面状态和交付记录：读取 `project-docs\/ui-design` 入口/,
+        "文档包作为传递依赖时也应生成任务路由");
+
+      const sourceRule = path.join(source, "rulepacks/ui-design/其他规则/02-交互设计规则.md");
+      const installedRule = path.join(project, ".agent-rules/ui-design/其他规则/02-交互设计规则.md");
+      const previous = await readFile(installedRule, "utf8");
+      await writeFile(sourceRule, `${previous}\n测试中的 UI 规则来源更新。\n`);
+      expectExit(command("check", project), 3, `${fixture} 发现 UI 更新`);
+      expectExit(command("diff", project), 0, `${fixture} 展示 UI 差异`);
+      assert.equal(await readFile(installedRule, "utf8"), previous);
+      expectExit(command("update", project, "--apply"), 0, `${fixture} 更新 UI 规则`);
+      expectExit(command("check", project), 0, `${fixture} 更新后无差异`);
+
+      const localNote = path.join(project, ".agent-rules/ui-design/项目笔记.md");
+      await writeFile(localNote, "用户自行维护的说明。\n");
+      config.rulepacks = originalPacks;
+      await writeFile(configPath, stringify(config));
+      expectExit(command("update", project), 0, `${fixture} 预览移除 UI 包`);
+      assert.ok((await readFile(installedRule, "utf8")).length > 0);
+      expectExit(command("update", project, "--apply"), 0, `${fixture} 移除 UI 及文档依赖`);
+      await assert.rejects(readFile(installedRule), /ENOENT/);
+      await assert.rejects(readFile(path.join(project, ".agent-rules/project-docs/ui-design/pack.json")), /ENOENT/);
+      assert.equal(await readFile(localNote, "utf8"), "用户自行维护的说明。\n");
+      assert.equal(await readFile(overrides, "utf8"), "# 项目 UI 约定\n保留现有品牌与状态。\n");
+      assert.match(await readFile(agentsPath, "utf8"), /^# 项目已有要求\n/);
+      expectExit(command("validate", project), 0, `${fixture} 移除后校验`);
+      const removedLock = JSON.parse(await readFile(path.join(project, ".agent-rules.lock.json"), "utf8"));
+      assert.deepEqual(Object.keys(removedLock.rulepacks).sort(), [...originalInstalled].sort());
+
+      config.rulepacks.push("project-docs/ui-design");
+      await writeFile(configPath, stringify(config));
+      expectExit(command("update", project, "--apply"), 0, `${fixture} 独立安装 UI 文档包`);
+      expectExit(command("validate", project), 0, `${fixture} 独立文档包校验`);
+      const docsLock = JSON.parse(await readFile(path.join(project, ".agent-rules.lock.json"), "utf8"));
+      assert.ok(docsLock.rulepacks["project-docs/ui-design"]);
+      assert.ok(!docsLock.rulepacks["ui-design"], "文档整理不应反向强制安装设计包");
+    }
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("CLI 卸载先预览再应用，保留项目本地规则且无需联网", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "agentrulekit-uninstall-cli-"));
   try {

@@ -15,6 +15,7 @@ else
     "$repo_root/rulepacks/unity"
     "$repo_root/rulepacks/pico"
     "$repo_root/rulepacks/rule-authoring"
+    "$repo_root/rulepacks/ui-design"
     "$repo_root/rulepacks/project-docs"
   )
 fi

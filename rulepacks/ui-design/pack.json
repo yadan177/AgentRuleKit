@@ -1,0 +1,22 @@
+{
+  "$schema": "../../schemas/rulepack.schema.json",
+  "id": "ui-design",
+  "version": "0.1.5",
+  "status": "ready",
+  "kind": "common",
+  "entry": "15-AI通用入口规则.md",
+  "dependencies": [
+    "common",
+    "project-docs/ui-design"
+  ],
+  "rules": [
+    "00-文档总览.md",
+    "15-AI通用入口规则.md",
+    "其他规则/01-需求分析规则.md",
+    "其他规则/02-交互设计规则.md",
+    "其他规则/03-视觉设计规则.md",
+    "其他规则/04-设计系统规则.md",
+    "其他规则/05-验证交付与落地跟踪规则.md",
+    "其他规则/06-设计工具与切图导出规则.md"
+  ]
+}

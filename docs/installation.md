@@ -73,6 +73,8 @@ agent-rule uninstall /absolute/path/to/project --apply
 
 ## 本地开发与离线试用
 
+当前源码中的 UI 设计与 UI 设计文档规则是可选包，不随语言检测自动安装，也尚未进入正式 Release。通过本地规则源与项目配置选装，具体步骤见 [UI 规则说明](ui-design-rules.md#本地选装与验证)。
+
 若只想离线试用，请先准备独立临时工程，再用下面的 `--source-workspace` 命令从本仓库安装规则。此方式不访问 GitHub，也不安装 IDE 个人环境资产；试用后可在临时工程运行 `check`、`diff` 和经审查的 `update --apply`。正式 npm 包已单独通过真实远端初始化验证；本地试用不代替真实跨版本更新验收。
 
 在 AgentRuleKit 仓库运行 `npm ci && npm run build`。若要从源码试用已发布的最新正式规则源，在临时工程运行：

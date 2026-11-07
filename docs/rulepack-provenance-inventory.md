@@ -2,7 +2,7 @@
 
 本清单由 `node scripts/generate-provenance-inventory.mjs --write` 从当前 `rulepacks/` 清单和文件内容生成；CI 用 `--check` 检查同步。SHA-256 按 CRLF 转 LF 后的文本计算，以便跨平台复核。它只提供人工复核线索，不判断原创性、许可或公开权限。文件内容变化会改变摘要；已完成的人工授权记录必须针对变更重新核对。迁移前的规则内容仍可在 Git 历史中查阅并需单独审查。
 
-当前纳入 14 个规则包、116 份 Markdown；5 份包含明确的来源措辞线索，24 份含外部 URL。没有线索或外链不代表内容由本仓库原创；有外链也不代表正文来自该网站。
+当前纳入 16 个规则包、129 份 Markdown；5 份包含明确的来源措辞线索，24 份含外部 URL。没有线索或外链不代表内容由本仓库原创；有外链也不代表正文来自该网站。
 
 ## 规则包汇总
 
@@ -17,10 +17,12 @@
 | `project-docs/java` | 5 |
 | `project-docs/js-ts` | 5 |
 | `project-docs/python` | 5 |
+| `project-docs/ui-design` | 5 |
 | `project-docs/unity` | 5 |
 | `python` | 15 |
 | `rule-authoring` | 1 |
 | `typescript` | 10 |
+| `ui-design` | 8 |
 | `unity` | 17 |
 
 ## 逐文件复核索引
@@ -29,7 +31,7 @@
 
 | 文件 | 规范化文本 SHA-256 | 来源线索行 | 外链域名 |
 |---|---|---|---|
-| [`rulepacks/common/entry.md`](<../rulepacks/common/entry.md>) | `dcbf442758430f13a28c3452ff435cfec8a12ef2a0c609d68ff9aede08e5c132` | — | — |
+| [`rulepacks/common/entry.md`](<../rulepacks/common/entry.md>) | `2283c20cb3e6cd9145ca396aad6ede7c37b3f10821f59ec92f701b9732f6677a` | — | — |
 | [`rulepacks/go/00-文档总览.md`](<../rulepacks/go/00-文档总览.md>) | `015228d53a2611b962ac36d6380f91e1eacb8c2c2b37ab0b37576aefe59f036a` | L115 | github.com |
 | [`rulepacks/go/13-AI通用入口规则.md`](<../rulepacks/go/13-AI通用入口规则.md>) | `261175f49ca34786a80b4d245ab053910b999d2a5d31a70c3456c800da6e6382` | — | — |
 | [`rulepacks/go/其他规则/01-代码编写规则.md`](<../rulepacks/go/其他规则/01-代码编写规则.md>) | `7ea4a9918c635d3b2476a0f3e819a64fb5c577c4659d4aff4b557720de3ce2e8` | L801 | github.com, pkg.go.dev |
@@ -77,31 +79,36 @@
 | [`rulepacks/javascript/其他规则/14-CSS与样式体系规则.md`](<../rulepacks/javascript/其他规则/14-CSS与样式体系规则.md>) | `a7f5b55d8e97c79ce2c012af54c90fc8fae897afcef7d5f681d4bd80905b41dc` | — | — |
 | [`rulepacks/javascript/其他规则/16-Vue组件规则.md`](<../rulepacks/javascript/其他规则/16-Vue组件规则.md>) | `bc8713b0b57105a8eb3f89adc6946f06a0bbf02b53c2ec9dfa3eca8b692d69b2` | — | — |
 | [`rulepacks/pico/PICO Unity SDK.md`](<../rulepacks/pico/PICO Unity SDK.md>) | `04fe4892afa1719e1c9af3b2db80ed36b64649fe7e3cd390c2c7524bf429ff3b` | — | developer.picoxr.com, docs.unity3d.com |
-| [`rulepacks/project-docs/go/其他规则/00-Go技术文档编写规范总览.md`](<../rulepacks/project-docs/go/其他规则/00-Go技术文档编写规范总览.md>) | `71e4137493eaf4afb7bf1868e72358f409b6d440cdb0b4d5212c03d557ecbe23` | — | — |
-| [`rulepacks/project-docs/go/其他规则/01-技术文档组织与维护规范.md`](<../rulepacks/project-docs/go/其他规则/01-技术文档组织与维护规范.md>) | `c8cd3c292a83c9c637f0a967df063fe1149ca2195fc90a3f3575ff6d45c415b8` | — | — |
-| [`rulepacks/project-docs/go/其他规则/02-Go技术文档编写规范.md`](<../rulepacks/project-docs/go/其他规则/02-Go技术文档编写规范.md>) | `833e2b6078d4828d5bbfce5d2dbc19ebaa5bb335e1bf8e43f7cd374d8b8770b5` | — | — |
-| [`rulepacks/project-docs/go/其他规则/03-Go技术文档模板.md`](<../rulepacks/project-docs/go/其他规则/03-Go技术文档模板.md>) | `62095c857ad64536a5e7630479dde6509669e0b8f8bf3c30aa216102d4df30db` | — | — |
-| [`rulepacks/project-docs/go/其他规则/04-GoAI技术文档任务入口.md`](<../rulepacks/project-docs/go/其他规则/04-GoAI技术文档任务入口.md>) | `27a98a2ec8de8c84aa1f55344fd35a4e08bb82601668cf9ae0efedc7857a369d` | — | — |
-| [`rulepacks/project-docs/java/其他规则/00-Java技术文档编写规范总览.md`](<../rulepacks/project-docs/java/其他规则/00-Java技术文档编写规范总览.md>) | `05d40bfbd3a7ce05b18b618206003f6a962cc05b5933329c47c8928562d2d88b` | — | — |
-| [`rulepacks/project-docs/java/其他规则/01-技术文档组织与维护规范.md`](<../rulepacks/project-docs/java/其他规则/01-技术文档组织与维护规范.md>) | `daab2b63939f8fac6263bf6c1ad35a5e5f1ed8c38827d48c92e60da5e671234b` | — | — |
-| [`rulepacks/project-docs/java/其他规则/02-Java技术文档编写规范.md`](<../rulepacks/project-docs/java/其他规则/02-Java技术文档编写规范.md>) | `c711dea83c3f1816b9bcd47a077c58f0c0a30b20cd70cf63bda1afad23b50e75` | — | — |
-| [`rulepacks/project-docs/java/其他规则/03-Java技术文档模板.md`](<../rulepacks/project-docs/java/其他规则/03-Java技术文档模板.md>) | `facbf5497f4d5e7547c3c5244cb32168538b3e06192c59e10261e7a856117b07` | — | — |
-| [`rulepacks/project-docs/java/其他规则/04-JavaAI技术文档任务入口.md`](<../rulepacks/project-docs/java/其他规则/04-JavaAI技术文档任务入口.md>) | `928e74759cd653236bfa47d9fac715cd2ee0c145fc7fb876131c001f1dba3fdf` | — | — |
-| [`rulepacks/project-docs/js-ts/其他规则/00-JS+TS技术文档编写规范总览.md`](<../rulepacks/project-docs/js-ts/其他规则/00-JS+TS技术文档编写规范总览.md>) | `e1cb381e97d40ec9c908eb06dfd17b46b579002622a8e7a2c9d4f370ea48a73e` | — | — |
-| [`rulepacks/project-docs/js-ts/其他规则/01-技术文档组织与维护规范.md`](<../rulepacks/project-docs/js-ts/其他规则/01-技术文档组织与维护规范.md>) | `c84597624e92dbf40282ee3965d31b0b259d10cf4b34eba96edd7e1fd6dcc214` | — | — |
-| [`rulepacks/project-docs/js-ts/其他规则/02-JS+TS技术文档编写规范.md`](<../rulepacks/project-docs/js-ts/其他规则/02-JS+TS技术文档编写规范.md>) | `37b6d1359e6a83861cc824ee5558e58f2b4341f4a38f432f3f678ae7161b0ca3` | — | — |
-| [`rulepacks/project-docs/js-ts/其他规则/03-JS+TS技术文档模板.md`](<../rulepacks/project-docs/js-ts/其他规则/03-JS+TS技术文档模板.md>) | `764a374dabb6536da49d943bee65c43e90eb668047ba19332f0dc79a36e079f2` | — | — |
-| [`rulepacks/project-docs/js-ts/其他规则/04-JS+TSAI技术文档任务入口.md`](<../rulepacks/project-docs/js-ts/其他规则/04-JS+TSAI技术文档任务入口.md>) | `270686084f905bb7f476c5bf5d189489e9f7092a360a262c310704127893f2f7` | — | — |
-| [`rulepacks/project-docs/python/其他规则/00-Python技术文档编写规范总览.md`](<../rulepacks/project-docs/python/其他规则/00-Python技术文档编写规范总览.md>) | `618a139105f49993646fd8ae33795c6684fed655b219677be91458dd528b235e` | — | — |
-| [`rulepacks/project-docs/python/其他规则/01-技术文档组织与维护规范.md`](<../rulepacks/project-docs/python/其他规则/01-技术文档组织与维护规范.md>) | `a34588e859f459514c63d47d7ce2d4de39a3c109444e8887f7d318d9f95be63f` | — | — |
-| [`rulepacks/project-docs/python/其他规则/02-Python技术文档编写规范.md`](<../rulepacks/project-docs/python/其他规则/02-Python技术文档编写规范.md>) | `79781e04c90bc8be7f3f722453d7b02b96738a8370d5747f008c1e40a42cbcdb` | — | — |
-| [`rulepacks/project-docs/python/其他规则/03-Python技术文档模板.md`](<../rulepacks/project-docs/python/其他规则/03-Python技术文档模板.md>) | `8cb66434f6e0c2ccd1268ac860e75576f03bb03d12429930152c454cf5c729be` | — | — |
-| [`rulepacks/project-docs/python/其他规则/04-PythonAI技术文档任务入口.md`](<../rulepacks/project-docs/python/其他规则/04-PythonAI技术文档任务入口.md>) | `e65d2ad036509d955a39b701b33aab893db3ae92872b9070aa0638e240d4a72f` | — | — |
-| [`rulepacks/project-docs/unity/其他规则/00-Unity技术文档编写规范总览.md`](<../rulepacks/project-docs/unity/其他规则/00-Unity技术文档编写规范总览.md>) | `12be36e15102279ff119e71fadbad7d3b92233442d32d39daed2751b8c7060db` | — | — |
-| [`rulepacks/project-docs/unity/其他规则/01-技术文档组织与维护规范.md`](<../rulepacks/project-docs/unity/其他规则/01-技术文档组织与维护规范.md>) | `40b1506e9408b0c273a838c6a2076a003de6a09e61bba9e2bd90cf0b0cc03c03` | — | — |
-| [`rulepacks/project-docs/unity/其他规则/02-Unity技术文档编写规范.md`](<../rulepacks/project-docs/unity/其他规则/02-Unity技术文档编写规范.md>) | `b06b1befe353dedbe8cbc9792f5912f611452b982ef3fabead0448722243bff1` | — | — |
-| [`rulepacks/project-docs/unity/其他规则/03-Unity技术文档模板.md`](<../rulepacks/project-docs/unity/其他规则/03-Unity技术文档模板.md>) | `e4bf9931649c36d0904d458ce05ed245a6f03702b28115d3a6e7dfe69d50d466` | — | — |
-| [`rulepacks/project-docs/unity/其他规则/04-UnityAI技术文档任务入口.md`](<../rulepacks/project-docs/unity/其他规则/04-UnityAI技术文档任务入口.md>) | `2dc571151e9c1dfcfeb821b896aa81ae93b0ca3c13161db777d7f4a4691a6952` | — | — |
+| [`rulepacks/project-docs/go/其他规则/00-Go技术文档编写规范总览.md`](<../rulepacks/project-docs/go/其他规则/00-Go技术文档编写规范总览.md>) | `bfe9112b713448007c5a6edd8e086985ddf29983f4d49d4a0fc2712e25fd056e` | — | — |
+| [`rulepacks/project-docs/go/其他规则/01-技术文档组织与维护规范.md`](<../rulepacks/project-docs/go/其他规则/01-技术文档组织与维护规范.md>) | `ff841a896df15b8cebebdf7edb3f2a90fab177342f7293b0b7139cabdd9550f0` | — | — |
+| [`rulepacks/project-docs/go/其他规则/02-Go技术文档编写规范.md`](<../rulepacks/project-docs/go/其他规则/02-Go技术文档编写规范.md>) | `50654da1331d640ba3eaa638dbbf42005ed66631ac813b149919144a6d0bbdc7` | — | — |
+| [`rulepacks/project-docs/go/其他规则/03-Go技术文档模板.md`](<../rulepacks/project-docs/go/其他规则/03-Go技术文档模板.md>) | `8208aa5b606edde5486684c991d3d09a2bbd45eee998eee3f580e1fb5e21982f` | — | — |
+| [`rulepacks/project-docs/go/其他规则/04-GoAI技术文档任务入口.md`](<../rulepacks/project-docs/go/其他规则/04-GoAI技术文档任务入口.md>) | `f612db6ae972359bec06d29c50b8fef326fc4277ff83f6b04a982f2bfa42d7ed` | — | — |
+| [`rulepacks/project-docs/java/其他规则/00-Java技术文档编写规范总览.md`](<../rulepacks/project-docs/java/其他规则/00-Java技术文档编写规范总览.md>) | `0131d7924ad8fd117f497e383fe057afc098f0678fbd04a4a5e66f7b5f2e7729` | — | — |
+| [`rulepacks/project-docs/java/其他规则/01-技术文档组织与维护规范.md`](<../rulepacks/project-docs/java/其他规则/01-技术文档组织与维护规范.md>) | `7c26332b9deaa9b945246bf4f7e44fd47803d5eb5218daaf6ffbaaf4b941214d` | — | — |
+| [`rulepacks/project-docs/java/其他规则/02-Java技术文档编写规范.md`](<../rulepacks/project-docs/java/其他规则/02-Java技术文档编写规范.md>) | `3c742c8810cfe324ce85e2da3189333099204648947225617e2bfb5b4751bfcc` | — | — |
+| [`rulepacks/project-docs/java/其他规则/03-Java技术文档模板.md`](<../rulepacks/project-docs/java/其他规则/03-Java技术文档模板.md>) | `bb30ef39a60c9b9ab651a85fd7537d29d241f7df770d9128107ff4dab768c20e` | — | — |
+| [`rulepacks/project-docs/java/其他规则/04-JavaAI技术文档任务入口.md`](<../rulepacks/project-docs/java/其他规则/04-JavaAI技术文档任务入口.md>) | `deb4d58613f99e75a798043a2389281cd3ba16d1d3b307fa40463ef8b305a9e9` | — | — |
+| [`rulepacks/project-docs/js-ts/其他规则/00-JS+TS技术文档编写规范总览.md`](<../rulepacks/project-docs/js-ts/其他规则/00-JS+TS技术文档编写规范总览.md>) | `d367ef186499ada69630dd982eb1aff4548631bcb909e8273184f15aa128b9ac` | — | — |
+| [`rulepacks/project-docs/js-ts/其他规则/01-技术文档组织与维护规范.md`](<../rulepacks/project-docs/js-ts/其他规则/01-技术文档组织与维护规范.md>) | `a21fb4ce0029cca6b984e2f3b3dac1e7bd96e5cb151aa4bd43cc884e917611e3` | — | — |
+| [`rulepacks/project-docs/js-ts/其他规则/02-JS+TS技术文档编写规范.md`](<../rulepacks/project-docs/js-ts/其他规则/02-JS+TS技术文档编写规范.md>) | `66db4a727a73cd987a0f97d06837ff12a97295275f3379eaea57469f52d827d5` | — | — |
+| [`rulepacks/project-docs/js-ts/其他规则/03-JS+TS技术文档模板.md`](<../rulepacks/project-docs/js-ts/其他规则/03-JS+TS技术文档模板.md>) | `91cea8cbf264793c696a41ba5b46cfbcf301bb5126f7e30fe43bc5124b7faa3e` | — | — |
+| [`rulepacks/project-docs/js-ts/其他规则/04-JS+TSAI技术文档任务入口.md`](<../rulepacks/project-docs/js-ts/其他规则/04-JS+TSAI技术文档任务入口.md>) | `bc9d4357b7f7efe6fbc10cc4d2700dabeff8e002e3ca9502b2859fb0c9761b19` | — | — |
+| [`rulepacks/project-docs/python/其他规则/00-Python技术文档编写规范总览.md`](<../rulepacks/project-docs/python/其他规则/00-Python技术文档编写规范总览.md>) | `90a3e61a9ce1f33dbf940a833af7c8d42a8c2d335c34e9676940b5e9d470fc5a` | — | — |
+| [`rulepacks/project-docs/python/其他规则/01-技术文档组织与维护规范.md`](<../rulepacks/project-docs/python/其他规则/01-技术文档组织与维护规范.md>) | `65ecdbc997e4468c958abd8be23284a119c56512905511d0bd90278fc2b8799d` | — | — |
+| [`rulepacks/project-docs/python/其他规则/02-Python技术文档编写规范.md`](<../rulepacks/project-docs/python/其他规则/02-Python技术文档编写规范.md>) | `97527450539682139273c45c5009427bce4a56abc324e49708a7eb6e0a954cf4` | — | — |
+| [`rulepacks/project-docs/python/其他规则/03-Python技术文档模板.md`](<../rulepacks/project-docs/python/其他规则/03-Python技术文档模板.md>) | `2a868277e116a36653560b50b9da86fdc54ba82f17e688e3a63611898a194f88` | — | — |
+| [`rulepacks/project-docs/python/其他规则/04-PythonAI技术文档任务入口.md`](<../rulepacks/project-docs/python/其他规则/04-PythonAI技术文档任务入口.md>) | `402a8fbbf75b06a0b1e676608e5ca0d8490499b19144202fcb736c981b27b6d5` | — | — |
+| [`rulepacks/project-docs/ui-design/其他规则/00-UI设计文档规则总览.md`](<../rulepacks/project-docs/ui-design/其他规则/00-UI设计文档规则总览.md>) | `1d4aad7fb414547f646aa53fa0ba49e337c2f111a579178e0aa54c8fd6fac5f5` | — | — |
+| [`rulepacks/project-docs/ui-design/其他规则/01-UI设计文档组织与维护规范.md`](<../rulepacks/project-docs/ui-design/其他规则/01-UI设计文档组织与维护规范.md>) | `432b861d2edc667a5b7079f15c160089134e3dad71bd09789ce5b154746b3ee1` | — | — |
+| [`rulepacks/project-docs/ui-design/其他规则/02-UI设计文档编写规范.md`](<../rulepacks/project-docs/ui-design/其他规则/02-UI设计文档编写规范.md>) | `0eb26c299b232f1690de4d228fd3551295cc142c50bb8062ceba8c6959d5a3ac` | — | — |
+| [`rulepacks/project-docs/ui-design/其他规则/03-UI设计文档模板.md`](<../rulepacks/project-docs/ui-design/其他规则/03-UI设计文档模板.md>) | `023d5a3d534a064d46f2a8dfe8b76a5b153712e4c1609e4f0735dbbb68c98a77` | — | — |
+| [`rulepacks/project-docs/ui-design/其他规则/04-UI设计文档任务入口.md`](<../rulepacks/project-docs/ui-design/其他规则/04-UI设计文档任务入口.md>) | `67f727e74b0b7c283f7fdc145d6edbeb3cf13369688ec980f5e1458285a878f1` | — | — |
+| [`rulepacks/project-docs/unity/其他规则/00-Unity技术文档编写规范总览.md`](<../rulepacks/project-docs/unity/其他规则/00-Unity技术文档编写规范总览.md>) | `1f94a336e7838aef45c81007cc318920123576b559a731a94741c97cd41baaec` | — | — |
+| [`rulepacks/project-docs/unity/其他规则/01-技术文档组织与维护规范.md`](<../rulepacks/project-docs/unity/其他规则/01-技术文档组织与维护规范.md>) | `6b523e5579a3b05589f4f885fa464e7e4cbcfa8d71a540c7a23e5d8d86c6c1d4` | — | — |
+| [`rulepacks/project-docs/unity/其他规则/02-Unity技术文档编写规范.md`](<../rulepacks/project-docs/unity/其他规则/02-Unity技术文档编写规范.md>) | `f9c1d99020757d6384a02d17291b69ace3ee59392836e66edc3dca6637d136bf` | — | — |
+| [`rulepacks/project-docs/unity/其他规则/03-Unity技术文档模板.md`](<../rulepacks/project-docs/unity/其他规则/03-Unity技术文档模板.md>) | `d243a1c4a76d22d60d422a2d01bdc2e230cbf6e4c23a568dcdeb11fdc453c748` | — | — |
+| [`rulepacks/project-docs/unity/其他规则/04-UnityAI技术文档任务入口.md`](<../rulepacks/project-docs/unity/其他规则/04-UnityAI技术文档任务入口.md>) | `0b6f717945c1a8449890d63297d4f071d49ebfa7cee77f34f4c7a7f93241054d` | — | — |
 | [`rulepacks/python/00-文档总览.md`](<../rulepacks/python/00-文档总览.md>) | `4125e00577bda86db6b80748c7bd211b4cc00eed65be09b3e263537a44eb64d9` | — | — |
 | [`rulepacks/python/14-AI通用入口规则.md`](<../rulepacks/python/14-AI通用入口规则.md>) | `650485b8dce6a0ff0ca943281ca12d9c87aa88653dd10797686d4f350b4796ed` | — | — |
 | [`rulepacks/python/其他规则/01-代码编写规则.md`](<../rulepacks/python/其他规则/01-代码编写规则.md>) | `52b257f95747b5f81ffc02dfbaaaa3a8d0ea0861e79bdc95dc971966a3c7c0c1` | — | — |
@@ -128,6 +135,14 @@
 | [`rulepacks/typescript/其他规则/06-tsconfig 严格度.md`](<../rulepacks/typescript/其他规则/06-tsconfig 严格度.md>) | `f57074a42c315007c664973b376755619038a35fca6ebf226994f4f39c2c3aa8` | — | — |
 | [`rulepacks/typescript/其他规则/07-ESLint + Prettier TS 集成.md`](<../rulepacks/typescript/其他规则/07-ESLint + Prettier TS 集成.md>) | `7ac46ba25e67ca6148fcd1527e10802ec09e6c340fc4f1aef85e082570b601de` | — | — |
 | [`rulepacks/typescript/其他规则/08-常见反模式与 AI 自检.md`](<../rulepacks/typescript/其他规则/08-常见反模式与 AI 自检.md>) | `d67eb001ff78547a5493bda16c9203312cf15a8a4203b24b4e4c1c2247325870` | — | — |
+| [`rulepacks/ui-design/00-文档总览.md`](<../rulepacks/ui-design/00-文档总览.md>) | `95e99e107d34f8b84869e52e4803e2090201c02eda94fc1431132384cf18fd83` | — | — |
+| [`rulepacks/ui-design/15-AI通用入口规则.md`](<../rulepacks/ui-design/15-AI通用入口规则.md>) | `7ea12b78dab2d9d37e9ea4d5ba4c3100bdefcea924d67eab506118ffc8637205` | — | — |
+| [`rulepacks/ui-design/其他规则/01-需求分析规则.md`](<../rulepacks/ui-design/其他规则/01-需求分析规则.md>) | `a1226ab59f164e2c6f08b5841e5fc1cecef6207d38316dcec3944752913556ca` | — | — |
+| [`rulepacks/ui-design/其他规则/02-交互设计规则.md`](<../rulepacks/ui-design/其他规则/02-交互设计规则.md>) | `d145b2e0ab15b29618d4c325a18289f61438544fdc232c9b9b1e5a1208e89f29` | — | — |
+| [`rulepacks/ui-design/其他规则/03-视觉设计规则.md`](<../rulepacks/ui-design/其他规则/03-视觉设计规则.md>) | `6f26b06d1e4ff22991b47faebd6a3385851149bd023f50537ebf2af4bee4a632` | — | — |
+| [`rulepacks/ui-design/其他规则/04-设计系统规则.md`](<../rulepacks/ui-design/其他规则/04-设计系统规则.md>) | `28ddc7dea9670a9b591a19e2cc9eeb80295ae62a8144eacfb0c9b57ef0983f8c` | — | — |
+| [`rulepacks/ui-design/其他规则/05-验证交付与落地跟踪规则.md`](<../rulepacks/ui-design/其他规则/05-验证交付与落地跟踪规则.md>) | `365e97275a4d641e4b3cb0f6829717214995c58555a1647c317bb01425d84cf6` | — | — |
+| [`rulepacks/ui-design/其他规则/06-设计工具与切图导出规则.md`](<../rulepacks/ui-design/其他规则/06-设计工具与切图导出规则.md>) | `5da01b94711420613abfc8a1938c1cd247cebc040031d36f65ce40150594b931` | — | — |
 | [`rulepacks/unity/00-文档总览.md`](<../rulepacks/unity/00-文档总览.md>) | `970e37d161918add6c1153c88ea619d5162fe28fd015f643e9607832b36c7b6a` | — | — |
 | [`rulepacks/unity/15-AI通用入口规则.md`](<../rulepacks/unity/15-AI通用入口规则.md>) | `08840facbce7e5cb813ec6ee7673f9780058a615488330ee002444a523f8f974` | — | — |
 | [`rulepacks/unity/其他规则/01-代码编写规则.md`](<../rulepacks/unity/其他规则/01-代码编写规则.md>) | `076ad851be50a4061fe7984dd1019457b64926ae09755a4bed9d3e88843114c8` | — | — |

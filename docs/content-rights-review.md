@@ -20,10 +20,12 @@
 | `project-docs/js-ts` | 5 | 0 | 待填写 | 待填写 | 待填写 | 待核 |
 | `project-docs/python` | 5 | 0 | 待填写 | 待填写 | 待填写 | 待核 |
 | `project-docs/unity` | 5 | 0 | 待填写 | 待填写 | 待填写 | 待核 |
+| `project-docs/ui-design` | 5 | 0 | 待填写 | 本次新增的 UI 设计文档规则；形成过程见 [UI 规则说明](ui-design-rules.md) | 用户要求本地新增，发布时按本表核对具体内容 | 待核 |
 | `python` | 15 | 0 | 待填写 | 待填写 | 待填写 | 待核 |
 | `rule-authoring` | 1 | 0 | 待填写 | 待填写 | 待填写 | 待核 |
 | `typescript` | 10 | 0 | 待填写 | 待填写 | 待填写 | 待核 |
 | `unity` | 17 | 0 | 待填写 | 待填写 | 待填写 | 待核 |
+| `ui-design` | 8 | 0 | 待填写 | 根据用户指定项目的 UI 规则提炼重写；来源与调整见 [UI 规则说明](ui-design-rules.md) | 用户要求本地迁入与优化，未在本次执行发布 | 待核 |
 
 ## 仓库范围与历史
 

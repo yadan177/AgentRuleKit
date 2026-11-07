@@ -16,6 +16,8 @@ const packs = [
   { id: "unity", kind: "development", entry: "15-AI通用入口规则.md", dependencies: ["common"] },
   { id: "pico", kind: "development", entry: "PICO Unity SDK.md", dependencies: ["common", "unity"] },
   { id: "rule-authoring", kind: "common", entry: "规则文档编写格式规范.md", dependencies: ["common"] },
+  { id: "ui-design", kind: "common", entry: "15-AI通用入口规则.md", dependencies: ["common", "project-docs/ui-design"] },
+  { id: "project-docs/ui-design", kind: "documentation", entry: "其他规则/04-UI设计文档任务入口.md", dependencies: ["common"] },
   { id: "project-docs/python", kind: "documentation", entry: "其他规则/04-PythonAI技术文档任务入口.md", dependencies: ["common"] },
   { id: "project-docs/go", kind: "documentation", entry: "其他规则/04-GoAI技术文档任务入口.md", dependencies: ["common"] },
   { id: "project-docs/java", kind: "documentation", entry: "其他规则/04-JavaAI技术文档任务入口.md", dependencies: ["common"] },
